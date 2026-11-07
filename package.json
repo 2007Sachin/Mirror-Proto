@@ -12,7 +12,9 @@
     "start:server": "tsx server/index.ts",
     "typecheck:server": "tsc -p server/tsconfig.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "smoke": "tsx server/scripts/smoke.ts",
+    "build:server": "tsc -p server/tsconfig.json"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.5",

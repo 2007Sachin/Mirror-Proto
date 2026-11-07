@@ -14,7 +14,12 @@ export const ReflectionOutputSchema = z.object({
   focus: z.string().min(1).max(2000),
 })
 
+export const FollowUpOutputSchema = z.object({
+  question: z.string().trim().min(8).max(500),
+})
+
 export type ReflectionOutput = z.infer<typeof ReflectionOutputSchema>
+export type FollowUpOutput = z.infer<typeof FollowUpOutputSchema>
 
 export interface ProviderRequest {
   role: string
@@ -22,6 +27,14 @@ export interface ProviderRequest {
   turns: { id: string; question: string; answer: string }[]
 }
 
+export interface FollowUpRequest {
+  role: string
+  industry: string | null
+  turns: { question: string; answer: string }[]
+  nextIndex: number
+}
+
 export interface ReflectionProvider {
   generateReflection(request: ProviderRequest): Promise<ReflectionOutput>
+  generateFollowUp?(request: FollowUpRequest): Promise<string>
 }

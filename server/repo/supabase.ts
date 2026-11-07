@@ -15,7 +15,8 @@ interface InterviewRecord {
   workspace_id: string
   role: string
   industry: string | null
-  status: 'in_progress' | 'completed'
+  status: InterviewRow['status']
+  asked_questions: string[] | null
   created_at: string
 }
 
@@ -50,6 +51,7 @@ function toInterviewRow(r: InterviewRecord): InterviewRow {
     role: r.role,
     industry: r.industry,
     status: r.status,
+    askedQuestions: r.asked_questions ?? [],
     createdAt: r.created_at,
   }
 }
@@ -82,8 +84,8 @@ function toReflectionRow(r: ReflectionRecord): ReflectionRow {
   }
 }
 
-export function createSupabaseRepository(url: string, serviceRoleKey: string): Repository {
-  const client: SupabaseClient = createClient(url, serviceRoleKey)
+export function createSupabaseRepository(url: string, secretKey: string): Repository {
+  const client: SupabaseClient = createClient(url, secretKey)
 
   return {
     async ensureWorkspace(slug: string): Promise<void> {
@@ -99,6 +101,7 @@ export function createSupabaseRepository(url: string, serviceRoleKey: string): R
           role: input.role,
           industry: input.industry ?? null,
           status: 'in_progress',
+          asked_questions: [input.openingQuestion],
         })
         .select()
         .single()
@@ -107,12 +110,14 @@ export function createSupabaseRepository(url: string, serviceRoleKey: string): R
     },
 
     async getInterview(workspace: string, id: string): Promise<InterviewRow | null> {
-      const { data, error } = await client.from('interviews').select().eq('id', id).single()
+      const { data, error } = await client
+        .from('interviews')
+        .select()
+        .eq('id', id)
+        .eq('workspace_id', workspace)
+        .maybeSingle()
       if (error || !data) return null
-      const row = toInterviewRow(data as InterviewRecord)
-      // Defence in depth on top of workspace-scoped queries.
-      if (row.workspaceId !== workspace) return null
-      return row
+      return toInterviewRow(data as InterviewRecord)
     },
 
     async updateInterviewStatus(workspace: string, id: string, status: InterviewRow['status']): Promise<void> {
@@ -122,6 +127,21 @@ export function createSupabaseRepository(url: string, serviceRoleKey: string): R
         .eq('id', id)
         .eq('workspace_id', workspace)
       if (error) throw new Error(`failed to update interview status: ${error.message}`)
+    },
+
+    async appendAskedQuestion(workspace: string, id: string, question: string): Promise<InterviewRow | null> {
+      const current = await this.getInterview(workspace, id)
+      if (!current) return null
+      const asked = [...current.askedQuestions, question]
+      const { data, error } = await client
+        .from('interviews')
+        .update({ asked_questions: asked })
+        .eq('id', id)
+        .eq('workspace_id', workspace)
+        .select()
+        .single()
+      if (error) throw new Error(`failed to append question: ${error.message}`)
+      return toInterviewRow(data as InterviewRecord)
     },
 
     async listInterviewsByRole(workspace: string, role: string): Promise<InterviewRow[]> {
@@ -189,11 +209,10 @@ export function createSupabaseRepository(url: string, serviceRoleKey: string): R
         .from('reflections')
         .select()
         .eq('interview_id', interviewId)
+        .eq('workspace_id', workspace)
         .maybeSingle()
       if (error || !data) return null
-      const row = toReflectionRow(data as ReflectionRecord)
-      if (row.workspaceId !== workspace) return null
-      return row
+      return toReflectionRow(data as ReflectionRecord)
     },
   }
 }

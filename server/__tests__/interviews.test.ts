@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { FIXED_QUESTIONS } from '../domain/questions.js'
+import { FALLBACK_QUESTIONS, OPENING_QUESTION } from '../domain/questions.js'
+import { ProviderFailure } from '../providers/nim.js'
 import { j, makeApp, WS } from './helpers.js'
 
 const answers = [
@@ -44,7 +45,8 @@ describe('POST /interviews', () => {
     expect(res.status).toBe(201)
     const body = await j(res)
     expect(body.status).toBe('in_progress')
-    expect(body.questions).toEqual(FIXED_QUESTIONS)
+    expect(body.currentQuestion).toBe(OPENING_QUESTION)
+    expect(body.questions).toEqual([OPENING_QUESTION])
     expect(body.nextQuestionIndex).toBe(0)
     expect(body.turns).toEqual([])
     expect(body.workspace).toBe('dev')
@@ -70,7 +72,7 @@ describe('POST /interviews/:id/turns', () => {
       expect(res.status).toBe(201)
       const body = await j(res)
       expect(body.turn.questionIndex).toBe(i)
-      expect(body.turn.question).toBe(FIXED_QUESTIONS[i])
+      expect(body.turn.question).toBe(FALLBACK_QUESTIONS[i])
       expect(body.status).toBe(i === 3 ? 'completed' : 'in_progress')
       expect(body.nextQuestionIndex).toBe(i === 3 ? null : i + 1)
     }
@@ -155,8 +157,74 @@ describe('GET /interviews/:id', () => {
     expect(body.status).toBe('completed')
     expect(body.turns.length).toBe(4)
     expect(body.reflection).toBeNull()
-    expect(body.questions).toEqual(FIXED_QUESTIONS)
+    expect(body.questions).toEqual(FALLBACK_QUESTIONS)
   })
+
+  it('rejects completion before four answers', async () => {
+    const { app } = makeApp()
+    const { id } = await createInterview(app)
+    await postTurn(app, id, 0, answers[0])
+    const res = await app.request(`/interviews/${id}/complete`, { method: 'POST', headers: WS })
+    expect(res.status).toBe(409)
+    expect((await j(res)).error).toBe('interview_incomplete')
+  })
+
+  it('rejects new turns after abandonment', async () => {
+    const { app } = makeApp()
+    const { id } = await createInterview(app)
+    const abandoned = await app.request(`/interviews/${id}/abandon`, { method: 'POST', headers: WS })
+    expect(abandoned.status).toBe(200)
+    const res = await postTurn(app, id, 0, answers[0])
+    expect(res.status).toBe(409)
+    expect((await j(res)).error).toBe('interview_abandoned')
+  })
+
+  it('preserves a saved answer when follow-up generation fails', async () => {
+    const { app, repo } = makeApp({
+      provider: {
+        async generateFollowUp() {
+          throw new ProviderFailure('nim down')
+        },
+        async generateReflection() {
+          throw new ProviderFailure('unused')
+        },
+      },
+    })
+    const { id } = await createInterview(app)
+    const res = await postTurn(app, id, 0, answers[0])
+    expect(res.status).toBe(503)
+    const body = await j(res)
+    expect(body.error).toBe('followup_provider_unavailable')
+    expect(body.saved).toBe(true)
+    expect((await repo.getTurns('dev', id)).length).toBe(1)
+
+    const retry = await app.request(`/interviews/${id}/next-question`, { method: 'POST', headers: WS })
+    expect(retry.status).toBe(503)
+    expect((await repo.getTurns('dev', id)).length).toBe(1)
+  })
+
+  it('retries follow-up generation without duplicating the saved turn', async () => {
+    let fail = true
+    const { app, repo } = makeApp({
+      provider: {
+        async generateFollowUp() {
+          if (fail) throw new ProviderFailure('transient')
+          return 'What decision did you personally own?'
+        },
+        async generateReflection() {
+          throw new ProviderFailure('unused')
+        },
+      },
+    })
+    const { id } = await createInterview(app)
+    await postTurn(app, id, 0, answers[0])
+    fail = false
+    const retry = await app.request(`/interviews/${id}/next-question`, { method: 'POST', headers: WS })
+    expect(retry.status).toBe(200)
+    expect((await j(retry)).nextQuestion).toBe('What decision did you personally own?')
+    expect((await repo.getTurns('dev', id)).length).toBe(1)
+  })
+
 
   it('returns 404 across the workspace boundary', async () => {
     const { app } = makeApp()

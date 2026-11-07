@@ -1,6 +1,7 @@
--- MIRROR Phase 1: initial schema.
--- All tables carry workspace_id; Phase 2 adds auth and RLS policies that
--- scope every query to the caller's workspace.
+-- MIRROR Phase 1 schema (idempotent).
+-- Candidate-data tables enable RLS. No broad anonymous public policies.
+-- Repository operations are workspace-scoped in application code.
+-- The service/secret key bypasses RLS; the anon key has no policies.
 
 create table if not exists public.workspaces (
   slug text primary key,
@@ -12,9 +13,17 @@ create table if not exists public.interviews (
   workspace_id text not null references public.workspaces(slug) on delete cascade,
   role text not null,
   industry text,
-  status text not null default 'in_progress' check (status in ('in_progress', 'completed')),
+  status text not null default 'in_progress',
+  asked_questions jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now()
 );
+
+alter table public.interviews add column if not exists asked_questions jsonb not null default '[]'::jsonb;
+
+alter table public.interviews drop constraint if exists interviews_status_check;
+alter table public.interviews
+  add constraint interviews_status_check
+  check (status in ('in_progress', 'completed', 'abandoned'));
 
 create table if not exists public.turns (
   id uuid primary key default gen_random_uuid(),
@@ -41,14 +50,10 @@ create table if not exists public.reflections (
   created_at timestamptz not null default now()
 );
 
--- Phase 2 RLS pattern (to be added when auth lands):
---   create policy "workspace_isolation" on public.interviews
---     for all using (workspace_id = (auth.jwt() ->> 'workspace'))
---     with check (workspace_id = (auth.jwt() ->> 'workspace'));
--- Same shape applies to turns / reflections (and workspaces keyed by slug).
--- Broad anon policies (using (true)) are intentionally NOT created.
-
 alter table public.workspaces enable row level security;
 alter table public.interviews enable row level security;
 alter table public.turns enable row level security;
 alter table public.reflections enable row level security;
+
+-- Intentionally no `anon` / `public` policies with using (true).
+-- Phase 1 has no authentication; the server uses SUPABASE_SECRET_KEY.

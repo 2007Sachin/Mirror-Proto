@@ -55,8 +55,13 @@ async function completeInterview(app: ReturnType<typeof makeApp>['app']) {
 
 function makeNimApp(fetchImpl: typeof fetch, log?: NimLog) {
   const env = makeEnv({ nimApiKey: 'test-key' })
-  const provider = createNimClient(env, fetchImpl, log)
-  return makeApp({ env, provider })
+  const nim = createNimClient(env, fetchImpl, log, 5_000, 0, 3)
+  return makeApp({
+    env,
+    provider: {
+      generateReflection: request => nim.generateReflection(request),
+    },
+  })
 }
 
 describe('POST /interviews/:id/reflect', () => {
@@ -207,5 +212,32 @@ describe('POST /interviews/:id/reflect', () => {
     expect(serialized).not.toContain('redesigned')
     expect(logs[0]).toHaveProperty('provider', 'nim')
     expect(typeof logs[0].latencyMs).toBe('number')
+  })
+
+  it('retries reflection without duplicating turns', async () => {
+    const fetchImpl = (async () => completion(validOutput(turnIds))) as typeof fetch
+    const { app, repo } = makeNimApp(fetchImpl)
+    const { id, turnIds } = await completeInterview(app)
+    const first = await app.request(`/interviews/${id}/reflect`, { method: 'POST', headers: WS })
+    expect(first.status).toBe(201)
+    const second = await app.request(`/interviews/${id}/reflect`, { method: 'POST', headers: WS })
+    expect(second.status).toBe(201)
+    expect((await repo.getTurns('dev', id)).length).toBe(4)
+  })
+
+  it('does not attach another role’s evidence to this interview', async () => {
+    const foreign = {
+      readinessLabel: 'strong' as const,
+      readinessRange: { low: 80, high: 90 },
+      evidence: [
+        { turnId: 'other-interview-turn', quote: answers[0].slice(0, 20), observation: 'From another role.', competency: 'Ownership' },
+      ],
+      focus: 'Focus.',
+    }
+    const { app } = makeNimApp((async () => completion(foreign)) as typeof fetch)
+    const session = await completeInterview(app)
+    const res = await app.request(`/interviews/${session.id}/reflect`, { method: 'POST', headers: WS })
+    expect(res.status).toBe(400)
+    expect((await j(res)).error).toBe('invalid_evidence_turn_id')
   })
 })

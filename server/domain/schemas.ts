@@ -25,6 +25,10 @@ export const reflectionOutputSchema = z.object({
   focus: z.string().min(1).max(2000),
 })
 
+export const followUpOutputSchema = z.object({
+  question: z.string().trim().min(8).max(500),
+})
+
 export type CreateInterviewBody = z.infer<typeof createInterviewSchema>
 export type AddTurnBody = z.infer<typeof addTurnSchema>
 export type ReflectionOutput = z.infer<typeof reflectionOutputSchema>

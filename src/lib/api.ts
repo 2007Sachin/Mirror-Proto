@@ -6,6 +6,7 @@ export const DEV_WORKSPACE = 'dev'
 const BASE: string = (import.meta.env.VITE_API_BASE as string | undefined) ?? '/api'
 
 export type TranscriptSource = 'text' | 'voice'
+export type InterviewStatus = 'in_progress' | 'completed' | 'abandoned'
 
 export interface Turn {
   id: string
@@ -39,12 +40,22 @@ export interface InterviewSession {
   workspace: string
   role: string
   industry: string | null
-  status: 'in_progress' | 'completed'
+  status: InterviewStatus
   questions: string[]
+  currentQuestion: string | null
+  pendingFollowUp: boolean
   nextQuestionIndex: number | null
   turns: Turn[]
   reflection: Reflection | null
   createdAt: string
+}
+
+export interface TurnResponse {
+  turn: Turn
+  nextQuestion: string | null
+  nextQuestionIndex: number | null
+  status: InterviewStatus
+  saved: boolean
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -83,11 +94,20 @@ export const api = {
   createInterview: (role: string, industry?: string) =>
     request<InterviewSession>('/interviews', { method: 'POST', body: JSON.stringify({ role, industry }) }),
   submitTurn: (interviewId: string, questionIndex: number, answer: string) =>
-    request<{ turn: Turn; nextQuestionIndex: number | null; status: 'in_progress' | 'completed' }>(
+    request<TurnResponse>(
       `/interviews/${interviewId}/turns`,
       { method: 'POST', body: JSON.stringify({ questionIndex, answer, transcriptSource: 'text' }) },
     ),
+  nextQuestion: (interviewId: string) =>
+    request<{ nextQuestion: string; nextQuestionIndex: number; status: InterviewStatus }>(
+      `/interviews/${interviewId}/next-question`,
+      { method: 'POST' },
+    ),
   getInterview: (interviewId: string) => request<InterviewSession>(`/interviews/${interviewId}`),
+  complete: (interviewId: string) =>
+    request<InterviewSession>(`/interviews/${interviewId}/complete`, { method: 'POST' }),
+  abandon: (interviewId: string) =>
+    request<InterviewSession>(`/interviews/${interviewId}/abandon`, { method: 'POST' }),
   reflect: (interviewId: string) =>
     request<Reflection>(`/interviews/${interviewId}/reflect`, { method: 'POST' }),
 }

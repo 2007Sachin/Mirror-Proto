@@ -14,19 +14,37 @@ describe('server/config', () => {
     expect(env.nimModel).toBe('meta/llama-3.3-70b-instruct')
     expect(env.supabaseUrl).toBeNull()
     expect(env.nimApiKey).toBeNull()
+    expect(env.supabaseSecretKey).toBeNull()
   })
 
-  it('reads NVIDIA_NIM_API_KEY per SETUP-INFRA.md and NIM_API_KEY as alias', async () => {
+  it('reads NVIDIA_NIM_API_KEY, NVIDIA_NIM_BASE_URL, and NVIDIA_NIM_MODEL', async () => {
     vi.stubEnv('NVIDIA_NIM_API_KEY', 'nvidia-key')
+    vi.stubEnv('NVIDIA_NIM_BASE_URL', 'https://integrate.api.nvidia.com/v1')
+    vi.stubEnv('NVIDIA_NIM_MODEL', 'meta/llama-3.3-70b-instruct')
     vi.resetModules()
     const { env } = await import('../config.js')
     expect(env.nimApiKey).toBe('nvidia-key')
+    expect(env.nimModel).toBe('meta/llama-3.3-70b-instruct')
   })
 
-  it('a malformed NIM_BASE_URL fails startup naming the key, not the value', async () => {
-    vi.stubEnv('NIM_BASE_URL', 'not a url at all ://')
+  it('reads SUPABASE_SECRET_KEY', async () => {
+    vi.stubEnv('SUPABASE_URL', 'https://example.supabase.co')
+    vi.stubEnv('SUPABASE_SECRET_KEY', 'secret-role')
     vi.resetModules()
-    await expect(import('../config.js')).rejects.toThrow(/NIM_BASE_URL/)
+    const { env, isSupabaseConfigured } = await import('../config.js')
+    expect(env.supabaseSecretKey).toBe('secret-role')
+    expect(isSupabaseConfigured(env)).toBe(true)
+  })
+
+  it('a malformed NVIDIA_NIM_BASE_URL fails startup naming the key, not the value', async () => {
+    vi.stubEnv('NVIDIA_NIM_BASE_URL', 'not a url at all ://')
+    vi.resetModules()
+    await expect(import('../config.js')).rejects.toThrow(/NVIDIA_NIM_BASE_URL/)
     await expect(import('../config.js')).rejects.toThrow(/key/)
+    try {
+      await import('../config.js')
+    } catch (err) {
+      expect(String(err)).not.toContain('not a url at all')
+    }
   })
 })

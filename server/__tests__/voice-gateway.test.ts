@@ -124,6 +124,37 @@ describe('voice gateway', () => {
     ws.close()
   })
 
+  it('resumes a tombstoned session immediately without creating a new interview turn', async () => {
+    const { repo, interview, port } = await start()
+    const first = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`)
+    const inbox = attachInbox(first)
+    await new Promise<void>((resolve, reject) => {
+      first.on('open', () => resolve())
+      first.on('error', reject)
+    })
+    first.send(envelope('hello', 0, { interviewId: interview.id, token: 'dev' }))
+    await inbox.wait(msgs => msgs.some(m => m.type === 'session_ready'))
+    const sessionId = (inbox.msgs.find(m => m.type === 'session_ready')?.payload as { sessionId: string }).sessionId
+    first.close()
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    const second = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`)
+    const inbox2 = attachInbox(second)
+    await new Promise<void>((resolve, reject) => {
+      second.on('open', () => resolve())
+      second.on('error', reject)
+    })
+    second.send(envelope('hello', 0, { interviewId: interview.id, token: 'dev', resumeSessionId: sessionId }))
+    const resumed = await inbox2.wait(msgs => msgs.some(m => m.type === 'session_ready') || msgs.some(m => m.type === 'error'))
+    expect(resumed.some(m => m.type === 'error' && (m.payload as { code: string }).code === 'rate_limited')).toBe(false)
+    const ready = resumed.find(m => m.type === 'session_ready')
+    expect((ready?.payload as { sessionId: string }).sessionId).toBe(sessionId)
+    expect((ready?.payload as { interviewState: { questionIndex: number } }).interviewState.questionIndex).toBe(0)
+    const turns = await repo.getTurns('dev', interview.id)
+    expect(turns).toHaveLength(0)
+    second.close()
+  })
+
   it('drops stale sequence numbers without applying the command', async () => {
     const { interview, port } = await start()
     const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`)
@@ -203,6 +234,45 @@ describe('voice gateway', () => {
     const body = await j(reflect)
     expect(body.evidence[0].quote).toBe('simplified onboarding')
     expect(body.evidence[0].turnId).toBe(turns[0].id)
+    ws.close()
+  })
+
+  it('falls back to listening after a TTS provider failure without advancing the interview', async () => {
+    const repo = createMemoryRepository()
+    await repo.ensureWorkspace('dev')
+    const interview = await repo.createInterview('dev', {
+      role: 'Product Analyst',
+      industry: 'Technology / SaaS',
+      openingQuestion: OPENING_QUESTION,
+    })
+    const http = createServer()
+    const gateway = createVoiceGateway({
+      env: makeEnv(),
+      repo,
+      stt: createMockStt({ emitPartials: false }),
+      tts: createMockTts({ fail: true }),
+      provider: null,
+    })
+    gateway.attach(http)
+    await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve))
+    servers.push({
+      close() {
+        gateway.close()
+        http.close()
+      },
+    })
+    const addr = http.address()
+    const port = typeof addr === 'object' && addr ? addr.port : 0
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`)
+    const inbox = attachInbox(ws)
+    await new Promise<void>((resolve, reject) => {
+      ws.on('open', () => resolve())
+      ws.on('error', reject)
+    })
+    ws.send(envelope('hello', 0, { interviewId: interview.id, token: 'dev' }))
+    const failed = await inbox.wait(msgs => msgs.some(m => m.type === 'error') && msgs.some(m => m.type === 'state' && (m.payload as { state: string }).state === 'listening'))
+    expect((failed.find(m => m.type === 'error')?.payload as { code: string }).code).toBe('tts_error')
+    expect(await repo.getTurns('dev', interview.id)).toHaveLength(0)
     ws.close()
   })
 })

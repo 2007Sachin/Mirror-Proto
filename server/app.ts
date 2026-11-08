@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { createClient } from '@supabase/supabase-js'
 import type { Env } from './config.js'
-import { isNimConfigured, isSupabaseConfigured } from './config.js'
+import { isNimConfigured, isSarvamConfigured, isSupabaseConfigured } from './config.js'
 import { FALLBACK_QUESTIONS, OPENING_QUESTION, TOTAL_QUESTIONS } from './domain/questions.js'
 import { persistFollowUpQuestion } from './domain/followUp.js'
 import { addTurnSchema, createInterviewSchema } from './domain/schemas.js'
@@ -135,6 +135,10 @@ export function buildApp(deps: AppDeps): Hono {
       status: 'ok',
       mode: isSupabaseConfigured(env) ? 'supabase' : 'memory',
       uptime: Math.round((Date.now() - startedAt) / 1000),
+      voice: {
+        configured: isSarvamConfigured(env),
+        provider: isSarvamConfigured(env) ? 'sarvam' : 'mock',
+      },
     }),
   )
 
@@ -142,6 +146,15 @@ export function buildApp(deps: AppDeps): Hono {
     c.json({
       supabase: { configured: isSupabaseConfigured(env), live: await supabaseLive() },
       nim: { configured: isNimConfigured(env), live: isNimConfigured(env), model: env.nimModel },
+      voice: {
+        configured: isSarvamConfigured(env),
+        live: isSarvamConfigured(env),
+        provider: isSarvamConfigured(env) ? 'sarvam' : 'mock',
+        sttModel: env.sarvamSttModel,
+        ttsModel: env.sarvamTtsModel,
+        language: env.sarvamLanguage,
+        speaker: env.sarvamSpeaker,
+      },
     }),
   )
 

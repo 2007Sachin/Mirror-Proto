@@ -153,6 +153,18 @@ describe('POST /interviews/:id/reflect', () => {
     expect(body.readinessRange).toBeNull()
   })
 
+  it('swaps an inverted numeric range when evidence is present', async () => {
+    const fetchImpl = (async () => {
+      const valid = validOutput(turnIds)
+      return completion({ ...valid, readinessRange: { low: 1, high: 0 } })
+    }) as typeof fetch
+    const { app } = makeNimApp(fetchImpl)
+    const { id, turnIds } = await completeInterview(app)
+    const res = await app.request(`/interviews/${id}/reflect`, { method: 'POST', headers: WS })
+    expect(res.status).toBe(201)
+    expect((await j(res)).readinessRange).toEqual({ low: 0, high: 1 })
+  })
+
   it('returns 502 when fetch throws', async () => {
     const fetchImpl = (async () => { throw new Error('network down') }) as typeof fetch
     const { app } = makeNimApp(fetchImpl)

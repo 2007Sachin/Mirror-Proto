@@ -113,5 +113,9 @@ export function reconcileReadinessRange(output: ProviderReflectionOutput): Provi
   if (output.evidence.length === 0) {
     return { ...output, readinessRange: null }
   }
+  const range = output.readinessRange
+  if (range && range.low > range.high) {
+    return { ...output, readinessRange: { low: range.high, high: range.low } }
+  }
   return output
 }

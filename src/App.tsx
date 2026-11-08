@@ -42,6 +42,7 @@ const goals = [
   { id: 'confidence', icon: TrendingUp, title: 'Build quiet confidence', text: 'Practise privately, without performance pressure.' },
 ]
 const QUESTION_COUNT = 4
+const SESSION_STORAGE_KEY = 'mirror.phase1.sessionId'
 
 function Brand({ onClick }: { onClick: () => void }) {
   return <button className="brand" onClick={onClick} aria-label="MIRROR home"><span className="brand-mark"><i /><i /></span><span>MIRROR</span></button>
@@ -115,6 +116,7 @@ export default function App() {
     try {
       const session = await api.createInterview(roleName, industry)
       setSessionId(session.id)
+      sessionStorage.setItem(SESSION_STORAGE_KEY, session.id)
       setServerLive(true)
       setCurrentQuestion(session.currentQuestion ?? session.questions[0])
       setQuestionIndex(session.nextQuestionIndex ?? 0)
@@ -224,11 +226,30 @@ export default function App() {
   }
   const resetDemo = () => {
     if (!window.confirm('Reset all demonstration data and return to the beginning?')) return
-    setGoal(''); setStory(''); setExtraStories([]); setAnswers([]); setAnswer(''); setRole('Product Analyst'); go('home'); notify('Prototype data reset.')
+    sessionStorage.removeItem(SESSION_STORAGE_KEY)
+    setGoal(''); setStory(''); setExtraStories([]); setAnswers([]); setAnswer(''); setRole('Product Analyst'); setSessionId(null); setReflection(null); go('home'); notify('Prototype data reset.')
   }
 
   useEffect(() => {
     document.title = 'MIRROR — Find the story behind your experience'
+  }, [])
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem(SESSION_STORAGE_KEY)
+    if (!saved) return
+    void api.getInterview(saved)
+      .then(session => {
+        setSessionId(session.id)
+        setServerLive(true)
+        setRole(session.role)
+        setAssessedRole(session.role)
+        if (session.industry) setIndustry(session.industry)
+        setAnswers(session.turns.map(t => ({ question: t.question, answer: t.answer })))
+        if (session.reflection) setReflection(session.reflection)
+        if (session.currentQuestion) setCurrentQuestion(session.currentQuestion)
+        if (session.nextQuestionIndex !== null) setQuestionIndex(session.nextQuestionIndex)
+      })
+      .catch(() => sessionStorage.removeItem(SESSION_STORAGE_KEY))
   }, [])
 
   useEffect(() => {

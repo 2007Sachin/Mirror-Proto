@@ -9,10 +9,14 @@ export interface SttStream {
   onPartial(cb: (text: string) => void): void
   onFinal(cb: (text: string) => void): void
   onError(cb: (err: Error) => void): void
-  /** Flush and return the final transcript. */
+  /** Flush the current utterance and return the final transcript. */
   finalize(): Promise<string>
   /** Discard the stream without a final result. */
   abort(): void
+  /** True after abort() or an unrecoverable provider close. */
+  isClosed(): boolean
+  /** Settles when the upstream provider is ready to accept audio. */
+  whenReady(): Promise<void>
 }
 
 export interface SttProvider {

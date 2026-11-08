@@ -138,6 +138,7 @@ export function buildApp(deps: AppDeps): Hono {
       voice: {
         configured: isSarvamConfigured(env),
         provider: isSarvamConfigured(env) ? 'sarvam' : 'mock',
+        sttTransport: env.sarvamSttTransport,
       },
     }),
   )
@@ -150,7 +151,8 @@ export function buildApp(deps: AppDeps): Hono {
         configured: isSarvamConfigured(env),
         live: isSarvamConfigured(env),
         provider: isSarvamConfigured(env) ? 'sarvam' : 'mock',
-        sttModel: env.sarvamSttModel,
+        sttTransport: env.sarvamSttTransport,
+        sttModel: env.sarvamSttTransport === 'rest' ? env.sarvamSttModel : env.sarvamSttRealtimeModel,
         ttsModel: env.sarvamTtsModel,
         language: env.sarvamLanguage,
         speaker: env.sarvamSpeaker,

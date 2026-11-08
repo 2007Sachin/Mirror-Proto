@@ -7,8 +7,13 @@ export const VOICE_LIMITS = {
   maxJsonBytes: 16 * 1024,
   /** Max binary (PCM) frame size (bytes). One 20ms/640B capture chunk is expected. */
   maxBinaryBytes: 8 * 1024,
-  /** Max accumulated audio per turn before finalize is forced. */
-  maxTurnAudioMs: 5 * 60 * 1000,
+  /** Expected capture frame: PCM16 16 kHz mono, 20 ms. */
+  expectedPcmFrameBytes: 640,
+  /**
+   * Application safety cap per spoken answer (ms). This is a MIRROR limit,
+   * not a Sarvam REST duration constraint.
+   */
+  maxTurnAudioMs: 180 * 1000,
   /** Max session lifetime. */
   maxSessionMs: 30 * 60 * 1000,
   /** Client ping interval expectation; server treats silence > this * 3 as dead. */
@@ -21,4 +26,11 @@ export const VOICE_LIMITS = {
   reconnectWindowMs: 60 * 1000,
   /** Per-IP hello rate limit. */
   helloRateLimitMs: 5 * 1000,
+  /** How long to wait for transcript.final after speech_end/flush. */
+  sttFinalizeTimeoutMs: 8 * 1000,
+  /** Bounded upstream audio queue (~1s of 20ms frames) before dropping. */
+  sttMaxQueuedFrames: 50,
 } as const
+
+export const TURN_TOO_LONG_MESSAGE =
+  'Spoken answers are limited to 3 minutes. Send your answer, or continue by typing.'

@@ -16,8 +16,27 @@ describe('GET /integration-status', () => {
     const body = await j(res)
     expect(body.supabase).toEqual({ configured: false, live: false })
     expect(body.nim).toEqual({ configured: false, live: false, model: 'nvidia/nemotron-3.5-bolt-e4b' })
+    expect(body.voice).toEqual({
+      configured: false,
+      live: false,
+      provider: 'mock',
+      sttModel: 'saaras:v4',
+      ttsModel: 'bulbul:v3',
+      language: 'en-IN',
+      speaker: 'shubh',
+    })
     expect(JSON.stringify(body)).not.toContain('http')
-    expect(JSON.stringify(body)).not.toContain('key')
+    expect(JSON.stringify(body)).not.toMatch(/api-subscription-key|SARVAM_API_KEY|secret/i)
+  })
+
+  it('reports voice configured/live when a Sarvam key is present', async () => {
+    const { app } = makeApp({ env: makeEnv({ sarvamApiKey: 'test-key' }) })
+    const res = await app.request('/integration-status', { headers: WS })
+    const body = await j(res)
+    expect(body.voice.configured).toBe(true)
+    expect(body.voice.live).toBe(true)
+    expect(body.voice.provider).toBe('sarvam')
+    expect(JSON.stringify(body)).not.toContain('test-key')
   })
 
   it('reports nim configured/live when a key is present', async () => {

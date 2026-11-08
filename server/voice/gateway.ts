@@ -12,7 +12,7 @@ import { createMockTts } from './tts/mockTts.js'
 import { createSarvamStt } from './stt/sarvamStt.js'
 import { createSarvamTts } from './tts/sarvamTts.js'
 import { TOTAL_QUESTIONS } from '../domain/questions.js'
-import { isNimConfigured } from '../config.js'
+import { isNimConfigured, isSarvamConfigured } from '../config.js'
 import { createNimClient } from '../providers/nim.js'
 import type { ReflectionProvider } from '../providers/types.js'
 import { interviewProgress, submitVoiceTurn } from './interviewBridge.js'
@@ -56,17 +56,28 @@ interface ConnectionCtx {
 export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
   const log = deps.log ?? noopLog
   const sessionManager = new SessionManager()
+  const liveVoice = isSarvamConfigured(deps.env)
   const stt: SttProvider =
     deps.stt ??
-    (deps.env.sarvamApiKey
-      ? createSarvamStt({ apiKey: deps.env.sarvamApiKey, baseUrl: deps.env.sarvamBaseUrl })
+    (liveVoice
+      ? createSarvamStt({
+          apiKey: deps.env.sarvamApiKey!,
+          baseUrl: deps.env.sarvamBaseUrl,
+          model: deps.env.sarvamSttModel,
+          language: deps.env.sarvamLanguage,
+        })
       : createMockStt())
   const tts: TtsProvider =
     deps.tts ??
-    (deps.env.sarvamApiKey
-      ? createSarvamTts({ apiKey: deps.env.sarvamApiKey, baseUrl: deps.env.sarvamBaseUrl })
+    (liveVoice
+      ? createSarvamTts({
+          apiKey: deps.env.sarvamApiKey!,
+          baseUrl: deps.env.sarvamBaseUrl,
+          speaker: deps.env.sarvamSpeaker,
+          model: deps.env.sarvamTtsModel,
+        })
       : createMockTts())
-  const providerLabel = deps.env.sarvamApiKey ? 'sarvam' : 'mock'
+  const providerLabel = liveVoice ? 'sarvam' : 'mock'
   const interviewProvider: ReflectionProvider | null =
     deps.provider !== undefined
       ? deps.provider
@@ -146,6 +157,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
         session.machine.transition('error', turnId)
         sendError(ctx, session, 'tts_error', 'speech synthesis failed', true)
         resetCapture(ctx, session)
+        sendJson(ctx, 'state', session.id, session.currentTurnId, { state: session.machine.current, turnId: session.currentTurnId })
       }
       return
     }
@@ -175,8 +187,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
         code: 'empty_transcript',
         recoverable: true,
       })
-      session.finalizeCache.set(turnId, { accepted: false, payload: { code: 'empty_transcript' } })
-      // Same turnId is reused; the client may speak again.
+      // Do not cache empty rejects — the same turnId is reused so the client can speak again.
       resetCapture(ctx, session)
       return
     }
@@ -242,12 +253,15 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
     const payload = (msg.payload ?? {}) as { interviewId?: string; token?: string; resumeSessionId?: string }
     const now = Date.now()
     const last = lastHelloAt.get(ctx.ip) ?? 0
-    if (now - last < VOICE_LIMITS.helloRateLimitMs) {
-      sendError(ctx, null, 'rate_limited', 'one hello per 5 seconds', true)
-      closeWith(ctx, null, 'rate_limited', 'hello rate limit exceeded')
-      return
+    const isResume = Boolean((payload as { resumeSessionId?: string }).resumeSessionId)
+    if (!isResume) {
+      if (now - last < VOICE_LIMITS.helloRateLimitMs) {
+        sendError(ctx, null, 'rate_limited', 'one hello per 5 seconds', true)
+        closeWith(ctx, null, 'rate_limited', 'hello rate limit exceeded')
+        return
+      }
+      lastHelloAt.set(ctx.ip, now)
     }
-    lastHelloAt.set(ctx.ip, now)
 
     const workspace = (payload.token ?? '').trim()
     if (!workspace) {
@@ -257,6 +271,8 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
     }
 
     // Reconnection path: resume within the tombstone window.
+    // Resume hellos skip the new-session rate limit so a dropped socket can
+    // reconnect immediately without advancing the interview.
     if (payload.resumeSessionId) {
       const resumed = sessionManager.resume(payload.resumeSessionId)
       if (!resumed || resumed.interviewId !== payload.interviewId) {

@@ -18,6 +18,7 @@ describe('voice security contracts', () => {
       const text = readFileSync(join(root, rel), 'utf8')
       expect(text).not.toMatch(/SARVAM_API_KEY/)
       expect(text).not.toMatch(/api\.sarvam\.ai/)
+      expect(text).not.toMatch(/api-subscription-key/)
     }
   })
 

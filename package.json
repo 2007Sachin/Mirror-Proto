@@ -14,6 +14,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "smoke": "tsx server/scripts/smoke.ts",
+    "smoke:voice": "tsx server/scripts/voice-smoke.ts",
+    "live:sarvam": "tsx server/scripts/live-sarvam-qa.ts",
     "build:server": "tsc -p server/tsconfig.json"
   },
   "dependencies": {

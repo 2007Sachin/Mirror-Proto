@@ -13,6 +13,10 @@ export function makeEnv(overrides: Partial<Env> = {}): Env {
     nimModel: 'nvidia/nemotron-3.5-bolt-e4b',
     sarvamApiKey: null,
     sarvamBaseUrl: 'https://api.sarvam.ai',
+    sarvamSttModel: 'saaras:v4',
+    sarvamTtsModel: 'bulbul:v3',
+    sarvamLanguage: 'en-IN',
+    sarvamSpeaker: 'shubh',
     ...overrides,
   }
 }

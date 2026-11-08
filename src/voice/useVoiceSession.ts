@@ -42,6 +42,8 @@ export interface VoiceSessionApi {
   mute: (muted: boolean) => void
   /** Leave voice mode without touching the text composer. */
   continueByTyping: () => void
+  /** Finalize the current spoken turn (user finished answering). */
+  commitSpokenAnswer: () => void
 }
 
 export function useVoiceSession(options: {
@@ -183,7 +185,12 @@ export function useVoiceSession(options: {
     })
 
     client.on(MSG.TTS_AUDIO, payload => {
-      playbackRef.current?.enqueue(payload as ArrayBuffer)
+      const data = payload as ArrayBuffer | Blob
+      if (data instanceof Blob) {
+        void data.arrayBuffer().then(buf => playbackRef.current?.enqueue(buf))
+        return
+      }
+      playbackRef.current?.enqueue(data)
     })
 
     client.on(MSG.TURN_ACCEPTED, payload => {
@@ -200,16 +207,11 @@ export function useVoiceSession(options: {
 
     client.on(MSG.STATE, payload => {
       const { state } = payload as { state: VoiceState }
-      // End of user speech for the current turn → ask the server to finalize
-      // the turn (exactly once per turn).
-      if (state === 'processing_speech') {
-        const turnId = client.currentTurnId ?? lastTurnIdRef.current
-        if (turnId && !finalizeSentRef.current.has(turnId)) {
-          finalizeSentRef.current.add(turnId)
-          client.finalizeTurn(turnId)
-        }
-      }
       syncState(state)
+    })
+
+    client.on(MSG.TTS_END, () => {
+      /* playback_complete is sent from AudioPlayback.onComplete */
     })
 
     client.on(MSG.ERROR, payload => {
@@ -283,6 +285,15 @@ export function useVoiceSession(options: {
     stop()
   }, [stop])
 
+  const commitSpokenAnswer = useCallback(() => {
+    const client = clientRef.current
+    if (!client) return
+    const turnId = client.currentTurnId ?? lastTurnIdRef.current
+    if (!turnId || finalizeSentRef.current.has(turnId)) return
+    finalizeSentRef.current.add(turnId)
+    client.finalizeTurn(turnId)
+  }, [])
+
   // Clean up on unmount.
   useEffect(() => {
     return () => {
@@ -310,8 +321,9 @@ export function useVoiceSession(options: {
     interrupt,
     mute,
     continueByTyping,
+    commitSpokenAnswer,
   }), [
     voiceState, orbState, partialTranscript, finalTranscript, questionText, error,
-    inputLevel, outputLevel, isMuted, active, start, stop, retry, interrupt, mute, continueByTyping,
+    inputLevel, outputLevel, isMuted, active, start, stop, retry, interrupt, mute, continueByTyping, commitSpokenAnswer,
   ])
 }

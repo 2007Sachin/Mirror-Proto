@@ -11,6 +11,7 @@ export interface VoiceRouteDeps {
   /** Test hooks: inject mock providers and capture logs. */
   stt?: SttProvider
   tts?: TtsProvider
+  provider?: import('../providers/types.js').ReflectionProvider | null
   log?: (msg: string) => void
 }
 

@@ -50,7 +50,9 @@ export function createMockStt(opts: MockSttOpts = {}): SttProvider {
             throw err
           }
           const text =
-            opts.finalText ?? process.env.MOCK_STT_FINAL_TEXT ?? 'mock transcript'
+            opts.finalText ??
+            process.env.MOCK_STT_FINAL_TEXT ??
+            'I owned the research and simplified onboarding after the product update.'
           finalCb?.(text)
           return text
         },

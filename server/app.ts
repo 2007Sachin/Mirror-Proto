@@ -3,7 +3,8 @@ import { cors } from 'hono/cors'
 import { createClient } from '@supabase/supabase-js'
 import type { Env } from './config.js'
 import { isNimConfigured, isSupabaseConfigured } from './config.js'
-import { FALLBACK_QUESTIONS, OPENING_QUESTION, TOTAL_QUESTIONS, fallbackQuestionAt } from './domain/questions.js'
+import { FALLBACK_QUESTIONS, OPENING_QUESTION, TOTAL_QUESTIONS } from './domain/questions.js'
+import { persistFollowUpQuestion } from './domain/followUp.js'
 import { addTurnSchema, createInterviewSchema } from './domain/schemas.js'
 import { addTurn, canAbandon, canComplete, reconcileReadinessRange, validateEvidence } from './domain/stateMachine.js'
 import { PHASE1_TABLES } from './repo/supabase.js'
@@ -92,26 +93,9 @@ export function buildApp(deps: AppDeps): Hono {
     }
   }
 
-  async function nextFollowUp(interview: InterviewRow, turns: TurnRow[]): Promise<string> {
-    const nextIndex = turns.length
-    if (provider?.generateFollowUp) {
-      return provider.generateFollowUp({
-        role: interview.role,
-        industry: interview.industry,
-        turns: turns.map(t => ({ question: t.question, answer: t.answer })),
-        nextIndex,
-      })
-    }
-    return fallbackQuestionAt(nextIndex)
-  }
-
   async function persistFollowUp(interview: InterviewRow, turns: TurnRow[]): Promise<string> {
-    if (turns.length >= TOTAL_QUESTIONS) return interview.askedQuestions[TOTAL_QUESTIONS - 1]
-    if (interview.askedQuestions.length > turns.length) return interview.askedQuestions[turns.length]
     try {
-      const question = await nextFollowUp(interview, turns)
-      const updated = await repo.appendAskedQuestion(interview.workspaceId, interview.id, question)
-      return updated?.askedQuestions[turns.length] ?? question
+      return await persistFollowUpQuestion(repo, interview, turns, provider)
     } catch (err) {
       if (err instanceof ProviderFailure) {
         throw new AppError(503, 'followup_provider_unavailable', { answers: turns.length })

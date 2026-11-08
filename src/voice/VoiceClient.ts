@@ -5,6 +5,7 @@
 // - Drops stale messages: tts_audio received after an interrupt (until the next
 //   tts_start) and any message tagged with an old turnId.
 
+import { DEV_WORKSPACE } from '../lib/api'
 import {
   VOICE_WS_URL,
   PROTOCOL_VERSION,
@@ -60,7 +61,7 @@ export class VoiceClient {
 
   constructor(options: VoiceClientOptions = {}) {
     this.url = options.url ?? VOICE_WS_URL
-    this.token = options.token ?? 'dev'
+    this.token = options.token ?? DEV_WORKSPACE
     this.resumeWindowMs = options.resumeWindowMs ?? 60_000
     this.backoff = options.backoff ?? { initialMs: 500, maxMs: 8_000 }
     this.onConnectionChange = options.onConnectionChange
@@ -99,6 +100,7 @@ export class VoiceClient {
 
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(this.url)
+      ws.binaryType = 'arraybuffer'
       this.ws = ws
       this.connecting = true
 
@@ -120,6 +122,7 @@ export class VoiceClient {
       const cleanup = () => offReady()
 
       ws.onopen = () => {
+        this.onConnectionChange?.(true)
         const hello: HelloPayload = {
           interviewId,
           token: this.token,
@@ -181,7 +184,8 @@ export class VoiceClient {
     // Stale turnId messages are dropped once a turn is active and the tag differs.
     if (this.activeTurnId && env.turnId && env.turnId !== this.activeTurnId) {
       // allow state/session-level messages through; drop turn-scoped ones
-      if (![MSG.STATE, MSG.SESSION_READY, MSG.ERROR, MSG.PONG, MSG.CLOSE_SERVER].includes(env.type)) {
+      const allowedWhenStale = new Set<string>([MSG.STATE, MSG.SESSION_READY, MSG.ERROR, MSG.PONG, MSG.CLOSE_SERVER])
+      if (!allowedWhenStale.has(env.type)) {
         return
       }
     }
@@ -226,19 +230,9 @@ export class VoiceClient {
     this.ws.send(encodeEnvelope(env))
   }
 
-  /** Raw binary audio chunk (PCM16 16k mono, 640 bytes). */
+  /** Raw binary audio chunk (PCM16 16k mono, 640 bytes). No JSON envelope. */
   sendAudioChunk(chunk: ArrayBuffer | ArrayBufferView): void {
     if (this.ws?.readyState !== WebSocket.OPEN) return
-    const env: Envelope = {
-      v: PROTOCOL_VERSION,
-      type: MSG.AUDIO_CHUNK,
-      sessionId: this.sessionId,
-      turnId: this.activeTurnId,
-      seq: this.outSeq++,
-      ts: Date.now(),
-      payload: null,
-    }
-    this.ws.send(encodeEnvelope(env))
     this.ws.send(chunk)
   }
 

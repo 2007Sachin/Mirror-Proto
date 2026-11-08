@@ -20,7 +20,7 @@ export type VoiceState =
 const ALLOWED: Record<VoiceState, readonly VoiceState[]> = {
   idle: ['requesting_permission', 'connecting', 'error', 'completed'],
   requesting_permission: ['connecting', 'error', 'idle'],
-  connecting: ['listening', 'reconnecting', 'error', 'completed'],
+  connecting: ['listening', 'speaking', 'reconnecting', 'error', 'completed'],
   listening: ['processing_speech', 'thinking', 'speaking', 'reconnecting', 'error', 'completed'],
   processing_speech: ['thinking', 'listening', 'reconnecting', 'error', 'completed'],
   thinking: ['speaking', 'listening', 'reconnecting', 'error', 'completed'],

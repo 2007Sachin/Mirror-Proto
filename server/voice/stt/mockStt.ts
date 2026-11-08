@@ -1,4 +1,5 @@
 import type { SttProvider, SttStream } from '../providers/types.js'
+import { VOICE_LIMITS } from '../limits.js'
 
 export interface MockSttOpts {
   /** Deterministic final transcript; defaults to MOCK_STT_FINAL_TEXT or a fixed string. */
@@ -7,6 +8,15 @@ export interface MockSttOpts {
   emitPartials?: boolean
   /** Simulate a provider failure on finalize(). */
   failOnFinalize?: boolean
+  /** Hang until abort — exercises finalize timeout. */
+  hangOnFinalize?: boolean
+  /** Delay before returning the final transcript. */
+  delayFinalizeMs?: number
+  /** Bounded queue; extra frames are dropped. */
+  maxQueuedFrames?: number
+  onDrop?: (dropped: number) => void
+  /** Fail the first connection so the gateway can use REST fallback. */
+  failConnect?: boolean
 }
 
 /**
@@ -18,14 +28,46 @@ export function createMockStt(opts: MockSttOpts = {}): SttProvider {
     startStream(): SttStream {
       let bytes = 0
       let aborted = false
-      let finalized = false
+      let utteranceFinalized = false
+      let queued = 0
+      let dropped = 0
       let partialCb: ((text: string) => void) | null = null
       let finalCb: ((text: string) => void) | null = null
       let errorCb: ((err: Error) => void) | null = null
+      const maxQueued = opts.maxQueuedFrames ?? VOICE_LIMITS.sttMaxQueuedFrames
+
+      if (opts.failConnect) {
+        return {
+          sendAudio() {},
+          onPartial() {},
+          onFinal() {},
+          onError(cb) {
+            errorCb = cb
+            queueMicrotask(() => errorCb?.(new Error('mock_stt_connect_failed')))
+          },
+          async finalize() {
+            throw new Error('mock_stt_connect_failed')
+          },
+          abort() {
+            aborted = true
+          },
+          isClosed() {
+            return true
+          },
+          async whenReady() {},
+        }
+      }
 
       return {
         sendAudio(chunk: Buffer) {
-          if (aborted || finalized) return
+          if (aborted) return
+          if (utteranceFinalized) utteranceFinalized = false
+          if (queued >= maxQueued) {
+            dropped += 1
+            opts.onDrop?.(dropped)
+            return
+          }
+          queued += 1
           bytes += chunk.length
           if (opts.emitPartials !== false) {
             partialCb?.(`[mock partial ${bytes} bytes]`)
@@ -42,23 +84,39 @@ export function createMockStt(opts: MockSttOpts = {}): SttProvider {
         },
         async finalize(): Promise<string> {
           if (aborted) throw new Error('stream_aborted')
-          if (finalized) throw new Error('already_finalized')
-          finalized = true
+          if (utteranceFinalized) throw new Error('already_finalized')
+          utteranceFinalized = true
           if (opts.failOnFinalize) {
             const err = new Error('mock_stt_finalize_failed')
             errorCb?.(err)
             throw err
           }
+          if (opts.hangOnFinalize) {
+            await new Promise((_, reject) => {
+              setTimeout(() => reject(new Error('stt_finalize_timeout')), opts.delayFinalizeMs ?? 30)
+            })
+          }
+          if (opts.delayFinalizeMs) {
+            await new Promise(resolve => setTimeout(resolve, opts.delayFinalizeMs))
+          }
           const text =
-            opts.finalText ??
-            process.env.MOCK_STT_FINAL_TEXT ??
-            'I owned the research and simplified onboarding after the product update.'
+            bytes === 0
+              ? ''
+              : (opts.finalText ??
+                process.env.MOCK_STT_FINAL_TEXT ??
+                'I owned the research and simplified onboarding after the product update.')
           finalCb?.(text)
+          queued = 0
+          bytes = 0
           return text
         },
         abort() {
           aborted = true
         },
+        isClosed() {
+          return aborted
+        },
+        async whenReady() {},
       }
     },
   }

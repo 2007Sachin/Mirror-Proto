@@ -21,6 +21,14 @@ const envSchema = z
     NIM_MODEL: z.string().optional(),
     SARVAM_API_KEY: z.string().optional(),
     SARVAM_BASE_URL: z.string().default('https://api.sarvam.ai'),
+    SARVAM_STT_MODEL: z.string().optional(),
+    SARVAM_STT_TRANSPORT: z.enum(['realtime', 'rest']).optional(),
+    SARVAM_STT_REALTIME_MODEL: z.string().optional(),
+    SARVAM_STT_REALTIME_URL: z.string().optional(),
+    SARVAM_STT_ENDPOINTING: z.enum(['manual', 'vad']).optional(),
+    SARVAM_TTS_MODEL: z.string().optional(),
+    SARVAM_LANGUAGE: z.string().optional(),
+    SARVAM_SPEAKER: z.string().optional(),
   })
   .transform((env, ctx) => {
     const nimBaseRaw = env.NVIDIA_NIM_BASE_URL || env.NIM_BASE_URL || DEFAULT_NIM_BASE
@@ -50,7 +58,7 @@ const envSchema = z
       nimBaseUrl: nimBaseUrl.toString().replace(/\/$/, ''),
       nimApiKey,
       nimModel,
-      sarvamApiKey: env.SARVAM_API_KEY ?? null,
+      sarvamApiKey: present(env.SARVAM_API_KEY),
       sarvamBaseUrl: (() => {
         try {
           return new URL(env.SARVAM_BASE_URL).toString().replace(/\/$/, '')
@@ -63,6 +71,15 @@ const envSchema = z
           return z.NEVER
         }
       })(),
+      sarvamSttModel: present(env.SARVAM_STT_MODEL) ?? 'saaras:v4',
+      sarvamSttTransport: env.SARVAM_STT_TRANSPORT ?? 'realtime',
+      sarvamSttRealtimeModel: present(env.SARVAM_STT_REALTIME_MODEL) ?? 'saaras:v3-realtime',
+      sarvamSttRealtimeUrl:
+        present(env.SARVAM_STT_REALTIME_URL) ?? 'wss://api.sarvam.ai/speech-to-text-realtime/ws',
+      sarvamSttEndpointing: env.SARVAM_STT_ENDPOINTING ?? 'manual',
+      sarvamTtsModel: present(env.SARVAM_TTS_MODEL) ?? 'bulbul:v3',
+      sarvamLanguage: present(env.SARVAM_LANGUAGE) ?? 'en-IN',
+      sarvamSpeaker: present(env.SARVAM_SPEAKER) ?? 'shubh',
     }
   })
 
@@ -81,4 +98,8 @@ export function isSupabaseConfigured(e: Env): boolean {
 
 export function isNimConfigured(e: Env): boolean {
   return Boolean(e.nimApiKey)
+}
+
+export function isSarvamConfigured(e: Env): boolean {
+  return Boolean(e.sarvamApiKey)
 }

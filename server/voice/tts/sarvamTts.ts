@@ -5,6 +5,7 @@ export interface SarvamTtsDeps {
   baseUrl: string
   fetchImpl?: typeof fetch
   speaker?: string
+  model?: string
 }
 
 /**
@@ -65,21 +66,24 @@ export function wavToPcm16kMono(wav: Buffer): Buffer | null {
  */
 export function createSarvamTts(deps: SarvamTtsDeps): TtsProvider {
   const fetchImpl = deps.fetchImpl ?? fetch
-  const speaker = deps.speaker ?? 'anushka'
+  const speaker = deps.speaker ?? 'shubh'
+  const model = deps.model ?? 'bulbul:v3'
   return {
     async *synthesizeStream(text: string, opts: TtsSynthesizeOpts): AsyncIterable<Buffer> {
       const res = await fetchImpl(`${deps.baseUrl}/text-to-speech`, {
         method: 'POST',
         headers: {
-          'X-API-Key': deps.apiKey,
+          'api-subscription-key': deps.apiKey,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          input: text,
-          target_language_code: opts.language,
+          text,
+          language_code: opts.language,
           speaker,
+          model,
           pace: opts.speed,
-          audio_format: 'wav',
+          speech_sample_rate: 16000,
+          output_audio_codec: 'wav',
         }),
       })
       if (!res.ok) throw new Error(`sarvam_tts_http_${res.status}`)

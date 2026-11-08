@@ -11,6 +11,7 @@ describe('GET /health', () => {
     expect(body.status).toBe('ok')
     expect(body.mode).toBe('memory')
     expect(typeof body.uptime).toBe('number')
+    expect(body.voice).toEqual({ configured: false, provider: 'mock', sttTransport: 'realtime' })
   })
 
   it('is also reachable under /api', async () => {

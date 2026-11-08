@@ -2,14 +2,14 @@ import { WebSocketServer, type WebSocket } from 'ws'
 import type { Server as HttpServer, IncomingMessage } from 'node:http'
 import type { Env } from '../config.js'
 import type { Repository } from '../repo/types.js'
-import { VOICE_LIMITS } from './limits.js'
+import { TURN_TOO_LONG_MESSAGE, VOICE_LIMITS } from './limits.js'
 import { encodeServerMessage, parseClientMessage, SeqTracker, PROTOCOL_VERSION, type ServerMessageType } from './protocol.js'
 import type { VoiceSession } from './sessionManager.js'
 import { SessionManager } from './sessionManager.js'
 import type { SttProvider, SttStream, TtsProvider } from './providers/types.js'
 import { createMockStt } from './stt/mockStt.js'
 import { createMockTts } from './tts/mockTts.js'
-import { createSarvamStt } from './stt/sarvamStt.js'
+import { createSttFromEnv } from './stt/createStt.js'
 import { createSarvamTts } from './tts/sarvamTts.js'
 import { TOTAL_QUESTIONS } from '../domain/questions.js'
 import { isNimConfigured, isSarvamConfigured } from '../config.js'
@@ -57,16 +57,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
   const log = deps.log ?? noopLog
   const sessionManager = new SessionManager()
   const liveVoice = isSarvamConfigured(deps.env)
-  const stt: SttProvider =
-    deps.stt ??
-    (liveVoice
-      ? createSarvamStt({
-          apiKey: deps.env.sarvamApiKey!,
-          baseUrl: deps.env.sarvamBaseUrl,
-          model: deps.env.sarvamSttModel,
-          language: deps.env.sarvamLanguage,
-        })
-      : createMockStt())
+  const stt: SttProvider = deps.stt ?? (liveVoice ? createSttFromEnv(deps.env) : createMockStt())
   const tts: TtsProvider =
     deps.tts ??
     (liveVoice
@@ -77,7 +68,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
           model: deps.env.sarvamTtsModel,
         })
       : createMockTts())
-  const providerLabel = liveVoice ? 'sarvam' : 'mock'
+  const providerLabel = liveVoice ? `sarvam:${deps.env.sarvamSttTransport}` : 'mock'
   const interviewProvider: ReflectionProvider | null =
     deps.provider !== undefined
       ? deps.provider
@@ -113,8 +104,8 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
   }
 
   function ensureSttStream(ctx: ConnectionCtx, session: VoiceSession): SttStream {
-    if (ctx.sttStream) return ctx.sttStream
-    const stream = stt.startStream({ language: 'en-IN', sampleRate: 16000 })
+    if (ctx.sttStream && !ctx.sttStream.isClosed()) return ctx.sttStream
+    const stream = stt.startStream({ language: deps.env.sarvamLanguage, sampleRate: 16000 })
     stream.onPartial((text) => {
       // Partials never advance state; emit only while still capturing.
       if (ctx.session === session && session.machine.current === 'listening' && !ctx.closed) {
@@ -123,17 +114,23 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
     })
     stream.onError(() => {
       if (ctx.session !== session || ctx.closed) return
+      const state = session.machine.current
+      if (state !== 'listening' && state !== 'processing_speech') {
+        if (ctx.sttStream?.isClosed()) ctx.sttStream = null
+        return
+      }
       session.machine.transition('error', session.currentTurnId)
       sendError(ctx, session, 'stt_error', 'speech recognition failed', true)
       session.machine.transition('listening', session.currentTurnId)
+      sendJson(ctx, 'state', session.id, session.currentTurnId, { state: 'listening', turnId: session.currentTurnId })
+      if (ctx.sttStream?.isClosed()) ctx.sttStream = null
     })
     ctx.sttStream = stream
     return stream
   }
 
   function resetCapture(ctx: ConnectionCtx, session: VoiceSession) {
-    ctx.sttStream?.abort()
-    ctx.sttStream = null
+    if (ctx.sttStream?.isClosed()) ctx.sttStream = null
     ctx.turnAudioBytes = 0
     ctx.turnAudioRejected = false
     session.machine.transition('listening', session.currentTurnId)
@@ -164,6 +161,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
     if (abort.aborted || ctx.closed || ctx.session !== session) return
     sendJson(ctx, 'tts_end', session.id, turnId, { turnId })
     sessionManager.touch(session)
+    void ensureSttStream(ctx, session).whenReady().catch(() => undefined)
   }
 
   async function runTurnPipeline(ctx: ConnectionCtx, session: VoiceSession, turnId: string) {
@@ -171,13 +169,17 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
     try {
       const stream = ctx.sttStream
       transcript = stream ? await stream.finalize() : ''
-    } catch {
+    } catch (err) {
+      const code = err instanceof Error && err.message === 'stt_finalize_timeout' ? 'stt_finalize_timeout' : 'stt_error'
+      ctx.sttStream?.abort()
       ctx.sttStream = null
       session.machine.transition('error', turnId)
-      sendError(ctx, session, 'stt_error', 'speech recognition failed', true)
+      sendError(ctx, session, code, code === 'stt_finalize_timeout' ? 'speech recognition timed out' : 'speech recognition failed', true)
       resetCapture(ctx, session)
+      sendJson(ctx, 'state', session.id, session.currentTurnId, { state: session.machine.current, turnId: session.currentTurnId })
       return
     }
+    ctx.sttStream?.abort()
     ctx.sttStream = null
     sessionManager.touch(session)
 
@@ -247,6 +249,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
     sessionManager.touch(session)
     resetCapture(ctx, session)
     sendJson(ctx, 'state', session.id, session.currentTurnId, { state: session.machine.current, turnId: session.currentTurnId })
+    void ensureSttStream(ctx, session).whenReady().catch(() => undefined)
   }
 
   async function handleHello(ctx: ConnectionCtx, msg: { payload?: unknown }) {
@@ -323,6 +326,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
     ctx.session = session
     session.machine.transition('connecting', session.currentTurnId)
     log(`voice session=${session.id} interview=${session.interviewId} stt=${providerLabel} tts=${providerLabel} bytes=0`)
+    void ensureSttStream(ctx, session).whenReady().catch(() => undefined)
     sendJson(ctx, 'session_ready', session.id, session.currentTurnId, {
       sessionId: session.id,
       interviewState: { questionIndex: progress.questionIndex, questionCount: progress.questionCount },
@@ -346,14 +350,18 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
         closeWith(ctx, session, 'message_too_large', 'binary frame exceeds 8KB')
         return
       }
+      if (data.length === 0 || data.length % 2 !== 0) {
+        sendError(ctx, session, 'invalid_frame', 'PCM16 frames must be even-sized', true)
+        return
+      }
       // Capture gate: audio arriving while speaking/processing is ignored.
       if (session.machine.current !== 'listening') return
       if (session.muted || ctx.turnAudioRejected) return
       ctx.turnAudioBytes += data.length
-      if (ctx.turnAudioBytes * 10 > VOICE_LIMITS.maxTurnAudioMs * 32) {
-        // ~20ms/640B chunks → bytes*10/32 ≈ ms captured. Cap at 5 minutes.
+      const capturedMs = ctx.turnAudioBytes / 32
+      if (capturedMs > VOICE_LIMITS.maxTurnAudioMs) {
         ctx.turnAudioRejected = true
-        sendError(ctx, session, 'turn_too_long', 'turn audio exceeds 5 minute limit', true)
+        sendError(ctx, session, 'turn_too_long', TURN_TOO_LONG_MESSAGE, true)
         return
       }
       ensureSttStream(ctx, session).sendAudio(data)
@@ -401,6 +409,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
         if (session.machine.current !== 'listening') return
         session.machine.transition('processing_speech', turnId)
         sendJson(ctx, 'state', session.id, turnId, { state: 'processing_speech', turnId })
+        void ensureSttStream(ctx, session).whenReady().catch(() => undefined)
         void runTurnPipeline(ctx, session, turnId)
         return
       }
@@ -475,6 +484,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
       ctx.closed = true
       ctx.ttsAbort.aborted = true
       ctx.sttStream?.abort()
+      ctx.sttStream = null
       if (ctx.session && ctx.session.machine.current !== 'completed') {
         sessionManager.tombstone(ctx.session)
         log(`voice disconnected session=${ctx.session.id} tombstoned`)

@@ -202,7 +202,16 @@ export function useVoiceSession(options: {
 
     client.on(MSG.TURN_REJECTED, payload => {
       const { reason, code } = payload as { turnId: string; reason: string; code: string }
-      setError({ code, message: reason, recoverable: true })
+      const turnId = client.currentTurnId ?? lastTurnIdRef.current
+      if (turnId) finalizeSentRef.current.delete(turnId)
+      const message =
+        code === 'empty_transcript'
+          ? 'No speech detected. Try speaking again, or type instead.'
+          : code === 'turn_too_long'
+            ? reason
+            : reason
+      setError({ code, message, recoverable: true })
+      setPartialTranscript('')
     })
 
     client.on(MSG.STATE, payload => {
@@ -217,6 +226,10 @@ export function useVoiceSession(options: {
     client.on(MSG.ERROR, payload => {
       const err = payload as { code: string; message: string; recoverable: boolean }
       setError(err)
+      if (err.code === 'turn_too_long') {
+        const turnId = client.currentTurnId ?? lastTurnIdRef.current
+        if (turnId) finalizeSentRef.current.delete(turnId)
+      }
       if (!err.recoverable) setVoiceState('error')
     })
 

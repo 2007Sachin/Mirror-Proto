@@ -87,6 +87,10 @@ export function createSarvamStt(deps: SarvamSttDeps): SttProvider {
           aborted = true
           ac.abort()
         },
+        isClosed() {
+          return aborted || finalized
+        },
+        async whenReady() {},
       }
     },
   }

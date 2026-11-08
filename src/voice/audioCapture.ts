@@ -20,7 +20,11 @@ export class AudioCapture {
   private muted = false
   private stopped = true
 
-  constructor(private readonly options: AudioCaptureOptions) {}
+  private readonly options: AudioCaptureOptions
+
+  constructor(options: AudioCaptureOptions) {
+    this.options = options
+  }
 
   get isActive(): boolean {
     return !this.stopped && this.stream !== null
@@ -49,37 +53,29 @@ export class AudioCapture {
     this.context = context
     const source = context.createMediaStreamSource(stream)
     this.source = source
-    // 48kHz (typical) → emit one 16kHz 20ms chunk every 4 input frames.
-    const inputChunkSize = Math.round((context.sampleRate * PCM_CHUNK_MS) / 1000)
-    const processor = context.createScriptProcessor(inputChunkSize, 1, 1)
+    const processor = context.createScriptProcessor(4096, 1, 1)
     this.processor = processor
-
-    let downsampleFactor = Math.max(1, Math.round(context.sampleRate / PCM_SAMPLE_RATE))
-    let resampleBuffer = new Float32Array(inputChunkSize / downsampleFactor)
+    const downsampleFactor = Math.max(1, Math.round(context.sampleRate / PCM_SAMPLE_RATE))
+    const targetSamples = PCM_CHUNK_BYTES / 2
+    const pending: number[] = []
 
     processor.onaudioprocess = (event: AudioProcessingEvent) => {
       if (this.stopped) return
       const input = event.inputBuffer.getChannelData(0)
 
-      // RMS level for orb volume (independent of mute, but muted → 0).
       let sum = 0
       for (let i = 0; i < input.length; i++) sum += input[i] * input[i]
       this.options.onLevel?.(this.muted ? 0 : Math.min(1, Math.sqrt(sum / input.length) * 3))
 
       if (this.muted) return
 
-      if (downsampleFactor === 1) {
-        this.options.onChunk(floatToPcm16(input))
-        return
+      for (let i = 0; i < input.length; i += downsampleFactor) {
+        pending.push(input[i])
       }
-      if (resampleBuffer.length !== Math.floor(input.length / downsampleFactor)) {
-        resampleBuffer = new Float32Array(Math.floor(input.length / downsampleFactor))
+      while (pending.length >= targetSamples) {
+        const slice = pending.splice(0, targetSamples)
+        this.options.onChunk(floatToPcm16(Float32Array.from(slice)))
       }
-      for (let i = 0; i < resampleBuffer.length; i++) {
-        // Simple decimation — sufficient for speech STT at 16 kHz.
-        resampleBuffer[i] = input[i * downsampleFactor]
-      }
-      this.options.onChunk(floatToPcm16(resampleBuffer))
     }
 
     source.connect(processor)

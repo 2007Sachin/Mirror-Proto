@@ -1,4 +1,4 @@
-export type InterviewStatus = 'in_progress' | 'completed'
+export type InterviewStatus = 'in_progress' | 'completed' | 'abandoned'
 export type TranscriptSource = 'text' | 'voice'
 
 export interface InterviewRow {
@@ -7,6 +7,7 @@ export interface InterviewRow {
   role: string
   industry: string | null
   status: InterviewStatus
+  askedQuestions: string[]
   createdAt: string
 }
 
@@ -44,6 +45,7 @@ export interface ReflectionRow {
 export interface CreateInterviewInput {
   role: string
   industry?: string
+  openingQuestion: string
 }
 
 export interface AddTurnInput {
@@ -68,6 +70,7 @@ export interface Repository {
   createInterview(workspace: string, input: CreateInterviewInput): Promise<InterviewRow>
   getInterview(workspace: string, id: string): Promise<InterviewRow | null>
   updateInterviewStatus(workspace: string, id: string, status: InterviewStatus): Promise<void>
+  appendAskedQuestion(workspace: string, id: string, question: string): Promise<InterviewRow | null>
   listInterviewsByRole(workspace: string, role: string): Promise<InterviewRow[]>
   addTurn(workspace: string, interviewId: string, input: AddTurnInput): Promise<TurnRow>
   getTurns(workspace: string, interviewId: string): Promise<TurnRow[]>

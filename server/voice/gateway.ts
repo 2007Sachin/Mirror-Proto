@@ -11,8 +11,11 @@ import { createMockStt } from './stt/mockStt.js'
 import { createMockTts } from './tts/mockTts.js'
 import { createSarvamStt } from './stt/sarvamStt.js'
 import { createSarvamTts } from './tts/sarvamTts.js'
-import { FIXED_QUESTIONS } from '../domain/questions.js'
-import { interviewProgress, questionText, submitVoiceTurn } from './interviewBridge.js'
+import { TOTAL_QUESTIONS } from '../domain/questions.js'
+import { isNimConfigured } from '../config.js'
+import { createNimClient } from '../providers/nim.js'
+import type { ReflectionProvider } from '../providers/types.js'
+import { interviewProgress, submitVoiceTurn } from './interviewBridge.js'
 
 export type LogFn = (msg: string) => void
 
@@ -21,6 +24,7 @@ export interface VoiceGatewayDeps {
   repo: Repository
   stt?: SttProvider
   tts?: TtsProvider
+  provider?: ReflectionProvider | null
   log?: LogFn
 }
 
@@ -63,6 +67,12 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
       ? createSarvamTts({ apiKey: deps.env.sarvamApiKey, baseUrl: deps.env.sarvamBaseUrl })
       : createMockTts())
   const providerLabel = deps.env.sarvamApiKey ? 'sarvam' : 'mock'
+  const interviewProvider: ReflectionProvider | null =
+    deps.provider !== undefined
+      ? deps.provider
+      : isNimConfigured(deps.env)
+        ? createNimClient(deps.env)
+        : null
   const lastHelloAt = new Map<string, number>()
   const wss = new WebSocketServer({ noServer: true })
   let sweepTimer: ReturnType<typeof setInterval> | null = null
@@ -118,6 +128,32 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
     session.machine.transition('listening', session.currentTurnId)
   }
 
+  async function speakQuestion(ctx: ConnectionCtx, session: VoiceSession, text: string, turnId: string, kind: 'opening' | 'next') {
+    session.pendingPlayback = kind
+    session.machine.transition('speaking', turnId)
+    sendJson(ctx, 'state', session.id, turnId, { state: 'speaking', turnId })
+    sendJson(ctx, 'question', session.id, turnId, { turnId, text, questionIndex: session.questionIndex })
+    sendJson(ctx, 'tts_start', session.id, turnId, { turnId })
+    const abort = { aborted: false }
+    ctx.ttsAbort = abort
+    try {
+      for await (const chunk of tts.synthesizeStream(text, { language: 'en-IN', speed: 1 })) {
+        if (abort.aborted || ctx.closed || ctx.session !== session) return
+        ctx.ws.send(chunk)
+      }
+    } catch {
+      if (!abort.aborted) {
+        session.machine.transition('error', turnId)
+        sendError(ctx, session, 'tts_error', 'speech synthesis failed', true)
+        resetCapture(ctx, session)
+      }
+      return
+    }
+    if (abort.aborted || ctx.closed || ctx.session !== session) return
+    sendJson(ctx, 'tts_end', session.id, turnId, { turnId })
+    sessionManager.touch(session)
+  }
+
   async function runTurnPipeline(ctx: ConnectionCtx, session: VoiceSession, turnId: string) {
     let transcript: string
     try {
@@ -146,6 +182,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
     }
     sendJson(ctx, 'final_transcript', session.id, turnId, { text: transcript, confidence: undefined })
     session.machine.transition('thinking', turnId)
+    sendJson(ctx, 'state', session.id, turnId, { state: 'thinking', turnId })
 
     const bridge = await submitVoiceTurn(
       deps.repo,
@@ -153,6 +190,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
       session.interviewId,
       session.questionIndex,
       transcript,
+      interviewProvider,
     )
     if (!bridge.ok) {
       const recoverable = bridge.status >= 500
@@ -181,32 +219,12 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
       return
     }
 
-    // Interview continues: speak the next question, gated on playback_complete.
+    session.finalizeCache.set(turnId, { accepted: true, payload: { questionIndex: session.questionIndex } })
+    sendJson(ctx, 'turn_accepted', session.id, turnId, { turnId, questionIndex: session.questionIndex })
     const nextIndex = bridge.nextQuestionIndex as number
-    const text = questionText(nextIndex)
-    session.machine.transition('speaking', turnId)
-    sendJson(ctx, 'question', session.id, turnId, { turnId, text, questionIndex: nextIndex })
-    sendJson(ctx, 'tts_start', session.id, turnId, { turnId })
-
-    const abort = { aborted: false }
-    ctx.ttsAbort = abort
-    try {
-      for await (const chunk of tts.synthesizeStream(text, { language: 'en-IN', speed: 1 })) {
-        if (abort.aborted || ctx.closed || ctx.session !== session) return
-        ctx.ws.send(chunk)
-      }
-    } catch {
-      if (!abort.aborted) {
-        session.machine.transition('error', turnId)
-        sendError(ctx, session, 'tts_error', 'speech synthesis failed', true)
-        resetCapture(ctx, session)
-      }
-      return
-    }
-    if (abort.aborted || ctx.closed || ctx.session !== session) return
-    sendJson(ctx, 'tts_end', session.id, turnId, { turnId })
-    sessionManager.touch(session)
-    // Stay in `speaking` until playback_complete arrives (playback gate).
+    session.questionIndex = nextIndex
+    session.currentTurnId = `${session.id}:${nextIndex}`
+    await speakQuestion(ctx, session, bridge.nextQuestion ?? '', session.currentTurnId, 'next')
   }
 
   function acceptPlaybackComplete(ctx: ConnectionCtx, session: VoiceSession, turnId: string) {
@@ -214,10 +232,8 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
       sendError(ctx, session, 'stale_turn', 'turn is not awaiting playback completion', true)
       return
     }
-    session.finalizeCache.set(turnId, { accepted: true, payload: { questionIndex: session.questionIndex } })
-    sessionManager.advanceTurn(session)
+    session.pendingPlayback = 'none'
     sessionManager.touch(session)
-    sendJson(ctx, 'turn_accepted', session.id, turnId, { turnId, questionIndex: session.questionIndex })
     resetCapture(ctx, session)
     sendJson(ctx, 'state', session.id, session.currentTurnId, { state: session.machine.current, turnId: session.currentTurnId })
   }
@@ -258,16 +274,14 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
       log(`voice resumed session=${resumed.id} interview=${resumed.interviewId}`)
       sendJson(ctx, 'session_ready', resumed.id, resumed.currentTurnId, {
         sessionId: resumed.id,
-        interviewState: { questionIndex: resumed.questionIndex, questionCount: FIXED_QUESTIONS.length },
+        interviewState: { questionIndex: resumed.questionIndex, questionCount: TOTAL_QUESTIONS },
       })
-      sendJson(ctx, 'state', resumed.id, resumed.currentTurnId, { state: 'listening', turnId: resumed.currentTurnId })
-      // Replay the current question so the client can resume mid-interview.
-      if (resumed.questionIndex < FIXED_QUESTIONS.length) {
-        sendJson(ctx, 'question', resumed.id, resumed.currentTurnId, {
-          turnId: resumed.currentTurnId,
-          text: questionText(resumed.questionIndex),
-          questionIndex: resumed.questionIndex,
-        })
+      const resumedProgress = await interviewProgress(deps.repo, resumed.workspace, resumed.interviewId)
+      if (resumedProgress?.currentQuestion) {
+        await speakQuestion(ctx, resumed, resumedProgress.currentQuestion, resumed.currentTurnId, 'opening')
+      } else {
+        resumed.machine.transition('listening', resumed.currentTurnId)
+        sendJson(ctx, 'state', resumed.id, resumed.currentTurnId, { state: 'listening', turnId: resumed.currentTurnId })
       }
       return
     }
@@ -279,7 +293,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
       closeWith(ctx, null, 'interview_not_found', 'interview does not exist')
       return
     }
-    if (progress.questionIndex >= progress.questionCount) {
+    if (progress.questionIndex >= TOTAL_QUESTIONS) {
       sendError(ctx, null, 'interview_already_completed', 'interview is already complete', false)
       closeWith(ctx, null, 'interview_already_completed', 'interview is complete')
       return
@@ -297,14 +311,13 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
       sessionId: session.id,
       interviewState: { questionIndex: progress.questionIndex, questionCount: progress.questionCount },
     })
-    session.machine.transition('listening', session.currentTurnId)
-    sendJson(ctx, 'state', session.id, session.currentTurnId, { state: 'listening', turnId: session.currentTurnId })
-    // The current question is (re)played for the first turn.
-    sendJson(ctx, 'question', session.id, session.currentTurnId, {
-      turnId: session.currentTurnId,
-      text: questionText(progress.questionIndex),
-      questionIndex: progress.questionIndex,
-    })
+    const opening = progress.currentQuestion
+    if (!opening) {
+      sendError(ctx, session, 'followup_not_ready', 'no question is ready for this turn', true)
+      resetCapture(ctx, session)
+      return
+    }
+    await speakQuestion(ctx, session, opening, session.currentTurnId, 'opening')
   }
 
   function handleMessage(ctx: ConnectionCtx, data: Buffer, isBinary: boolean) {
@@ -371,6 +384,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
         }
         if (session.machine.current !== 'listening') return
         session.machine.transition('processing_speech', turnId)
+        sendJson(ctx, 'state', session.id, turnId, { state: 'processing_speech', turnId })
         void runTurnPipeline(ctx, session, turnId)
         return
       }

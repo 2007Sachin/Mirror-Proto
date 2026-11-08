@@ -27,7 +27,11 @@ export class AudioPlayback {
   private completedFired = true
   private cancelled = false
 
-  constructor(private readonly options: AudioPlaybackOptions) {}
+  private readonly options: AudioPlaybackOptions
+
+  constructor(options: AudioPlaybackOptions) {
+    this.options = options
+  }
 
   get isPlaying(): boolean {
     return !this.completedFired || this.queue.length > 0
@@ -57,7 +61,7 @@ export class AudioPlayback {
   }
 
   /** Queue one PCM16 16 kHz mono chunk (Int16Array or ArrayBuffer). */
-  enqueue(chunk: Int16Array | ArrayBuffer): void {
+  enqueue(chunk: Int16Array | ArrayBuffer | ArrayBufferView): void {
     if (this.cancelled || !this.currentTurnId) return
     const context = this.ensureGraph()
     const pcm = pcm16ToFloat(chunk)
@@ -69,7 +73,7 @@ export class AudioPlayback {
     while (this.queue.length > 0 && !this.cancelled) {
       const { pcm } = this.queue.shift()!
       const buffer = context.createBuffer(1, pcm.length, PCM_SAMPLE_RATE)
-      buffer.copyToChannel(pcm, 0)
+      buffer.copyToChannel(Float32Array.from(pcm), 0)
       const source = context.createBufferSource()
       source.buffer = buffer
       source.connect(this.gain!)
@@ -126,8 +130,13 @@ export class AudioPlayback {
   }
 }
 
-export function pcm16ToFloat(chunk: Int16Array | ArrayBuffer): Float32Array {
-  const view = chunk instanceof ArrayBuffer ? new Int16Array(chunk) : chunk
+export function pcm16ToFloat(chunk: Int16Array | ArrayBuffer | ArrayBufferView): Float32Array {
+  const view =
+    chunk instanceof Int16Array
+      ? chunk
+      : chunk instanceof ArrayBuffer
+        ? new Int16Array(chunk)
+        : new Int16Array(chunk.buffer, chunk.byteOffset, Math.floor(chunk.byteLength / 2))
   const out = new Float32Array(view.length)
   for (let i = 0; i < view.length; i++) out[i] = view[i] / 0x8000
   return out

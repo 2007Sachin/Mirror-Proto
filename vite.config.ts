@@ -14,6 +14,10 @@ export default defineConfig({
         target: 'http://localhost:8787',
         rewrite: p => p.replace(/^\/api/, ''),
       },
+      '/ws/voice': {
+        target: 'ws://localhost:8787',
+        ws: true,
+      },
     },
   },
   resolve: {

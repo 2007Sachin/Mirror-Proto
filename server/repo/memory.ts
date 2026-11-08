@@ -14,10 +14,6 @@ interface WorkspaceBucket {
   reflections: Map<string, ReflectionRow>
 }
 
-/**
- * In-memory repository. Everything is keyed workspace-first — a workspace
- * bucket owns its rows, so cross-workspace reads are structurally impossible.
- */
 export function createMemoryRepository(): Repository {
   const workspaces = new Map<string, WorkspaceBucket>()
 
@@ -43,6 +39,7 @@ export function createMemoryRepository(): Repository {
         role: input.role,
         industry: input.industry ?? null,
         status: 'in_progress',
+        askedQuestions: [input.openingQuestion],
         createdAt: new Date().toISOString(),
       }
       b.interviews.set(row.id, row)
@@ -57,6 +54,13 @@ export function createMemoryRepository(): Repository {
     async updateInterviewStatus(workspace: string, id: string, status: InterviewRow['status']): Promise<void> {
       const row = workspaces.get(workspace)?.interviews.get(id)
       if (row) row.status = status
+    },
+
+    async appendAskedQuestion(workspace: string, id: string, question: string): Promise<InterviewRow | null> {
+      const row = workspaces.get(workspace)?.interviews.get(id)
+      if (!row) return null
+      row.askedQuestions = [...row.askedQuestions, question]
+      return row
     },
 
     async listInterviewsByRole(workspace: string, role: string): Promise<InterviewRow[]> {
@@ -91,8 +95,9 @@ export function createMemoryRepository(): Repository {
 
     async saveReflection(workspace: string, input: SaveReflectionInput): Promise<ReflectionRow> {
       const b = bucket(workspace)
+      const existing = b.reflections.get(input.interviewId)
       const row: ReflectionRow = {
-        id: crypto.randomUUID(),
+        id: existing?.id ?? crypto.randomUUID(),
         interviewId: input.interviewId,
         workspaceId: workspace,
         role: input.role,
@@ -101,7 +106,7 @@ export function createMemoryRepository(): Repository {
         evidence: input.evidence,
         focus: input.focus,
         model: input.model,
-        createdAt: new Date().toISOString(),
+        createdAt: existing?.createdAt ?? new Date().toISOString(),
       }
       b.reflections.set(input.interviewId, row)
       return row

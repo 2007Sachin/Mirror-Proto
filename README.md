@@ -25,9 +25,10 @@ Backend tests and type checks:
 ```bash
 npm test                      # server API suite (vitest)
 npm run typecheck:server      # server-only tsc
+npm run smoke                 # in-process API smoke (memory/mocked)
 ```
 
-See `.env.example` for Supabase/NVIDIA NIM configuration.
+See `.env.example` for Supabase/NVIDIA NIM configuration. The primary text-interview flow calls the Phase 1 API.
 
 ## Project structure
 
@@ -61,4 +62,4 @@ MIRROR-Product-Prototype/
 
 ## Prototype scope
 
-This package is frontend-only and uses demonstration state. Authentication, Supabase, Sarvam speech services, and NVIDIA NIM are not connected. No credentials or API keys are required to run the prototype.
+Phase 1 text interviews persist through the Hono API (`npm run dev:server`). Without NVIDIA/Supabase credentials the API runs in memory mode with catalog follow-ups; reflection generation returns a retryable provider error. Voice remains a Phase 2 preview. No authentication.

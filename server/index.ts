@@ -9,7 +9,7 @@ import type { Repository } from './repo/types.js'
 
 export function createRepository(): Repository {
   return isSupabaseConfigured(env)
-    ? createSupabaseRepository(env.supabaseUrl!, env.supabaseServiceRoleKey!)
+    ? createSupabaseRepository(env.supabaseUrl!, env.supabaseSecretKey!)
     : createMemoryRepository()
 }
 
@@ -22,11 +22,14 @@ export function buildServer() {
 export function startServer(port = env.port) {
   const { app, repo } = buildServer()
   const server = serve({ fetch: app.fetch, port })
-  attachVoiceGateway(server as unknown as import('node:http').Server, { env, repo, log: msg => console.log(`[voice] ${msg}`) })
+  attachVoiceGateway(server as unknown as import('node:http').Server, {
+    env,
+    repo,
+    log: msg => console.log(`[voice] ${msg}`),
+  })
   return server
 }
 
-// Run only when executed directly (not when imported by tests).
 const isMain = (() => {
   const entry = process.argv[1]
   if (!entry) return false

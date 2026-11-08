@@ -7,10 +7,10 @@ export function makeEnv(overrides: Partial<Env> = {}): Env {
   return {
     port: 8787,
     supabaseUrl: null,
-    supabaseServiceRoleKey: null,
+    supabaseSecretKey: null,
     nimBaseUrl: 'https://integrate.api.nvidia.com/v1',
     nimApiKey: null,
-    nimModel: 'meta/llama-3.3-70b-instruct',
+    nimModel: 'nvidia/nemotron-3.5-bolt-e4b',
     sarvamApiKey: null,
     sarvamBaseUrl: 'https://api.sarvam.ai',
     ...overrides,

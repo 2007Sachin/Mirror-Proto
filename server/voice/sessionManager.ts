@@ -17,6 +17,8 @@ export interface VoiceSession {
   muted: boolean
   /** Set when the socket dropped; eligible for resume within the reconnect window. */
   tombstonedAt: number | null
+  /** Opening prompt vs post-answer follow-up; playback_complete must not skip a question. */
+  pendingPlayback: 'none' | 'opening' | 'next'
 }
 
 export interface CreateSessionInput {
@@ -43,13 +45,14 @@ export class SessionManager {
       workspace: input.workspace,
       interviewId: input.interviewId,
       machine: new VoiceStateMachine(),
-      currentTurnId: `${id}:0`,
+      currentTurnId: `${id}:${input.questionIndex}`,
       questionIndex: input.questionIndex,
       finalizeCache: new Map(),
       createdAt: Date.now(),
       lastActivityAt: Date.now(),
       muted: false,
       tombstonedAt: null,
+      pendingPlayback: 'none',
     }
     this.sessions.set(id, session)
     return session

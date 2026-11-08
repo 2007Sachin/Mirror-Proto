@@ -2,7 +2,10 @@
 // URL: ws://localhost:8787/ws/voice (overridable via VITE_VOICE_WS_URL).
 
 export const VOICE_WS_URL: string =
-  (import.meta.env.VITE_VOICE_WS_URL as string | undefined) ?? 'ws://localhost:8787/ws/voice'
+  (import.meta.env.VITE_VOICE_WS_URL as string | undefined) ??
+  (typeof window !== 'undefined'
+    ? `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws/voice`
+    : 'ws://localhost:8787/ws/voice')
 
 export const PROTOCOL_VERSION = 1
 

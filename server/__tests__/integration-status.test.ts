@@ -6,7 +6,7 @@ describe('GET /integration-status', () => {
     const { app } = makeApp()
     const res = await app.request('/integration-status')
     expect(res.status).toBe(200)
-    expect((await j(res)).nim.model).toBe('meta/llama-3.3-70b-instruct')
+    expect((await j(res)).nim.model).toBe('nvidia/nemotron-3.5-bolt-e4b')
   })
 
   it('reports unconfigured providers without secrets or URLs', async () => {
@@ -15,7 +15,7 @@ describe('GET /integration-status', () => {
     expect(res.status).toBe(200)
     const body = await j(res)
     expect(body.supabase).toEqual({ configured: false, live: false })
-    expect(body.nim).toEqual({ configured: false, live: false, model: 'meta/llama-3.3-70b-instruct' })
+    expect(body.nim).toEqual({ configured: false, live: false, model: 'nvidia/nemotron-3.5-bolt-e4b' })
     expect(JSON.stringify(body)).not.toContain('http')
     expect(JSON.stringify(body)).not.toContain('key')
   })
@@ -33,6 +33,19 @@ describe('GET /integration-status', () => {
     const res = await app.request('/integration-status', { headers: WS })
     const body = await j(res)
     expect(body.supabase.configured).toBe(false)
+    expect(body.supabase.live).toBe(false)
+  })
+
+  it('marks configured supabase as not live when the phase-1 tables are unreachable', async () => {
+    const { app } = makeApp({
+      env: makeEnv({
+        supabaseUrl: 'https://example.invalid.supabase.co',
+        supabaseSecretKey: 'secret-role',
+      }),
+    })
+    const res = await app.request('/integration-status', { headers: WS })
+    const body = await j(res)
+    expect(body.supabase.configured).toBe(true)
     expect(body.supabase.live).toBe(false)
   })
 })

@@ -6,6 +6,7 @@ import { isNimConfigured, isSupabaseConfigured } from './config.js'
 import { FALLBACK_QUESTIONS, OPENING_QUESTION, TOTAL_QUESTIONS, fallbackQuestionAt } from './domain/questions.js'
 import { addTurnSchema, createInterviewSchema } from './domain/schemas.js'
 import { addTurn, canAbandon, canComplete, reconcileReadinessRange, validateEvidence } from './domain/stateMachine.js'
+import { PHASE1_TABLES } from './repo/supabase.js'
 import type { InterviewRow, ReflectionRow, Repository, TurnRow } from './repo/types.js'
 import type { ReflectionProvider } from './providers/types.js'
 import { ProviderFailure, createNimClient, type NimLog } from './providers/nim.js'
@@ -80,7 +81,11 @@ export function buildApp(deps: AppDeps): Hono {
     if (!isSupabaseConfigured(env)) return false
     try {
       const client = createClient(env.supabaseUrl!, env.supabaseSecretKey!)
-      const { error } = await client.from('workspaces').select('slug', { head: true, count: 'exact' }).limit(1)
+      const probe = client.from(PHASE1_TABLES.workspaces).select('slug').limit(1)
+      const timeout = new Promise<{ error: { message: string } }>(resolve => {
+        setTimeout(() => resolve({ error: { message: 'timeout' } }), 1500)
+      })
+      const { error } = await Promise.race([probe, timeout])
       return !error
     } catch {
       return false

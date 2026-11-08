@@ -84,18 +84,37 @@ function toReflectionRow(r: ReflectionRecord): ReflectionRow {
   }
 }
 
+/** Phase 1 tables. Prefixed to avoid the production `public.turns` table. */
+export const PHASE1_TABLES = {
+  workspaces: 'mirror_workspaces',
+  interviews: 'mirror_interviews',
+  turns: 'mirror_turns',
+  reflections: 'mirror_reflections',
+} as const
+
+export class PersistenceError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'PersistenceError'
+  }
+}
+
+function throwIf(error: { message: string } | null, action: string): void {
+  if (error) throw new PersistenceError(`failed to ${action}: ${error.message}`)
+}
+
 export function createSupabaseRepository(url: string, secretKey: string): Repository {
   const client: SupabaseClient = createClient(url, secretKey)
 
   return {
     async ensureWorkspace(slug: string): Promise<void> {
-      const { error } = await client.from('workspaces').upsert({ slug }, { onConflict: 'slug' })
-      if (error) throw new Error(`failed to ensure workspace: ${error.message}`)
+      const { error } = await client.from(PHASE1_TABLES.workspaces).upsert({ slug }, { onConflict: 'slug' })
+      throwIf(error, 'ensure workspace')
     },
 
     async createInterview(workspace: string, input: CreateInterviewInput): Promise<InterviewRow> {
       const { data, error } = await client
-        .from('interviews')
+        .from(PHASE1_TABLES.interviews)
         .insert({
           workspace_id: workspace,
           role: input.role,
@@ -105,13 +124,13 @@ export function createSupabaseRepository(url: string, secretKey: string): Reposi
         })
         .select()
         .single()
-      if (error) throw new Error(`failed to create interview: ${error.message}`)
+      throwIf(error, 'create interview')
       return toInterviewRow(data as InterviewRecord)
     },
 
     async getInterview(workspace: string, id: string): Promise<InterviewRow | null> {
       const { data, error } = await client
-        .from('interviews')
+        .from(PHASE1_TABLES.interviews)
         .select()
         .eq('id', id)
         .eq('workspace_id', workspace)
@@ -122,11 +141,11 @@ export function createSupabaseRepository(url: string, secretKey: string): Reposi
 
     async updateInterviewStatus(workspace: string, id: string, status: InterviewRow['status']): Promise<void> {
       const { error } = await client
-        .from('interviews')
+        .from(PHASE1_TABLES.interviews)
         .update({ status })
         .eq('id', id)
         .eq('workspace_id', workspace)
-      if (error) throw new Error(`failed to update interview status: ${error.message}`)
+      throwIf(error, 'update interview status')
     },
 
     async appendAskedQuestion(workspace: string, id: string, question: string): Promise<InterviewRow | null> {
@@ -134,29 +153,29 @@ export function createSupabaseRepository(url: string, secretKey: string): Reposi
       if (!current) return null
       const asked = [...current.askedQuestions, question]
       const { data, error } = await client
-        .from('interviews')
+        .from(PHASE1_TABLES.interviews)
         .update({ asked_questions: asked })
         .eq('id', id)
         .eq('workspace_id', workspace)
         .select()
         .single()
-      if (error) throw new Error(`failed to append question: ${error.message}`)
+      throwIf(error, 'append question')
       return toInterviewRow(data as InterviewRecord)
     },
 
     async listInterviewsByRole(workspace: string, role: string): Promise<InterviewRow[]> {
       const { data, error } = await client
-        .from('interviews')
+        .from(PHASE1_TABLES.interviews)
         .select()
         .eq('workspace_id', workspace)
         .eq('role', role)
-      if (error) throw new Error(`failed to list interviews: ${error.message}`)
+      throwIf(error, 'list interviews')
       return (data as InterviewRecord[]).map(toInterviewRow)
     },
 
     async addTurn(workspace: string, interviewId: string, input: AddTurnInput): Promise<TurnRow> {
       const { data, error } = await client
-        .from('turns')
+        .from(PHASE1_TABLES.turns)
         .insert({
           workspace_id: workspace,
           interview_id: interviewId,
@@ -167,24 +186,24 @@ export function createSupabaseRepository(url: string, secretKey: string): Reposi
         })
         .select()
         .single()
-      if (error) throw new Error(`failed to add turn: ${error.message}`)
+      throwIf(error, 'add turn')
       return toTurnRow(data as TurnRecord)
     },
 
     async getTurns(workspace: string, interviewId: string): Promise<TurnRow[]> {
       const { data, error } = await client
-        .from('turns')
+        .from(PHASE1_TABLES.turns)
         .select()
         .eq('workspace_id', workspace)
         .eq('interview_id', interviewId)
         .order('question_index', { ascending: true })
-      if (error) throw new Error(`failed to list turns: ${error.message}`)
+      throwIf(error, 'list turns')
       return (data as TurnRecord[]).map(toTurnRow)
     },
 
     async saveReflection(workspace: string, input: SaveReflectionInput): Promise<ReflectionRow> {
       const { data, error } = await client
-        .from('reflections')
+        .from(PHASE1_TABLES.reflections)
         .upsert(
           {
             workspace_id: workspace,
@@ -200,13 +219,13 @@ export function createSupabaseRepository(url: string, secretKey: string): Reposi
         )
         .select()
         .single()
-      if (error) throw new Error(`failed to save reflection: ${error.message}`)
+      throwIf(error, 'save reflection')
       return toReflectionRow(data as ReflectionRecord)
     },
 
     async getReflection(workspace: string, interviewId: string): Promise<ReflectionRow | null> {
       const { data, error } = await client
-        .from('reflections')
+        .from(PHASE1_TABLES.reflections)
         .select()
         .eq('interview_id', interviewId)
         .eq('workspace_id', workspace)

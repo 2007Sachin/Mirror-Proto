@@ -5,7 +5,7 @@ import { z } from 'zod'
 loadDotenv()
 
 const DEFAULT_NIM_BASE = 'https://integrate.api.nvidia.com/v1'
-const DEFAULT_NIM_MODEL = 'meta/llama-3.3-70b-instruct'
+const DEFAULT_NIM_MODEL = 'nvidia/nemotron-3.5-bolt-e4b'
 
 const envSchema = z
   .object({
@@ -36,12 +36,16 @@ const envSchema = z
       })
       return z.NEVER
     }
-    const nimApiKey = env.NVIDIA_NIM_API_KEY ?? env.NIM_API_KEY ?? null
+    const present = (value: string | undefined) => {
+      const trimmed = value?.trim()
+      return trimmed ? trimmed : null
+    }
+    const nimApiKey = present(env.NVIDIA_NIM_API_KEY) ?? present(env.NIM_API_KEY)
     const nimModel = env.NVIDIA_NIM_MODEL || env.NIM_MODEL || DEFAULT_NIM_MODEL
-    const supabaseSecret = env.SUPABASE_SECRET_KEY ?? env.SUPABASE_SERVICE_ROLE_KEY ?? null
+    const supabaseSecret = present(env.SUPABASE_SECRET_KEY) ?? present(env.SUPABASE_SERVICE_ROLE_KEY)
     return {
       port: env.PORT,
-      supabaseUrl: env.SUPABASE_URL ?? null,
+      supabaseUrl: present(env.SUPABASE_URL),
       supabaseSecretKey: supabaseSecret,
       nimBaseUrl: nimBaseUrl.toString().replace(/\/$/, ''),
       nimApiKey,

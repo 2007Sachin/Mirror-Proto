@@ -1,53 +1,39 @@
-import { useEffect, useId, useState, type FormEvent } from 'react'
+import { useEffect, useState } from 'react'
 import FluidOrb from '../components/FluidOrb'
 import '../landing.css'
 
-const EXAMPLE_ANSWER = 'I kept the pilot to one team so we could see what broke before we scaled it.'
-
-const steps = [
-  {
-    index: '01',
-    title: 'Bring a real moment',
-    summary: 'A college project, an internship task, or a decision from work. Rough is fine.',
-    detail: 'Name the moment in a sentence. You do not need the polished version. MIRROR starts from what you actually bring.',
-  },
-  {
-    index: '02',
-    title: 'Answer in order',
-    summary: 'What happened, what you did, what changed, and what you would do next.',
-    detail: 'The next question comes only after you answer. Follow-ups stay with what you actually said.',
-  },
-  {
-    index: '03',
-    title: 'See what you said',
-    summary: 'The notes stay tied to your exact words. One concrete thing to practise next.',
-    detail: 'The note quotes the line you typed or spoke. Nothing is added that you did not say.',
-  },
+const MOMENTS = [
+  'Finished the course',
+  'Built the project',
+  'Did the internship',
+  'Solved the problems',
 ] as const
 
-function useOrbSize(desktop: number, mobile: number) {
-  const [size, setSize] = useState(desktop)
-  useEffect(() => {
-    const media = window.matchMedia('(max-width: 720px)')
-    const apply = () => setSize(media.matches ? mobile : desktop)
-    apply()
-    media.addEventListener('change', apply)
-    return () => media.removeEventListener('change', apply)
-  }, [desktop, mobile])
-  return size
-}
+const QUESTIONS = [
+  'Tell me about a project you worked on.',
+  'What was your part?',
+  'What would you do differently?',
+] as const
 
-function quoteClip(text: string, max = 140) {
-  const clean = text.replace(/\s+/g, ' ').trim()
-  if (clean.length <= max) return clean
-  const cut = clean.slice(0, max)
-  const last = cut.lastIndexOf(' ')
-  const base = (last > 48 ? cut.slice(0, last) : cut).trim()
-  return `${base}…`
-}
+const STEPS = [
+  'Start with something you did — A project, an internship, or a decision at work. It doesn’t have to be polished.',
+  'Add more if you want — The role, the job description, your resume. Helpful, not required.',
+  'Answer the questions — What happened, what you did, what changed. One at a time.',
+  'See the notes — They only use what you said. You leave with one thing to practise.',
+] as const
+
+const GAINS = [
+  'Something to practise — One clear next step. Not a score.',
+  'Only your words — If there’s a note, your line is right there with it.',
+  'It stays private — Nothing is shared. Audio isn’t stored.',
+] as const
+
+const EXTRAS = ['A moment', 'The role you want', 'Job description', 'Your resume'] as const
 
 function usePrefersReducedMotion() {
-  const [reduced, setReduced] = useState(false)
+  const [reduced, setReduced] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  )
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)')
     const apply = () => setReduced(media.matches)
@@ -58,169 +44,65 @@ function usePrefersReducedMotion() {
   return reduced
 }
 
-function scrollToId(id: string) {
-  const node = document.getElementById(id)
+function useOrbSize(desktop: number, mobile: number) {
+  const [size, setSize] = useState(desktop)
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 760px)')
+    const apply = () => setSize(media.matches ? mobile : desktop)
+    apply()
+    media.addEventListener('change', apply)
+    return () => media.removeEventListener('change', apply)
+  }, [desktop, mobile])
+  return size
+}
+
+function scrollToHow() {
+  const node = document.getElementById('how')
   if (!node) return
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   node.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
 }
 
-function HeroDemo() {
-  const fieldId = useId()
-  const [draft, setDraft] = useState('')
-  const [note, setNote] = useState<string | null>(null)
-  const [hint, setHint] = useState('')
-  const listening = note === null
-  const orbSize = useOrbSize(268, 120)
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault()
-    const text = draft.trim()
-    if (!text) {
-      setHint('Write a line first. The note can only use your words.')
-      setNote(null)
-      return
-    }
-    setHint('')
-    setNote(quoteClip(text))
-  }
-
-  const reset = () => {
-    setNote(null)
-    setHint('')
-  }
-
-  return (
-    <div className="ml-panel">
-      <div className="ml-panel-top">
-        <span>One of four</span>
-        <p className="ml-stage" role="status">
-          <i className={listening ? 'is-live' : ''} />
-          {listening ? 'Listening' : 'Looking at your words'}
-        </p>
-      </div>
-      <FluidOrb size={orbSize} className="ml-hero-orb" role="img" aria-label={listening ? 'MIRROR orb, listening' : 'MIRROR orb, looking at your words'} />
-      <form onSubmit={submit}>
-        <label htmlFor={fieldId}>What part of that decision was yours?</label>
-        <textarea
-          id={fieldId}
-          value={draft}
-          onChange={event => {
-            setDraft(event.target.value)
-            if (hint) setHint('')
-          }}
-          rows={3}
-          placeholder="A rough line is enough."
-          onKeyDown={event => {
-            if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-              event.preventDefault()
-              event.currentTarget.form?.requestSubmit()
-            }
-          }}
-        />
-        {hint && <p className="ml-hint" role="status">{hint}</p>}
-        <div className="ml-panel-actions">
-          <p>Type or speak · Rough is fine</p>
-          <button type="submit" className="ml-button">See the note</button>
-        </div>
-      </form>
-      {note && (
-        <figure className="ml-note">
-          <figcaption>From what you said</figcaption>
-          <blockquote>“{note}”</blockquote>
-          <button type="button" className="ml-text" onClick={reset}>Write another line</button>
-        </figure>
-      )}
-    </div>
-  )
-}
-
-function SeePass({ reduced }: { reduced: boolean }) {
-  const [phase, setPhase] = useState(reduced ? 2 : 0)
-  const [count, setCount] = useState(reduced ? EXAMPLE_ANSWER.length : 0)
-  const [paused, setPaused] = useState(reduced)
-  const shown = phase === 0 ? '' : EXAMPLE_ANSWER.slice(0, phase === 2 || reduced ? EXAMPLE_ANSWER.length : count)
-  const showNote = phase === 2 || reduced
+function HeroSequence({ reduced }: { reduced: boolean }) {
+  const total = MOMENTS.length + 1 + QUESTIONS.length
+  const [count, setCount] = useState(0)
+  const shown = reduced ? total : count
 
   useEffect(() => {
-    if (reduced || paused) return
-    if (phase === 0) {
-      const timer = window.setTimeout(() => setPhase(1), 1500)
-      return () => window.clearTimeout(timer)
-    }
-    if (phase === 1) {
-      if (count >= EXAMPLE_ANSWER.length) {
-        const timer = window.setTimeout(() => setPhase(2), 650)
-        return () => window.clearTimeout(timer)
-      }
-      const timer = window.setTimeout(() => setCount(value => value + 1), 24)
-      return () => window.clearTimeout(timer)
-    }
-    const timer = window.setTimeout(() => {
-      setCount(0)
-      setPhase(0)
-    }, 3400)
-    return () => window.clearTimeout(timer)
-  }, [phase, count, paused, reduced])
-
-  const jump = (next: number) => {
-    setPaused(true)
-    setPhase(next)
-    setCount(next === 0 ? 0 : EXAMPLE_ANSWER.length)
-  }
-
-  const labels = ['Question', 'Answer', 'Notes'] as const
-  const orbSize = useOrbSize(200, 120)
+    if (reduced) return
+    let current = 0
+    const id = window.setInterval(() => {
+      current += 1
+      setCount(current)
+      if (current >= total) window.clearInterval(id)
+    }, 340)
+    return () => window.clearInterval(id)
+  }, [reduced, total])
 
   return (
-    <div className="ml-pass">
-      <div className="ml-pass-orb">
-        <FluidOrb size={orbSize} role="img" aria-label="MIRROR orb during an example pass" />
-      </div>
-      <div className="ml-pass-copy">
-        <div className="ml-pass-kicker">
-          <span>Example pass</span>
-          <p role="status">{labels[phase]}</p>
-        </div>
-        <div className="ml-meter" aria-hidden="true"><i style={{ width: `${((phase + 1) / 3) * 100}%` }} /></div>
-        <p className="ml-pass-q">What part of that decision was yours?</p>
-        <p className={`ml-pass-a ${shown ? 'is-on' : ''}`} aria-hidden={shown ? undefined : true}>
-          {shown}
-          {phase === 1 && !paused && !reduced && <span className="ml-caret" />}
-        </p>
-        {showNote && (
-          <figure className="ml-note ml-note--pass">
-            <figcaption>From what you said</figcaption>
-            <blockquote>“{EXAMPLE_ANSWER}”</blockquote>
-          </figure>
-        )}
-        <div className="ml-pass-controls">
-          {labels.map((label, index) => (
-            <button
-              key={label}
-              type="button"
-              className={phase === index ? 'is-on' : ''}
-              aria-pressed={phase === index}
-              onClick={() => jump(index)}
-            >
-              {label}
-            </button>
-          ))}
-          {!reduced && (
-            <button type="button" className="ml-text" onClick={() => setPaused(value => !value)} aria-pressed={paused}>
-              {paused ? 'Play' : 'Pause'}
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
+    <>
+      <ul className="ml-pills">
+        {MOMENTS.map((item, index) => (
+          <li key={item} className={shown > index ? 'is-on' : undefined}>{item}</li>
+        ))}
+      </ul>
+      <p className={shown > MOMENTS.length ? 'ml-trip is-on' : 'ml-trip'}>
+        These are the questions that usually trip people up.
+      </p>
+      <ul className="ml-questions">
+        {QUESTIONS.map((item, index) => (
+          <li key={item} className={shown > MOMENTS.length + 1 + index ? 'is-on' : undefined}>{item}</li>
+        ))}
+      </ul>
+    </>
   )
 }
 
 export default function Landing({ onTry }: { onTry: () => void }) {
   const reduced = usePrefersReducedMotion()
-  const closeSize = useOrbSize(240, 160)
-  const [open, setOpen] = useState<number | null>(0)
+  const heroSize = useOrbSize(240, 168)
+  const sideSize = useOrbSize(200, 160)
+  const closeSize = useOrbSize(220, 168)
 
   return (
     <div className="mirror-landing" id="top">
@@ -234,92 +116,80 @@ export default function Landing({ onTry }: { onTry: () => void }) {
             window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' })
           }}
         >
-          <span className="ml-mark" aria-hidden="true"><i /><i /></span>
           MIRROR
         </a>
-        <nav aria-label="Page">
-          <a href="#how" onClick={event => { event.preventDefault(); scrollToId('how') }}>How it works</a>
-          <a href="#see" onClick={event => { event.preventDefault(); scrollToId('see') }}>See a pass</a>
-        </nav>
-        <button type="button" className="ml-button ml-button--header" onClick={onTry}>Try MIRROR</button>
+        <button type="button" className="ml-button" onClick={onTry}>Start with one moment</button>
       </header>
 
       <main>
         <section className="ml-hero" aria-labelledby="mirror-hero-title">
           <div className="ml-hero-copy">
-            <p className="ml-kicker">Four ordered questions</p>
-            <h1 id="mirror-hero-title">You already have the moment. <span>Find the answer.</span></h1>
-            <p className="ml-lede">MIRROR asks four questions about a college project, internship, or work decision. The feedback stays with the exact words you said.</p>
-            <button type="button" className="ml-button ml-button--primary" onClick={onTry}>Start with one moment</button>
-            <p className="ml-aside">Type or speak · Rough is fine</p>
+            <p className="ml-eyebrow">For students and early-career</p>
+            <h1 id="mirror-hero-title">You know what you did.<br />Saying it is the hard part.</h1>
+            <p className="ml-lede">Someone asks about a project or a decision. You have the details. They just don’t come out cleanly.</p>
+            <HeroSequence reduced={reduced} />
+            <button type="button" className="ml-button" onClick={scrollToHow}>See how it works</button>
           </div>
-          <HeroDemo />
+          <FluidOrb size={heroSize} aria-hidden="true" />
         </section>
 
-        <p className="ml-trust">Not another list of sample answers. A clearer way to understand your own experience.</p>
+        <p className="ml-trust">Not another list of sample answers.</p>
 
-        <section className="ml-see" id="see" aria-labelledby="see-title">
-          <div className="ml-section-head">
-            <h2 id="see-title">A question, your line, then the note.</h2>
-            <p>The pass below is an example. In the panel above, the note uses only what you type.</p>
-          </div>
-          <SeePass reduced={reduced} />
-        </section>
-
-        <section className="ml-how" id="how" aria-labelledby="how-title">
-          <div className="ml-section-head">
-            <h2 id="how-title">Four questions. Then the notes on your words.</h2>
-            <p>You start with one real moment. The next question comes only after you answer. The feedback cites the line you typed or spoke.</p>
-          </div>
-          <div className="ml-steps">
-            {steps.map((step, index) => {
-              const expanded = open === index
-              const panelId = `mirror-step-${step.index}`
-              return (
-                <article key={step.index} className={`ml-step ${expanded ? 'is-open' : ''}`}>
-                  <h3>
-                    <button
-                      type="button"
-                      aria-expanded={expanded}
-                      aria-controls={panelId}
-                      id={`${panelId}-button`}
-                      onClick={() => setOpen(expanded ? null : index)}
-                    >
-                      <span className="ml-step-index">{step.index}</span>
-                      <span className="ml-step-copy">
-                        <strong>{step.title}</strong>
-                        <span>{step.summary}</span>
-                      </span>
-                      <span className="ml-chevron" aria-hidden="true" />
-                    </button>
-                  </h3>
-                  <div
-                    className="ml-step-panel"
-                    id={panelId}
-                    role="region"
-                    aria-labelledby={`${panelId}-button`}
-                    aria-hidden={!expanded}
-                  >
-                    <div><p>{step.detail}</p></div>
-                  </div>
-                </article>
-              )
-            })}
-          </div>
-        </section>
-
-        <section className="ml-close" id="close" aria-labelledby="close-title">
-          <FluidOrb size={closeSize} className="ml-close-orb" role="img" aria-label="MIRROR orb" />
+        <section className="ml-split" aria-labelledby="what-title">
           <div>
-            <h2 id="close-title">What could your experience sound like, clearly told?</h2>
-            <button type="button" className="ml-button ml-button--primary" onClick={onTry}>Start with one moment</button>
-            <p className="ml-aside">Type or speak · Rough is fine</p>
+            <h2 id="what-title">What this is</h2>
+            <p>You bring one real thing you did — a project, an internship task, something from work.</p>
+            <p>MIRROR asks you about it. One question at a time. Then it shows you notes that only use the words you actually said.</p>
+            <p>You leave knowing what to practise next. No score. Nothing made up.</p>
+            <ul className="ml-pills ml-pills--still">
+              {EXTRAS.map(item => <li key={item} className="is-on">{item}</li>)}
+            </ul>
+            <p className="ml-wait">Start with whatever you have. The rest can wait.</p>
           </div>
+          <FluidOrb size={sideSize} aria-hidden="true" />
+        </section>
+
+        <section className="ml-block" aria-labelledby="looks-title">
+          <h2 id="looks-title">What it looks like</h2>
+          <div className="ml-story">
+            <p>Priya had a group project. She knew what she did. She just couldn’t say it cleanly.</p>
+            <p>She added the role she was applying for and pasted the job description. Then she answered one question.</p>
+            <div className="ml-exchange">
+              <p className="ml-asked">What was your part?</p>
+              <p>I kept the pilot small so we could see what broke before we changed everything.</p>
+            </div>
+            <p>The note used her exact line. It didn’t add anything. She left with one thing to try next time: say what happened in one sentence.</p>
+          </div>
+        </section>
+
+        <section className="ml-block" id="how" aria-labelledby="how-title">
+          <h2 id="how-title">How it goes</h2>
+          <ol className="ml-steps">
+            {STEPS.map((step, index) => (
+              <li key={step}>
+                <span>{index + 1}</span>
+                <p>{step}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section className="ml-block" aria-labelledby="get-title">
+          <h2 id="get-title">What you get</h2>
+          <ul className="ml-gains">
+            {GAINS.map(item => <li key={item}>{item}</li>)}
+          </ul>
+        </section>
+
+        <section className="ml-close" aria-labelledby="close-title">
+          <FluidOrb size={closeSize} aria-hidden="true" />
+          <h2 id="close-title">Want to try it with something you did?</h2>
+          <button type="button" className="ml-button" onClick={onTry}>Start with one moment</button>
         </section>
       </main>
 
       <footer className="ml-footer">
-        <p>MIRROR · Four ordered answers · Feedback tied to your words</p>
+        <p>MIRROR</p>
       </footer>
     </div>
   )

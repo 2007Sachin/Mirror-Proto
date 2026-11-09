@@ -276,7 +276,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    document.title = 'MIRROR — You already have the moment'
+    document.title = 'MIRROR — You know what you did'
   }, [])
 
   useEffect(() => {

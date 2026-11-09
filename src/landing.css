@@ -13,12 +13,7 @@
   line-height: 1.55;
 }
 .mirror-landing * { box-sizing: border-box; }
-.mirror-landing h1,
-.mirror-landing h2,
-.mirror-landing h3,
-.mirror-landing p,
-.mirror-landing ul,
-.mirror-landing ol { margin: 0; padding: 0; }
+.mirror-landing :where(h1, h2, h3, p, ul, ol) { margin: 0; padding: 0; }
 .mirror-landing ul,
 .mirror-landing ol { list-style: none; }
 .mirror-landing a:focus-visible,
@@ -64,8 +59,12 @@
 .ml-btn:hover { transform: translateY(-1px); }
 
 .ml-hero {
-  padding-top: 64px;
-  padding-bottom: 40px;
+  padding-top: 40px;
+  padding-bottom: 20px;
+}
+.ml-hero-col {
+  max-width: 640px;
+  margin: 0 auto;
   text-align: center;
 }
 .ml-eyebrow {
@@ -73,109 +72,118 @@
   letter-spacing: 0.04em;
   color: var(--accent);
   font-weight: 600;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 .ml-hero h1 {
   font-size: clamp(2.3rem, 4.8vw, 3.4rem);
   line-height: 1.08;
   letter-spacing: -0.03em;
   font-weight: 650;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 .ml-lede {
   font-size: 1.125rem;
   color: var(--muted);
-  max-width: 480px;
-  margin: 0 auto 28px;
+  max-width: 34rem;
+  margin: 0 auto 20px;
 }
 .ml-done {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px 14px;
-  margin-bottom: 28px;
-  min-height: 36px;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 .ml-done li {
+  display: none;
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 8px 14px;
   font-size: 0.9375rem;
-  opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 0.4s ease, transform 0.4s ease;
+  text-align: left;
 }
-.ml-done li.is-on { opacity: 1; transform: translateY(0); }
+.ml-done li.is-on { display: inline-flex; animation: ml-in 0.4s ease; }
 .ml-question {
+  display: none;
   font-size: clamp(1.35rem, 2.6vw, 1.75rem);
   letter-spacing: -0.02em;
   font-weight: 600;
-  margin: 24px 0 14px;
-  opacity: 0;
-  transition: opacity 0.5s ease;
+  margin: 0 0 12px;
 }
-.ml-question.is-on { opacity: 1; }
+.ml-question.is-on { display: block; animation: ml-in 0.4s ease; }
 .ml-examples {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  margin: 16px 0 28px;
-  min-height: 110px;
+  align-items: stretch;
+  gap: 12px;
+  width: min(100%, 420px);
+  margin: 0 auto 20px;
 }
 .ml-examples li {
+  display: none;
   background: var(--accent-soft);
   border-radius: 12px;
   padding: 10px 16px;
   font-size: 0.9375rem;
-  max-width: 400px;
-  opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 0.4s ease, transform 0.4s ease;
+  text-align: left;
 }
-.ml-examples li.is-on { opacity: 1; transform: translateY(0); }
-.ml-orb { margin: 32px auto 0; width: max-content; }
-.ml-orb--side { margin: 0; }
-.ml-orb--close { margin: 0 auto 18px; }
+.ml-examples li.is-on { display: block; animation: ml-in 0.4s ease; }
+@keyframes ml-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.ml-orb { width: max-content; }
+.ml-orb--hero { margin: 24px auto 0; }
+.ml-orb--side { margin: 0; justify-self: end; }
+.ml-orb--close { margin: 0; }
 
 .ml-trust {
-  padding-top: 18px;
-  padding-bottom: 18px;
+  width: 100%;
+  padding: 12px 28px;
   text-align: center;
   font-size: 0.9375rem;
   color: var(--muted);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
-.mirror-landing section { padding-top: 56px; padding-bottom: 56px; }
-.mirror-landing section.ml-hero { padding-top: 64px; padding-bottom: 40px; }
-.mirror-landing section.ml-close { padding-top: 64px; padding-bottom: 56px; }
+.mirror-landing section { padding-top: 32px; padding-bottom: 32px; }
+.mirror-landing section + section { padding-top: 0; }
+.mirror-landing section.ml-hero { padding-top: 36px; padding-bottom: 16px; }
+#what { padding-top: 16px; }
+.mirror-landing section.ml-close { padding-bottom: 24px; }
 .mirror-landing h2 {
   font-size: clamp(1.7rem, 2.8vw, 2.2rem);
   letter-spacing: -0.025em;
   font-weight: 650;
   line-height: 1.15;
-  margin-bottom: 12px;
+  text-align: left;
 }
 .ml-section-lede {
   color: var(--muted);
-  max-width: 520px;
-  margin-bottom: 24px;
   font-size: 1.0625rem;
+  text-align: left;
 }
 .ml-what {
   display: grid;
-  grid-template-columns: 1fr 200px;
-  gap: 40px;
+  grid-template-columns: minmax(0, 520px) 180px;
+  justify-content: space-between;
   align-items: center;
+  gap: 24px;
 }
-.ml-what p { margin-bottom: 14px; color: var(--muted); }
+.ml-what-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 520px;
+  text-align: left;
+}
+.ml-what p { margin: 0; color: var(--muted); }
 .ml-bring {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 14px;
 }
 .ml-bring li {
   background: #fff;
@@ -183,35 +191,47 @@
   border-radius: 999px;
   padding: 6px 12px;
   font-size: 0.875rem;
+  text-align: left;
 }
-.ml-wait { margin-top: 10px; font-size: 0.9375rem; }
+.ml-wait { font-size: 0.9375rem; }
+.ml-looks,
+.ml-how {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  text-align: left;
+}
+.ml-looks { max-width: 620px; }
+.ml-how { max-width: 520px; }
 .ml-story {
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 20px;
-  padding: 28px 24px;
-  max-width: 620px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
 }
-.ml-story p { color: var(--muted); margin-bottom: 12px; }
+.ml-story p { color: var(--muted); margin: 0; }
 .ml-line {
   background: var(--accent-soft);
   border-radius: 10px;
   padding: 10px 14px;
-  margin: 10px 0;
   font-size: 0.9375rem;
-  color: var(--ink) !important;
+  color: var(--ink);
+  text-align: left;
 }
-.ml-after { margin-top: 14px; }
 .ml-steps {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  max-width: 520px;
+  gap: 16px;
 }
 .ml-steps li {
   display: grid;
-  grid-template-columns: 32px 1fr;
-  gap: 12px;
+  grid-template-columns: 26px minmax(0, 1fr);
+  column-gap: 12px;
   align-items: start;
 }
 .ml-steps span {
@@ -226,26 +246,41 @@
   font-size: 0.8125rem;
   font-weight: 600;
 }
-.ml-steps h3 { font-size: 1.03125rem; font-weight: 600; margin-bottom: 2px; }
-.ml-steps p { color: var(--muted); font-size: 0.9375rem; }
+.ml-steps h3 {
+  min-height: 26px;
+  display: flex;
+  align-items: center;
+  font-size: 1.03125rem;
+  font-weight: 600;
+  margin: 0 0 2px;
+  text-align: left;
+}
+.ml-steps p { color: var(--muted); font-size: 0.9375rem; margin: 0; text-align: left; }
 .ml-expect {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+  align-items: stretch;
+  margin-top: 16px;
 }
 .ml-expect article {
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 18px 16px;
+  padding: 16px;
+  text-align: left;
+  height: 100%;
 }
-.ml-expect h3 { font-size: 1rem; margin-bottom: 6px; font-weight: 650; }
-.ml-expect p { color: var(--muted); font-size: 0.9rem; }
+.ml-expect h3 { font-size: 1rem; margin: 0 0 6px; font-weight: 650; text-align: left; }
+.ml-expect p { color: var(--muted); font-size: 0.9rem; margin: 0; text-align: left; }
 .ml-close {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  padding-top: 64px;
-  padding-bottom: 56px;
+  gap: 18px;
 }
+.ml-close h2 { text-align: center; margin: 0; }
 .ml-footer {
   padding-top: 22px;
   padding-bottom: 22px;
@@ -258,15 +293,19 @@
 
 @media (max-width: 800px) {
   .ml-what, .ml-expect { grid-template-columns: 1fr; }
-  .mirror-landing section { padding-top: 44px; padding-bottom: 44px; }
-  .mirror-landing section.ml-hero { padding-top: 48px; padding-bottom: 32px; }
-  .ml-wrap { padding-left: 16px; padding-right: 16px; }
+  .ml-what { justify-items: stretch; }
+  .ml-orb--side { justify-self: center; margin-top: 4px; }
+  .mirror-landing section { padding-top: 28px; padding-bottom: 28px; }
+  .mirror-landing section + section { padding-top: 0; }
+  .mirror-landing section.ml-hero { padding-top: 24px; padding-bottom: 12px; }
+  #what { padding-top: 12px; }
+  .ml-wrap, .ml-trust { padding-left: 16px; padding-right: 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ml-done li,
   .ml-question,
   .ml-examples li,
-  .ml-btn { transition: none; }
+  .ml-btn { transition: none; animation: none; }
   .ml-btn:hover { transform: none; }
 }

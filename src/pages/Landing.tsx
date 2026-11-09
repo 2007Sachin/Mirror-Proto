@@ -9,26 +9,11 @@ const MOMENTS = [
   'Solved the problems',
 ] as const
 
-const QUESTIONS = [
+const EXAMPLES = [
   'Tell me about a project you worked on.',
   'What was your part?',
   'What would you do differently?',
 ] as const
-
-const STEPS = [
-  'Start with something you did — A project, an internship, or a decision at work. It doesn’t have to be polished.',
-  'Add more if you want — The role, the job description, your resume. Helpful, not required.',
-  'Answer the questions — What happened, what you did, what changed. One at a time.',
-  'See the notes — They only use what you said. You leave with one thing to practise.',
-] as const
-
-const GAINS = [
-  'Something to practise — One clear next step. Not a score.',
-  'Only your words — If there’s a note, your line is right there with it.',
-  'It stays private — Nothing is shared. Audio isn’t stored.',
-] as const
-
-const EXTRAS = ['A moment', 'The role you want', 'Job description', 'Your resume'] as const
 
 function usePrefersReducedMotion() {
   const [reduced, setReduced] = useState(
@@ -44,153 +29,169 @@ function usePrefersReducedMotion() {
   return reduced
 }
 
-function useOrbSize(desktop: number, mobile: number) {
-  const [size, setSize] = useState(desktop)
-  useEffect(() => {
-    const media = window.matchMedia('(max-width: 760px)')
-    const apply = () => setSize(media.matches ? mobile : desktop)
-    apply()
-    media.addEventListener('change', apply)
-    return () => media.removeEventListener('change', apply)
-  }, [desktop, mobile])
-  return size
-}
-
-function scrollToHow() {
-  const node = document.getElementById('how')
-  if (!node) return
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  node.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
-}
-
-function HeroSequence({ reduced }: { reduced: boolean }) {
-  const total = MOMENTS.length + 1 + QUESTIONS.length
-  const [count, setCount] = useState(0)
-  const shown = reduced ? total : count
+function useHeroReveal(reduced: boolean) {
+  const [shown, setShown] = useState(() => (reduced ? Array(8).fill(true) : Array(8).fill(false)))
 
   useEffect(() => {
     if (reduced) return
-    let current = 0
-    const id = window.setInterval(() => {
-      current += 1
-      setCount(current)
-      if (current >= total) window.clearInterval(id)
-    }, 340)
-    return () => window.clearInterval(id)
-  }, [reduced, total])
+    const delay = 550
+    const marks = [
+      ...[0, 1, 2, 3].map(index => ({ index, at: delay * index })),
+      { index: 4, at: delay * 4.4 },
+      ...[0, 1, 2].map(index => ({ index: 5 + index, at: delay * (5 + index) })),
+    ]
+    const timers = marks.map(({ index, at }) => window.setTimeout(() => {
+      setShown(current => {
+        if (current[index]) return current
+        const next = [...current]
+        next[index] = true
+        return next
+      })
+    }, at))
+    return () => timers.forEach(timer => window.clearTimeout(timer))
+  }, [reduced])
 
+  return shown
+}
+
+function Mark() {
   return (
-    <>
-      <ul className="ml-pills">
-        {MOMENTS.map((item, index) => (
-          <li key={item} className={shown > index ? 'is-on' : undefined}>{item}</li>
-        ))}
-      </ul>
-      <p className={shown > MOMENTS.length ? 'ml-trip is-on' : 'ml-trip'}>
-        These are the questions that usually trip people up.
-      </p>
-      <ul className="ml-questions">
-        {QUESTIONS.map((item, index) => (
-          <li key={item} className={shown > MOMENTS.length + 1 + index ? 'is-on' : undefined}>{item}</li>
-        ))}
-      </ul>
-    </>
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <circle cx="9" cy="9" r="7" stroke="#0d1220" strokeWidth="1.5" />
+      <circle cx="9" cy="9" r="3" fill="#1a73f2" />
+    </svg>
   )
 }
 
 export default function Landing({ onTry }: { onTry: () => void }) {
   const reduced = usePrefersReducedMotion()
-  const heroSize = useOrbSize(240, 168)
-  const sideSize = useOrbSize(200, 160)
-  const closeSize = useOrbSize(220, 168)
+  const shown = useHeroReveal(reduced)
 
   return (
-    <div className="mirror-landing" id="top">
-      <header className="ml-header">
-        <a
-          className="ml-brand"
-          href="#top"
-          onClick={event => {
-            event.preventDefault()
-            const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-            window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' })
-          }}
-        >
-          MIRROR
-        </a>
-        <button type="button" className="ml-button" onClick={onTry}>Start with one moment</button>
+    <div className="mirror-landing">
+      <header className="ml-wrap ml-header">
+        <div className="ml-brand"><Mark /> MIRROR</div>
+        <button type="button" className="ml-btn" onClick={onTry}>Start with one moment</button>
       </header>
 
       <main>
-        <section className="ml-hero" aria-labelledby="mirror-hero-title">
-          <div className="ml-hero-copy">
-            <p className="ml-eyebrow">For students and early-career</p>
-            <h1 id="mirror-hero-title">You know what you did.<br />Saying it is the hard part.</h1>
-            <p className="ml-lede">Someone asks about a project or a decision. You have the details. They just don’t come out cleanly.</p>
-            <HeroSequence reduced={reduced} />
-            <button type="button" className="ml-button" onClick={scrollToHow}>See how it works</button>
+        <section className="ml-hero ml-wrap" id="start" aria-labelledby="mirror-hero-title">
+          <p className="ml-eyebrow">For students and early-career</p>
+          <h1 id="mirror-hero-title">You know what you did.<br />Saying it is the hard part.</h1>
+          <p className="ml-lede">Someone asks about a project or a decision. You have the details. They just don’t come out cleanly.</p>
+          <ul className="ml-done">
+            {MOMENTS.map((item, index) => (
+              <li key={item} className={shown[index] ? 'is-on' : undefined}>{item}</li>
+            ))}
+          </ul>
+          <p className={shown[4] ? 'ml-question is-on' : 'ml-question'}>These are the questions that usually trip people up.</p>
+          <ul className="ml-examples">
+            {EXAMPLES.map((item, index) => (
+              <li key={item} className={shown[5 + index] ? 'is-on' : undefined}>{item}</li>
+            ))}
+          </ul>
+          <a className="ml-btn" href="#what">See how it works</a>
+          <div className="ml-orb ml-orb--hero">
+            <FluidOrb size={140} color="#1A73F2" aria-hidden="true" />
           </div>
-          <FluidOrb size={heroSize} aria-hidden="true" />
         </section>
 
-        <p className="ml-trust">Not another list of sample answers.</p>
+        <p className="ml-trust ml-wrap">Not another list of sample answers.</p>
 
-        <section className="ml-split" aria-labelledby="what-title">
-          <div>
-            <h2 id="what-title">What this is</h2>
-            <p>You bring one real thing you did — a project, an internship task, something from work.</p>
-            <p>MIRROR asks you about it. One question at a time. Then it shows you notes that only use the words you actually said.</p>
-            <p>You leave knowing what to practise next. No score. Nothing made up.</p>
-            <ul className="ml-pills ml-pills--still">
-              {EXTRAS.map(item => <li key={item} className="is-on">{item}</li>)}
-            </ul>
-            <p className="ml-wait">Start with whatever you have. The rest can wait.</p>
-          </div>
-          <FluidOrb size={sideSize} aria-hidden="true" />
-        </section>
-
-        <section className="ml-block" aria-labelledby="looks-title">
-          <h2 id="looks-title">What it looks like</h2>
-          <div className="ml-story">
-            <p>Priya had a group project. She knew what she did. She just couldn’t say it cleanly.</p>
-            <p>She added the role she was applying for and pasted the job description. Then she answered one question.</p>
-            <div className="ml-exchange">
-              <p className="ml-asked">What was your part?</p>
-              <p>I kept the pilot small so we could see what broke before we changed everything.</p>
+        <section className="ml-wrap" id="what" aria-labelledby="what-title">
+          <div className="ml-what">
+            <div>
+              <h2 id="what-title">What this is</h2>
+              <p>You bring one real thing you did — a project, an internship task, something from work.</p>
+              <p>MIRROR asks you about it. One question at a time. Then it shows you notes that only use the words you actually said.</p>
+              <p>You leave knowing what to practise next. No score. Nothing made up.</p>
+              <ul className="ml-bring">
+                <li>A moment</li>
+                <li>The role you want</li>
+                <li>Job description</li>
+                <li>Your resume</li>
+              </ul>
+              <p className="ml-wait">Start with whatever you have. The rest can wait.</p>
             </div>
-            <p>The note used her exact line. It didn’t add anything. She left with one thing to try next time: say what happened in one sentence.</p>
+            <div className="ml-orb ml-orb--side">
+              <FluidOrb size={180} color="#1A73F2" aria-hidden="true" />
+            </div>
           </div>
         </section>
 
-        <section className="ml-block" id="how" aria-labelledby="how-title">
+        <section className="ml-wrap" aria-labelledby="looks-title">
+          <h2 id="looks-title">What it looks like</h2>
+          <p className="ml-section-lede">Priya had a group project. She knew what she did. She just couldn’t say it cleanly.</p>
+          <div className="ml-story">
+            <p>She added the role she was applying for and pasted the job description. Then she answered one question.</p>
+            <p className="ml-line">What was your part?</p>
+            <p className="ml-line">I kept the pilot small so we could see what broke before we changed everything.</p>
+            <p className="ml-after">The note used her exact line. It didn’t add anything. She left with one thing to try next time: say what happened in one sentence.</p>
+          </div>
+        </section>
+
+        <section className="ml-wrap" id="how" aria-labelledby="how-title">
           <h2 id="how-title">How it goes</h2>
           <ol className="ml-steps">
-            {STEPS.map((step, index) => (
-              <li key={step}>
-                <span>{index + 1}</span>
-                <p>{step}</p>
-              </li>
-            ))}
+            <li>
+              <span>1</span>
+              <div>
+                <h3>Start with something you did</h3>
+                <p>A project, an internship, or a decision at work. It doesn’t have to be polished.</p>
+              </div>
+            </li>
+            <li>
+              <span>2</span>
+              <div>
+                <h3>Add more if you want</h3>
+                <p>The role, the job description, your resume. Helpful, not required.</p>
+              </div>
+            </li>
+            <li>
+              <span>3</span>
+              <div>
+                <h3>Answer the questions</h3>
+                <p>What happened, what you did, what changed. One at a time.</p>
+              </div>
+            </li>
+            <li>
+              <span>4</span>
+              <div>
+                <h3>See the notes</h3>
+                <p>They only use what you said. You leave with one thing to practise.</p>
+              </div>
+            </li>
           </ol>
         </section>
 
-        <section className="ml-block" aria-labelledby="get-title">
+        <section className="ml-wrap" aria-labelledby="get-title">
           <h2 id="get-title">What you get</h2>
-          <ul className="ml-gains">
-            {GAINS.map(item => <li key={item}>{item}</li>)}
-          </ul>
+          <div className="ml-expect">
+            <article>
+              <h3>Something to practise</h3>
+              <p>One clear next step. Not a score.</p>
+            </article>
+            <article>
+              <h3>Only your words</h3>
+              <p>If there’s a note, your line is right there with it.</p>
+            </article>
+            <article>
+              <h3>It stays private</h3>
+              <p>Nothing is shared. Audio isn’t stored.</p>
+            </article>
+          </div>
         </section>
 
-        <section className="ml-close" aria-labelledby="close-title">
-          <FluidOrb size={closeSize} aria-hidden="true" />
+        <section className="ml-close ml-wrap" aria-labelledby="close-title">
+          <div className="ml-orb ml-orb--close">
+            <FluidOrb size={110} color="#1A73F2" aria-hidden="true" />
+          </div>
           <h2 id="close-title">Want to try it with something you did?</h2>
-          <button type="button" className="ml-button" onClick={onTry}>Start with one moment</button>
+          <button type="button" className="ml-btn" onClick={onTry}>Start with one moment</button>
         </section>
       </main>
 
-      <footer className="ml-footer">
-        <p>MIRROR</p>
-      </footer>
+      <footer className="ml-wrap ml-footer">MIRROR</footer>
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type FormEvent } from 'react'
-import { FluidOrb } from '../components/FluidOrb'
+import FluidOrb from '../components/FluidOrb'
 import '../landing.css'
 
 const EXAMPLE_ANSWER = 'I kept the pilot to one team so we could see what broke before we scaled it.'
@@ -24,6 +24,18 @@ const steps = [
     detail: 'The note quotes the line you typed or spoke. Nothing is added that you did not say.',
   },
 ] as const
+
+function useOrbSize(desktop: number, mobile: number) {
+  const [size, setSize] = useState(desktop)
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 720px)')
+    const apply = () => setSize(media.matches ? mobile : desktop)
+    apply()
+    media.addEventListener('change', apply)
+    return () => media.removeEventListener('change', apply)
+  }, [desktop, mobile])
+  return size
+}
 
 function quoteClip(text: string, max = 140) {
   const clean = text.replace(/\s+/g, ' ').trim()
@@ -59,7 +71,7 @@ function HeroDemo() {
   const [note, setNote] = useState<string | null>(null)
   const [hint, setHint] = useState('')
   const listening = note === null
-  const energy = note ? 1 : Math.min(draft.trim().length / 90, 0.4)
+  const orbSize = useOrbSize(268, 120)
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
@@ -87,7 +99,7 @@ function HeroDemo() {
           {listening ? 'Listening' : 'Looking at your words'}
         </p>
       </div>
-      <FluidOrb className="ml-hero-orb" focus={energy} label={listening ? 'MIRROR orb, listening' : 'MIRROR orb, looking at your words'} />
+      <FluidOrb size={orbSize} className="ml-hero-orb" role="img" aria-label={listening ? 'MIRROR orb, listening' : 'MIRROR orb, looking at your words'} />
       <form onSubmit={submit}>
         <label htmlFor={fieldId}>What part of that decision was yours?</label>
         <textarea
@@ -158,11 +170,12 @@ function SeePass({ reduced }: { reduced: boolean }) {
   }
 
   const labels = ['Question', 'Answer', 'Notes'] as const
+  const orbSize = useOrbSize(200, 120)
 
   return (
     <div className="ml-pass">
       <div className="ml-pass-orb">
-        <FluidOrb focus={phase === 2 ? 1 : phase === 1 ? 0.45 : 0.1} label="MIRROR orb during an example pass" />
+        <FluidOrb size={orbSize} role="img" aria-label="MIRROR orb during an example pass" />
       </div>
       <div className="ml-pass-copy">
         <div className="ml-pass-kicker">
@@ -206,6 +219,7 @@ function SeePass({ reduced }: { reduced: boolean }) {
 
 export default function Landing({ onTry }: { onTry: () => void }) {
   const reduced = usePrefersReducedMotion()
+  const closeSize = useOrbSize(240, 160)
   const [open, setOpen] = useState<number | null>(0)
 
   return (
@@ -295,7 +309,7 @@ export default function Landing({ onTry }: { onTry: () => void }) {
         </section>
 
         <section className="ml-close" id="close" aria-labelledby="close-title">
-          <FluidOrb className="ml-close-orb" focus={0.2} label="MIRROR orb" />
+          <FluidOrb size={closeSize} className="ml-close-orb" role="img" aria-label="MIRROR orb" />
           <div>
             <h2 id="close-title">What could your experience sound like, clearly told?</h2>
             <button type="button" className="ml-button ml-button--primary" onClick={onTry}>Start with one moment</button>

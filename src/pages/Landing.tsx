@@ -76,6 +76,7 @@ export default function Landing({ onTry }: { onTry: () => void }) {
 
       <main>
         <section className="ml-hero ml-wrap" id="start" aria-labelledby="mirror-hero-title">
+          <div className="ml-hero-col">
           <p className="ml-eyebrow">For students and early-career</p>
           <h1 id="mirror-hero-title">You know what you did.<br />Saying it is the hard part.</h1>
           <p className="ml-lede">Someone asks about a project or a decision. You have the details. They just don’t come out cleanly.</p>
@@ -94,13 +95,14 @@ export default function Landing({ onTry }: { onTry: () => void }) {
           <div className="ml-orb ml-orb--hero">
             <FluidOrb size={140} color="#1A73F2" aria-hidden="true" />
           </div>
+          </div>
         </section>
 
-        <p className="ml-trust ml-wrap">Not another list of sample answers.</p>
+        <p className="ml-trust">Not another list of sample answers.</p>
 
         <section className="ml-wrap" id="what" aria-labelledby="what-title">
           <div className="ml-what">
-            <div>
+            <div className="ml-what-copy">
               <h2 id="what-title">What this is</h2>
               <p>You bring one real thing you did — a project, an internship task, something from work.</p>
               <p>MIRROR asks you about it. One question at a time. Then it shows you notes that only use the words you actually said.</p>
@@ -120,6 +122,7 @@ export default function Landing({ onTry }: { onTry: () => void }) {
         </section>
 
         <section className="ml-wrap" aria-labelledby="looks-title">
+          <div className="ml-looks">
           <h2 id="looks-title">What it looks like</h2>
           <p className="ml-section-lede">Priya had a group project. She knew what she did. She just couldn’t say it cleanly.</p>
           <div className="ml-story">
@@ -128,9 +131,11 @@ export default function Landing({ onTry }: { onTry: () => void }) {
             <p className="ml-line">I kept the pilot small so we could see what broke before we changed everything.</p>
             <p className="ml-after">The note used her exact line. It didn’t add anything. She left with one thing to try next time: say what happened in one sentence.</p>
           </div>
+          </div>
         </section>
 
         <section className="ml-wrap" id="how" aria-labelledby="how-title">
+          <div className="ml-how">
           <h2 id="how-title">How it goes</h2>
           <ol className="ml-steps">
             <li>
@@ -162,6 +167,7 @@ export default function Landing({ onTry }: { onTry: () => void }) {
               </div>
             </li>
           </ol>
+          </div>
         </section>
 
         <section className="ml-wrap" aria-labelledby="get-title">

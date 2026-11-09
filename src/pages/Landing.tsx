@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import FluidOrb from '../components/FluidOrb'
+import HeroOrb from '../components/HeroOrb'
 import '../landing.css'
 
 const MOMENTS = [
@@ -66,6 +67,7 @@ function Mark() {
 export default function Landing({ onTry }: { onTry: () => void }) {
   const reduced = usePrefersReducedMotion()
   const shown = useHeroReveal(reduced)
+  const [orbFailed, setOrbFailed] = useState(false)
 
   return (
     <div className="mirror-landing">
@@ -76,25 +78,27 @@ export default function Landing({ onTry }: { onTry: () => void }) {
 
       <main>
         <section className="ml-hero ml-wrap" id="start" aria-labelledby="mirror-hero-title">
-          <div className="ml-hero-col">
-          <p className="ml-eyebrow">For students and early-career</p>
-          <h1 id="mirror-hero-title">You know what you did.<br />Saying it is the hard part.</h1>
-          <p className="ml-lede">Someone asks about a project or a decision. You have the details. They just don’t come out cleanly.</p>
-          <ul className="ml-done">
-            {MOMENTS.map((item, index) => (
-              <li key={item} className={shown[index] ? 'is-on' : undefined}>{item}</li>
-            ))}
-          </ul>
-          <p className={shown[4] ? 'ml-question is-on' : 'ml-question'}>These are the questions that usually trip people up.</p>
-          <ul className="ml-examples">
-            {EXAMPLES.map((item, index) => (
-              <li key={item} className={shown[5 + index] ? 'is-on' : undefined}>{item}</li>
-            ))}
-          </ul>
-          <a className="ml-btn" href="#what">See how it works</a>
-          <div className="ml-orb ml-orb--hero">
-            <FluidOrb size={140} color="#1A73F2" aria-hidden="true" />
-          </div>
+          <div className="ml-hero-grid">
+            <div className="ml-hero-copy">
+              <p className="ml-eyebrow">For students and early-career</p>
+              <h1 id="mirror-hero-title">You know what you did.<br />Saying it is the hard part.</h1>
+              <p className="ml-lede">Someone asks about a project or a decision. You have the details. They just don’t come out cleanly.</p>
+              <ul className="ml-done">
+                {MOMENTS.map((item, index) => (
+                  <li key={item} className={shown[index] ? 'is-on' : undefined}>{item}</li>
+                ))}
+              </ul>
+              <p className={shown[4] ? 'ml-question is-on' : 'ml-question'}>These are the questions that usually trip people up.</p>
+              <ul className="ml-examples">
+                {EXAMPLES.map((item, index) => (
+                  <li key={item} className={shown[5 + index] ? 'is-on' : undefined}>{item}</li>
+                ))}
+              </ul>
+              <a className="ml-btn" href="#what">See how it works</a>
+            </div>
+            <div className="ml-hero-stage">
+              <HeroOrb reduced={reduced} failed={orbFailed} onFail={() => setOrbFailed(true)} />
+            </div>
           </div>
         </section>
 

@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { api, ApiError, type Reflection } from './lib/api'
 import { LiveOrb, type OrbState } from './components/LiveOrb'
+import Landing from './pages/Landing'
 import { useVoiceSession } from './voice/useVoiceSession'
 import {
   ArrowLeft, ArrowRight, AudioLines, BarChart3, BookOpen, BriefcaseBusiness,
   Check, ChevronDown, Circle, Clock3, FileText, Fingerprint, Home as HomeIcon,
-  Layers3, Lightbulb, LockKeyhole, Menu, MessageCircle, Mic, MicOff, Pause,
-  Play, Plus, RotateCcw, Settings, ShieldCheck, Sparkles, Square, Target,
+  Layers3, LockKeyhole, Menu, MessageCircle, Mic, MicOff, Pause,
+  Plus, RotateCcw, Settings, ShieldCheck, Square, Target,
   Trash2, TrendingUp, Volume2, WandSparkles, X,
 } from 'lucide-react'
 
@@ -275,7 +276,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    document.title = 'MIRROR — Find the story behind your experience'
+    document.title = 'MIRROR — You already have the moment'
   }, [])
 
   useEffect(() => {
@@ -309,27 +310,7 @@ export default function App() {
       .catch(err => setFlowState(classifyApiError(err)))
   }, [view, sessionId])
 
-  if (view === 'home') return <div className={`site ${calmMotion ? 'reduce-motion' : ''}`}>
-    <div className="ambient ambient--one" /><div className="ambient ambient--two" />
-    <header className="site-header"><Brand onClick={() => go('home')} /><nav><a href="#experience">Experience</a><a href="#method">Method</a><a href="#privacy">Privacy</a></nav><Button onClick={() => go('goal')} variant="secondary">Try MIRROR <ArrowRight size={15} /></Button></header>
-    <main>
-      <section className="hero">
-        <div className="hero-copy"><div className="eyebrow"><Sparkles size={14} /> A new kind of interview practice</div><h1>You already have<br />the experience.<br /><em>Find the story.</em></h1><p>MIRROR helps you turn real moments into clear, confident interview answers—through a conversation that listens before it advises.</p><div className="hero-actions"><Button onClick={() => go('goal')}>Start your reflection <ArrowRight size={17} /></Button><button className="text-link" onClick={() => document.getElementById('experience')?.scrollIntoView({ behavior: 'smooth' })}><Play size={15} fill="currentColor" /> See how it feels</button></div><div className="hero-note"><LockKeyhole size={13} /> A private space to think out loud</div></div>
-        <div className="hero-orb"><div className="orb-status"><span /> MIRROR IS READY</div><LiveOrb state="idle" /><button className="orb-invitation" onClick={() => go('goal')}><AudioLines size={18} /><span><b>Talk it through</b><small>A guided, judgment-free conversation</small></span><ArrowRight size={18} /></button></div>
-      </section>
-      <section className="trust-line"><span>Not another list of interview questions.</span><i /><span>A clearer way to understand your own experience.</span></section>
-      <section className="experience-section" id="experience"><div className="section-label">THE EXPERIENCE <span>01 — 03</span></div><div className="section-heading"><h2>Less performing.<br />More reflecting.</h2><p>MIRROR meets you where you are. Start with a rough memory, speak freely, and let the right follow-up question reveal what matters.</p></div>
-        <div className="experience-grid"><article className="feature feature--large"><div className="feature-copy"><span className="feature-number">01</span><h3>A conversation,<br />not a questionnaire.</h3><p>Follow-ups respond to what you actually said—your decisions, your challenges, and your impact.</p></div><div className="mini-conversation"><div className="mini-question"><LiveOrb compact /><span>What part of that decision was yours?</span></div><div className="mini-answer">“I chose to run a small pilot before changing the whole process.”</div><div className="listening-line"><i /><i /><i /><i /><i /><span>Listening for the detail that matters</span></div></div></article>
-          <article className="feature"><span className="feature-number">02</span><Lightbulb size={25} /><h3>Feedback you can trace.</h3><p>Every observation connects back to your words. No invented strengths. No unexplained scores.</p><div className="evidence-chip"><Check size={14} /> Evidence linked to your answer</div></article>
-          <article className="feature feature--accent"><span className="feature-number">03</span><RotateCcw size={25} /><h3>One useful next step.</h3><p>Leave with something specific to improve, then return and practise it naturally.</p><Button variant="secondary" onClick={() => go('goal')}>Find your first story <ArrowRight size={15} /></Button></article>
-        </div>
-      </section>
-      <section className="method-section" id="method"><div className="section-label">HOW MIRROR WORKS</div><div className="method-row"><span>01</span><h3>Bring a real moment</h3><p>A project, a difficult conversation, a decision—rough is completely fine.</p></div><div className="method-row"><span>02</span><h3>Think out loud</h3><p>Type or speak. MIRROR gently explores what happened and what you did.</p></div><div className="method-row"><span>03</span><h3>See yourself more clearly</h3><p>Receive grounded feedback and one focused way to improve your next answer.</p></div></section>
-      <section className="privacy-section" id="privacy"><ShieldCheck size={30} /><div><h2>Your experience belongs to you.</h2><p>This interactive concept uses demonstration data only. Voice and AI services are represented in the experience but are not connected in this prototype.</p></div><Button variant="ghost" onClick={() => go('settings')}>Prototype settings <ArrowRight size={15} /></Button></section>
-      <section className="closing"><LiveOrb compact state="idle" /><h2>What could your experience<br />sound like, clearly told?</h2><Button onClick={() => go('goal')}>Begin with one story <ArrowRight size={17} /></Button></section>
-    </main><footer><Brand onClick={() => go('home')} /><span>Product concept · No authentication · Demonstration data</span><button onClick={() => go('workspace')}>Explore workspace</button></footer>
-    {toast && <div className="toast">{toast}</div>}
-  </div>
+  if (view === 'home') return <Landing onTry={() => go('goal')} />
 
   if (['goal', 'direction', 'story', 'review'].includes(view)) {
     const step = view === 'goal' ? 1 : view === 'direction' ? 2 : view === 'story' ? 3 : 4

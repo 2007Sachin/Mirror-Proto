@@ -1,9 +1,18 @@
-import { useEffect, useRef } from 'react'
+'use client'
+
+import React, { useEffect, useRef } from 'react'
+
+import { cn } from '@/lib/utils'
+
+export type FluidOrbProps = React.ComponentProps<'div'> & {
+  size?: number
+  color?: string
+}
 
 const VERT = `
-attribute vec2 aPos;
+attribute vec2 a_pos;
 void main() {
-  gl_Position = vec4(aPos, 0.0, 1.0);
+  gl_Position = vec4(a_pos, 0.0, 1.0);
 }
 `
 
@@ -14,11 +23,9 @@ precision highp float;
 precision mediump float;
 #endif
 
-uniform vec2 uResolution;
-uniform float uTime;
-uniform vec2 uPointer;
-uniform float uFocus;
-uniform float uStill;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform vec3 u_color;
 
 float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
@@ -29,7 +36,7 @@ float noise(vec2 p) {
   vec2 f = fract(p);
   vec2 u = f * f * (3.0 - 2.0 * f);
   return mix(
-    mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),
+    mix(hash(i + vec2(0.0, 0.0)), hash(i + vec2(1.0, 0.0)), u.x),
     mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
     u.y
   );
@@ -37,232 +44,156 @@ float noise(vec2 p) {
 
 float fbm(vec2 p) {
   float v = 0.0;
-  float a = 0.5;
-  mat2 m = mat2(0.80, 0.60, -0.60, 0.80);
-  for (int i = 0; i < 5; i++) {
+  float a = 0.6;
+  for (int i = 0; i < 3; i++) {
     v += a * noise(p);
-    p = m * p * 2.02 + 1.7;
+    p *= 2.0;
     a *= 0.5;
   }
   return v;
 }
 
 void main() {
-  vec2 uv = (gl_FragCoord.xy - 0.5 * uResolution.xy) / min(uResolution.x, uResolution.y);
-  float t = uStill > 0.5 ? 0.35 : uTime * (0.32 + uFocus * 0.4);
-  vec2 pull = clamp(uPointer, vec2(-1.2), vec2(1.2));
-  vec2 p = uv - pull * 0.028;
-  float ang = atan(p.y, p.x);
-  float breathe = uStill > 0.5 ? 0.0 : 0.007 * sin(t * 1.5 + ang * 2.0);
-  float radius = 0.40 + breathe;
-  float rad = length(p);
-  float edge = smoothstep(radius + 0.006, radius - 0.02, rad);
-  float z = sqrt(max(radius * radius - rad * rad, 0.0));
-  vec3 normal = normalize(vec3(p, z + 0.0001));
-  vec3 light = normalize(vec3(-0.42 + pull.x * 0.6 + sin(t) * 0.06, 0.7 + pull.y * 0.28, 0.72));
-  float shade = max(dot(normal, light), 0.0);
-  float fres = pow(1.0 - clamp(normal.z, 0.0, 1.0), 2.05);
-  vec3 halfV = normalize(light + vec3(0.0, 0.0, 1.0));
-  float spec = pow(max(dot(normal, halfV), 0.0), 70.0);
-  float broad = pow(max(dot(normal, normalize(vec3(-0.15, 0.85, 0.45))), 0.0), 5.0);
+  vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+  float t = u_time * 0.22;
 
-  vec2 flowUv = p * 2.5;
-  float n1 = fbm(flowUv + vec2(t * 0.62, -t * 0.28));
-  float n2 = fbm(flowUv * 1.55 + n1 + vec2(-t * 0.36, t * 0.5));
-  float pool = smoothstep(0.32, 0.82, n1);
-  float vein = smoothstep(0.48, 0.7, n2) * (1.0 - smoothstep(0.72, 0.9, n1));
+  vec2 drift = vec2(
+    sin(t) + 0.6 * sin(t * 1.7 + 1.3),
+    cos(t * 0.8) + 0.6 * cos(t * 1.3 + 2.1)
+  );
 
-  vec3 deep = vec3(0.027, 0.169, 0.478);
-  vec3 blue = vec3(0.102, 0.451, 0.949);
-  vec3 bright = vec3(0.62, 0.82, 1.0);
-  vec3 ice = vec3(0.910, 0.945, 0.996);
+  vec2 p = vec2(uv.x * 1.8, uv.y * 1.0) + drift * 0.7;
 
-  vec3 col = mix(deep, blue, 0.35 + shade * 0.75);
-  col = mix(col, bright, pool * 0.36 + vein * (0.55 + uFocus * 0.3));
-  col += ice * broad * 0.16;
-  col = mix(col, ice, fres * 0.5);
-  col += vec3(1.0) * spec * 0.95;
-  float rim = smoothstep(radius * 0.78, radius, rad);
-  col = mix(col, deep, rim * 0.28);
+  vec2 q = vec2(fbm(p + drift), fbm(p + vec2(3.2, 1.5) - drift));
+  float f = fbm(p + 1.2 * q);
 
-  float halo = smoothstep(radius + 0.15, radius, rad) * (0.16 + uFocus * 0.06);
-  float alpha = max(edge, halo);
-  vec3 rgb = mix(blue, col, clamp(edge, 0.0, 1.0));
-  gl_FragColor = vec4(rgb, alpha);
+  float g = clamp(1.0 - uv.y, 0.0, 1.0);
+  float anchor = smoothstep(0.0, 0.3, uv.y);
+  float shade = clamp(g + (f - 0.5) * 0.8 * anchor, 0.0, 1.0);
+
+  vec3 white = vec3(0.99, 1.0, 1.0);
+  vec3 light = mix(white, u_color, 0.5);
+  vec3 dark = u_color;
+
+  vec3 col = white;
+  col = mix(col, light, smoothstep(0.28, 0.52, shade));
+  col = mix(col, dark, smoothstep(0.58, 0.88, shade));
+
+  float edge = smoothstep(0.5, 0.49, distance(uv, vec2(0.5)));
+
+  gl_FragColor = vec4(col * edge, edge);
 }
 `
 
-type FluidOrbProps = {
-  className?: string
-  focus?: number
-  label?: string
+function hexToRgb(hex: string): [number, number, number] {
+  let h = hex.replace('#', '').trim()
+  if (h.length === 3) {
+    h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]
+  }
+  const n = parseInt(h, 16)
+  if (h.length !== 6 || Number.isNaN(n)) return [0.1, 0.45, 0.95]
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]
 }
 
-export function FluidOrb({ className = '', focus = 0, label = 'MIRROR fluid orb' }: FluidOrbProps) {
+function compile(gl: WebGLRenderingContext, type: number, src: string) {
+  const shader = gl.createShader(type)
+  if (!shader) return null
+  gl.shaderSource(shader, src)
+  gl.compileShader(shader)
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    console.error(gl.getShaderInfoLog(shader))
+    gl.deleteShader(shader)
+    return null
+  }
+  return shader
+}
+
+const FluidOrb = ({
+  size = 240,
+  color = '#1A73F2',
+  className,
+  style,
+  ...props
+}: FluidOrbProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const wrapRef = useRef<HTMLDivElement>(null)
-  const focusRef = useRef(focus)
-  useEffect(() => {
-    focusRef.current = focus
-  }, [focus])
 
   useEffect(() => {
     const canvas = canvasRef.current
-    const wrap = wrapRef.current
-    if (!canvas || !wrap) return
+    if (!canvas) return
 
-    const gl = canvas.getContext('webgl', {
-      alpha: true,
-      antialias: false,
-      premultipliedAlpha: false,
-      powerPreference: 'low-power',
-    })
-    if (!gl) {
-      wrap.dataset.fallback = 'true'
-      return
-    }
-
-    const compile = (type: number, source: string) => {
-      const shader = gl.createShader(type)
-      if (!shader) return null
-      gl.shaderSource(shader, source)
-      gl.compileShader(shader)
-      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        gl.deleteShader(shader)
-        return null
-      }
-      return shader
-    }
-
-    const vs = compile(gl.VERTEX_SHADER, VERT)
-    const fs = compile(gl.FRAGMENT_SHADER, FRAG)
-    if (!vs || !fs) {
-      wrap.dataset.fallback = 'true'
-      return
-    }
+    const gl = canvas.getContext('webgl', { antialias: true, alpha: true })
+    if (!gl) return
 
     const program = gl.createProgram()
-    if (!program) {
-      wrap.dataset.fallback = 'true'
-      return
-    }
-    gl.attachShader(program, vs)
-    gl.attachShader(program, fs)
-    gl.bindAttribLocation(program, 0, 'aPos')
+    const vert = compile(gl, gl.VERTEX_SHADER, VERT)
+    const frag = compile(gl, gl.FRAGMENT_SHADER, FRAG)
+    if (!program || !vert || !frag) return
+
+    gl.attachShader(program, vert)
+    gl.attachShader(program, frag)
     gl.linkProgram(program)
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      wrap.dataset.fallback = 'true'
+      console.error(gl.getProgramInfoLog(program))
       return
     }
+    gl.useProgram(program)
 
     const buffer = gl.createBuffer()
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW)
-    gl.useProgram(program)
-    gl.enableVertexAttribArray(0)
-    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0)
-    gl.enable(gl.BLEND)
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
+      gl.STATIC_DRAW,
+    )
+    const aPos = gl.getAttribLocation(program, 'a_pos')
+    gl.enableVertexAttribArray(aPos)
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0)
 
-    const uResolution = gl.getUniformLocation(program, 'uResolution')
-    const uTime = gl.getUniformLocation(program, 'uTime')
-    const uPointer = gl.getUniformLocation(program, 'uPointer')
-    const uFocus = gl.getUniformLocation(program, 'uFocus')
-    const uStill = gl.getUniformLocation(program, 'uStill')
+    const uResolution = gl.getUniformLocation(program, 'u_resolution')
+    const uTime = gl.getUniformLocation(program, 'u_time')
+    gl.uniform3f(gl.getUniformLocation(program, 'u_color'), ...hexToRgb(color))
 
-    const motion = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const pointer = { x: 0, y: 0 }
-    const smooth = { x: 0, y: 0 }
-    let visible = true
+    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    const px = Math.round(size * dpr)
+    canvas.width = px
+    canvas.height = px
+    gl.viewport(0, 0, px, px)
+    gl.uniform2f(uResolution, px, px)
+
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const start = performance.now()
     let raf = 0
-    let running = true
 
-    const resize = () => {
-      const rect = canvas.getBoundingClientRect()
-      const dpr = Math.min(window.devicePixelRatio || 1, 2)
-      const width = Math.max(2, Math.round(rect.width * dpr))
-      const height = Math.max(2, Math.round(rect.height * dpr))
-      if (canvas.width !== width || canvas.height !== height) {
-        canvas.width = width
-        canvas.height = height
-      }
-      gl.viewport(0, 0, canvas.width, canvas.height)
+    const render = (now: number) => {
+      gl.uniform1f(uTime, reduce ? 0 : (now - start) / 1000)
+      gl.drawArrays(gl.TRIANGLES, 0, 6)
+      if (!reduce) raf = requestAnimationFrame(render)
     }
-
-    const draw = (now: number) => {
-      if (!running) return
-      smooth.x += (pointer.x - smooth.x) * 0.08
-      smooth.y += (pointer.y - smooth.y) * 0.08
-      gl.useProgram(program)
-      gl.uniform2f(uResolution, canvas.width, canvas.height)
-      gl.uniform1f(uTime, now * 0.001)
-      gl.uniform2f(uPointer, smooth.x, smooth.y)
-      gl.uniform1f(uFocus, focusRef.current)
-      gl.uniform1f(uStill, motion.matches ? 1 : 0)
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
-    }
-
-    const tick = (now: number) => {
-      draw(now)
-      if (running && visible && !motion.matches) raf = window.requestAnimationFrame(tick)
-    }
-
-    const start = () => {
-      window.cancelAnimationFrame(raf)
-      if (running && visible) raf = window.requestAnimationFrame(tick)
-    }
-
-    const onPointer = (event: PointerEvent) => {
-      const rect = canvas.getBoundingClientRect()
-      if (rect.width === 0 || rect.height === 0) return
-      const x = ((event.clientX - rect.left) / rect.width) * 2 - 1
-      const y = -(((event.clientY - rect.top) / rect.height) * 2 - 1)
-      pointer.x = Math.max(-1.15, Math.min(1.15, x))
-      pointer.y = Math.max(-1.15, Math.min(1.15, y))
-      if (motion.matches) draw(performance.now())
-    }
-
-    const onMotion = () => {
-      if (motion.matches) {
-        window.cancelAnimationFrame(raf)
-        draw(performance.now())
-      } else {
-        start()
-      }
-    }
-
-    resize()
-    const observer = new ResizeObserver(resize)
-    observer.observe(wrap)
-    const visibility = new IntersectionObserver(([entry]) => {
-      visible = entry.isIntersecting
-      if (visible) start()
-      else window.cancelAnimationFrame(raf)
-    }, { threshold: 0.08 })
-    visibility.observe(wrap)
-
-    window.addEventListener('pointermove', onPointer, { passive: true })
-    motion.addEventListener('change', onMotion)
-    start()
-    if (motion.matches) draw(performance.now())
+    render(start)
 
     return () => {
-      running = false
-      window.cancelAnimationFrame(raf)
-      observer.disconnect()
-      visibility.disconnect()
-      window.removeEventListener('pointermove', onPointer)
-      motion.removeEventListener('change', onMotion)
-      gl.deleteBuffer(buffer)
+      cancelAnimationFrame(raf)
       gl.deleteProgram(program)
-      gl.deleteShader(vs)
-      gl.deleteShader(fs)
+      gl.deleteShader(vert)
+      gl.deleteShader(frag)
+      gl.deleteBuffer(buffer)
     }
-  }, [])
+  }, [size, color])
 
   return (
-    <div ref={wrapRef} className={`fluid-orb ${className}`.trim()}>
-      <canvas ref={canvasRef} role="img" aria-label={label} />
+    <div
+      data-slot="fluid-orb"
+      className={cn('relative overflow-hidden rounded-full', className)}
+      style={{
+        width: size,
+        height: size,
+        ...style,
+      }}
+      {...props}
+    >
+      <canvas ref={canvasRef} className="h-full w-full" />
     </div>
   )
 }
+
+export default FluidOrb

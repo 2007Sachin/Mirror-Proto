@@ -144,37 +144,29 @@ export default function Landing({ onTry }: { onTry: () => void }) {
           <ol className="ml-steps">
             <li>
               <span>1</span>
-              <div>
-                <h3>Start with something you did</h3>
-                <p>A project, an internship, or a decision at work. It doesn’t have to be polished.</p>
-              </div>
+              <h3>Start with something you did</h3>
+              <p>A project, an internship, or a decision at work. It doesn’t have to be polished.</p>
             </li>
             <li>
               <span>2</span>
-              <div>
-                <h3>Add more if you want</h3>
-                <p>The role, the job description, your resume. Helpful, not required.</p>
-              </div>
+              <h3>Add more if you want</h3>
+              <p>The role, the job description, your resume. Helpful, not required.</p>
             </li>
             <li>
               <span>3</span>
-              <div>
-                <h3>Answer the questions</h3>
-                <p>What happened, what you did, what changed. One at a time.</p>
-              </div>
+              <h3>Answer the questions</h3>
+              <p>What happened, what you did, what changed. One at a time.</p>
             </li>
             <li>
               <span>4</span>
-              <div>
-                <h3>See the notes</h3>
-                <p>They only use what you said. You leave with one thing to practise.</p>
-              </div>
+              <h3>See the notes</h3>
+              <p>They only use what you said. You leave with one thing to practise.</p>
             </li>
           </ol>
           </div>
         </section>
 
-        <section className="ml-wrap" aria-labelledby="get-title">
+        <section className="ml-wrap ml-get" aria-labelledby="get-title">
           <h2 id="get-title">What you get</h2>
           <div className="ml-expect">
             <article>

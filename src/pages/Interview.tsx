@@ -462,7 +462,7 @@ export default function Interview(p: InterviewProps) {
               <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={endFromSheet}><Square size={14} aria-hidden="true" />{sc ? 'End the call' : 'End session'}</button>
             </div>
           </div>
-          <p className="iv-foot"><Volume2 size={14} aria-hidden="true" />Saved as you go. Audio is not stored.</p>
+          <p className="iv-foot"><Volume2 size={14} aria-hidden="true" />Saved as you go. MIRROR doesn’t keep your audio.</p>
         </aside>
       )}
     </div>

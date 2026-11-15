@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { answerAttempts, clearAll, gapMatches, getCapabilities, replay, resetCapabilities, resumeClaims, stories, type StoryInput } from './data'
+import { answerAttempts, clearAll, gapMatches, getCapabilities, replay, resetCapabilities, resumeClaims, setUser, stories, type StoryInput } from './data'
 
 const story = (title: string): StoryInput => ({
   title, themes: ['impact'], situation: 's', task: 't', action: 'a', result: 'r', quote: null, question: null, sourceInterviewId: null, sourceTurnId: null,
@@ -12,6 +12,7 @@ const reply = (body: unknown, status = 200) => new Response(status === 204 ? nul
 describe('data.ts: browser backend', () => {
   beforeEach(() => {
     localStorage.clear()
+    setUser('u1')
     resetCapabilities()
     // The server says it does not keep the new stores, so everything lands in localStorage.
     vi.stubGlobal('fetch', vi.fn(async () => reply({ newData: 'browser', screenLongCalls: false })))
@@ -41,7 +42,7 @@ describe('data.ts: browser backend', () => {
     expect(await answerAttempts.list({ interviewId: 'i1' })).toHaveLength(1)
     expect(await answerAttempts.list({ itemId: 'sql-1' })).toHaveLength(1)
     expect(await answerAttempts.list({ kind: 'explain' })).toHaveLength(1)
-    expect(localStorage.getItem('mirror.data.v1.attempts')).toContain('Second.')
+    expect(localStorage.getItem('mirror.data.v1.u1.attempts')).toContain('Second.')
     await answerAttempts.deleteAll()
     expect(await answerAttempts.list()).toEqual([])
   })
@@ -85,7 +86,7 @@ describe('data.ts: browser backend', () => {
   })
 
   it('ignores corrupt storage and keeps working when storage is blocked', async () => {
-    localStorage.setItem('mirror.data.v1.stories', '{not json')
+    localStorage.setItem('mirror.data.v1.u1.stories', '{not json')
     expect(await stories.list()).toEqual([])
     const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
     const getSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked') })
@@ -105,8 +106,40 @@ describe('data.ts: browser backend', () => {
   })
 })
 
+describe('data.ts: per-user keys', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    resetCapabilities()
+    vi.stubGlobal('fetch', vi.fn(async () => reply({ newData: 'browser', screenLongCalls: false })))
+  })
+  afterEach(() => { vi.unstubAllGlobals(); setUser(null) })
+
+  it('keeps each user in their own keys and never shares one', async () => {
+    setUser('a')
+    await stories.create(story('Mine'))
+    setUser('b')
+    expect(await stories.list()).toEqual([])
+    setUser('a')
+    expect((await stories.list()).map(s => s.title)).toEqual(['Mine'])
+    expect(Object.keys(localStorage)).toEqual(['mirror.data.v1.a.stories'])
+  })
+
+  it('with no user keeps data in memory only', async () => {
+    setUser(null)
+    await stories.create(story('Nowhere'))
+    expect(Object.keys(localStorage)).toEqual([])
+  })
+
+  it('clearAll only clears the current user', async () => {
+    setUser('a'); await stories.create(story('A'))
+    setUser('b'); await stories.create(story('B'))
+    await clearAll()
+    expect(Object.keys(localStorage)).toEqual(['mirror.data.v1.a.stories'])
+  })
+})
+
 describe('data.ts: server backend', () => {
-  const calls: { path: string; method: string; body: unknown; ws: string | null }[] = []
+  const calls: { path: string; method: string; body: unknown; ws: string | null; cred?: string }[] = []
   beforeEach(() => {
     localStorage.clear()
     resetCapabilities()
@@ -114,7 +147,7 @@ describe('data.ts: server backend', () => {
     vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
       const path = String(url).replace(/^\/api/, '')
       const headers = new Headers(init?.headers)
-      calls.push({ path, method: init?.method ?? 'GET', body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined, ws: headers.get('X-Dev-Workspace') })
+      calls.push({ path, method: init?.method ?? 'GET', body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined, ws: headers.get('X-Dev-Workspace'), cred: init?.credentials })
       if (path === '/capabilities') return reply({ newData: 'server', screenLongCalls: true })
       if (path.startsWith('/stories/missing')) return reply({ error: 'story_not_found' }, 404)
       if (path.startsWith('/targets/') && path.endsWith('/match')) return reply({ matches: [] })
@@ -124,7 +157,7 @@ describe('data.ts: server backend', () => {
   })
   afterEach(() => vi.unstubAllGlobals())
 
-  it('calls the generic routes with the workspace header and never touches localStorage', async () => {
+  it('calls the generic routes with the session cookie, no workspace header, and never touches localStorage', async () => {
     await answerAttempts.add(attemptBase)
     await answerAttempts.list({ interviewId: 'i1', kind: 'retry' })
     await stories.list()
@@ -144,7 +177,7 @@ describe('data.ts: server backend', () => {
       'PUT /practice/schedule',
       'DELETE /practice/schedule?itemId=a%20b',
     ])
-    expect(calls.every(c => c.ws === 'dev')).toBe(true)
+    expect(calls.every(c => c.ws === null && c.cred === 'same-origin')).toBe(true)
     expect(calls.find(c => c.path === '/resume/claims')?.body).toEqual({ claims: [] })
     expect(calls.filter(c => c.path === '/capabilities')).toHaveLength(1)
     expect(Object.keys(localStorage)).toEqual([])

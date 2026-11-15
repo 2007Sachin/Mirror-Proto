@@ -3,8 +3,6 @@
 
 import type { AttemptReport, PracticeSummary } from '../practice/types'
 
-export const DEV_WORKSPACE = 'dev'
-
 const BASE: string = (import.meta.env.VITE_API_BASE as string | undefined) ?? '/api'
 
 export type TranscriptSource = 'text' | 'voice'
@@ -134,12 +132,12 @@ export interface SqlTurnBody {
   query: string; passed: boolean; error?: string; resultPreview?: string
 }
 
-/** The one fetch wrapper: workspace header, JSON in and out, ApiError on a non-2xx. */
+/** The one fetch wrapper: session cookie, JSON in and out, ApiError on a non-2xx. A 401 on a data call tells the app to show sign-in. */
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
+    credentials: 'same-origin',
     ...init,
     headers: {
-      'X-Dev-Workspace': DEV_WORKSPACE,
       ...(typeof init?.body === 'string' ? { 'Content-Type': 'application/json' } : {}),
       ...init?.headers,
     },
@@ -147,9 +145,33 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const body = await res.json().catch(() => null)
   if (!res.ok) {
     const message = body && typeof body === 'object' && 'error' in body ? String((body as { error: unknown }).error) : `request_failed_${res.status}`
+    if (res.status === 401 && !path.startsWith('/auth/') && typeof window !== 'undefined') window.dispatchEvent(new Event('mirror:unauthenticated'))
     throw new ApiError(res.status, message, body)
   }
   return body as T
+}
+
+export type SessionInfo =
+  | { demo: true }
+  | { user: { id: string; email: string | null }; providers: { google: boolean } }
+export interface Providers { google: boolean }
+
+export const authApi = {
+  /** Resolves with the session, or null when signed out. `providers` is read from the 401 body. */
+  async getSession(): Promise<{ session: SessionInfo | null; providers: Providers }> {
+    try {
+      const s = await request<SessionInfo>('/auth/session')
+      return { session: s, providers: 'providers' in s ? s.providers : { google: false } }
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
+        const p = (e.body as { providers?: Providers } | null)?.providers
+        return { session: null, providers: { google: Boolean(p?.google) } }
+      }
+      throw e
+    }
+  },
+  requestMagicLink: (email: string) => request<{ ok: true }>('/auth/magic-link', { method: 'POST', body: JSON.stringify({ email }) }),
+  signOut: () => request<{ ok: true }>('/auth/signout', { method: 'POST' }),
 }
 
 export class ApiError extends Error {

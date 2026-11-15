@@ -10,6 +10,14 @@ const at = (itemId: string, createdAt: string, o: Partial<PracticeAttemptRow> = 
 })
 
 describe('summarise', () => {
+  it('keeps only the last 12 attempts in history', () => {
+    const rows = Array.from({ length: 15 }, (_, i) => at('h', `2026-06-${String(i + 1).padStart(2, '0')}T10:00:00Z`, { correct: i % 2 === 0 }))
+    const h = summarise(rows, NOW).items[0].history
+    expect(h).toHaveLength(12)
+    expect(h[0].at).toBe('2026-06-04T10:00:00Z')
+    expect(h[11].at).toBe('2026-06-15T10:00:00Z')
+  })
+
   it('first-try vs later solve, time totals, latest metadata', () => {
     const { items } = summarise(
       [
@@ -23,6 +31,8 @@ describe('summarise', () => {
     const x = items.find(i => i.itemId === 'x')!
     expect(x).toMatchObject({ attempts: 3, firstTryCorrect: false, solved: true, seconds: 55, solvedAt: '2026-06-02T10:00:00Z', lastAt: '2026-06-03T10:00:00Z' })
     expect(x).toMatchObject({ topic: 'Joins', level: 1 }) // from the most recent attempt
+    expect(x.lastCorrect).toBe(true)
+    expect(x.history.map(h => h.correct)).toEqual([false, true, true]) // oldest first
     expect(items.find(i => i.itemId === 'y')).toMatchObject({ firstTryCorrect: true, solved: true })
   })
 

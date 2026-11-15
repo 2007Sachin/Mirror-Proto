@@ -12,6 +12,8 @@ export interface ItemStat {
   seconds: number
   lastAt: string
   solvedAt: string | null
+  lastCorrect: boolean
+  history: { at: string; correct: boolean }[] // last 12 attempts, oldest first
 }
 export interface DayStat { date: string; attempts: number; seconds: number }
 export interface PracticeSummary { items: ItemStat[]; days: DayStat[] }
@@ -31,12 +33,15 @@ export function summarise(attempts: PracticeAttemptRow[], now: Date = new Date()
       items.set(a.itemId, {
         itemId: a.itemId, track: a.track, topic: a.topic, level: a.level, attempts: 1,
         firstTryCorrect: a.correct, solved: a.correct, seconds: a.seconds, lastAt: a.createdAt,
-        solvedAt: a.correct ? a.createdAt : null,
+        solvedAt: a.correct ? a.createdAt : null, lastCorrect: a.correct, history: [{ at: a.createdAt, correct: a.correct }],
       })
     } else {
       s.attempts++
       s.seconds += a.seconds
       s.lastAt = a.createdAt
+      s.lastCorrect = a.correct
+      s.history.push({ at: a.createdAt, correct: a.correct })
+      if (s.history.length > 12) s.history.shift()
       s.track = a.track // metadata follows the latest attempt
       s.topic = a.topic
       s.level = a.level

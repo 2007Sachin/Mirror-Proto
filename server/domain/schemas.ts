@@ -3,6 +3,8 @@ import { z } from 'zod'
 export const createInterviewSchema = z.object({
   role: z.string().trim().min(1).max(120),
   industry: z.string().trim().max(120).optional(),
+  /** A practice can open on its own question (e.g. the Coach's note). */
+  openingQuestion: z.string().trim().min(8).max(300).optional(),
 })
 
 export const addTurnSchema = z.object({

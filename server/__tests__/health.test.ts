@@ -79,6 +79,9 @@ describe('persistence failures', () => {
         async listInterviewsByRole() {
           return []
         },
+        async listInterviews() {
+          return []
+        },
         async addTurn() {
           throw new PersistenceError('failed to add turn: missing table')
         },
@@ -90,6 +93,32 @@ describe('persistence failures', () => {
         },
         async getReflection() {
           return null
+        },
+        async getProfile() {
+          return null
+        },
+        async saveProfile() {
+          throw new PersistenceError('failed to save profile: missing table')
+        },
+        async deleteProfile() {},
+        async createTarget() {
+          throw new PersistenceError('failed to create target: missing table')
+        },
+        async getTarget() {
+          return null
+        },
+        async listTargets() {
+          return []
+        },
+        async updateTarget() {
+          return null
+        },
+        async deleteTarget() {},
+        async addPracticeAttempt() {
+          throw new PersistenceError('failed to add practice attempt: missing table')
+        },
+        async getPracticeAttempts() {
+          return []
         },
       },
     })

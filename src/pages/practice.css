@@ -1,0 +1,42 @@
+/* Practice hub. Built on .mirror-landing tokens (landing.css). */
+.mirror-landing.practice { min-height: 100%; padding: 32px max(16px, 4%) 56px; }
+.pr-wrap { max-width: 1000px; margin: 0 auto; display: grid; gap: 18px; }
+.practice h1, .practice h2 { letter-spacing: -.03em; line-height: 1.12; text-wrap: balance; margin: 0; }
+.practice h1 { font-size: 22px; font-weight: 700; }
+.practice .ml-eyebrow { margin: 0 0 6px; }
+/* while a drill is open: no hub header, tight page padding (the drill sizes itself to the viewport) */
+.practice:has(.sqd) { padding: 8px max(8px, 1.5%); }
+.practice:has(.sqd) .pr-top { display: none; }
+.practice:has(.sqd) .pr-wrap { max-width: none; gap: 8px; }
+.pr-lede { margin: 6px 0 0; color: var(--muted); max-width: 62ch; font-size: 14px; line-height: 1.5; text-wrap: pretty; }
+
+.pr-note { margin: 0; padding: 14px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--glass); color: var(--muted); font-size: 14px; line-height: 1.5; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.pr-note p { margin: 0; }
+.pr-link { font: inherit; font-weight: 600; color: var(--accent); background: none; border: 0; padding: 12px 4px; min-height: 44px; cursor: pointer; }
+
+.pr-tracks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 16px; }
+.pr-track { width: 100%; height: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; padding: 22px; display: grid; align-content: start; gap: 8px; }
+.pr-track:hover { border-color: var(--accent); }
+.pr-track b { font-size: 20px; letter-spacing: -.02em; }
+.pr-blurb { color: var(--muted); font-size: 15px; line-height: 1.5; }
+.pr-solved { font-weight: 650; font-size: 15px; }
+.pr-ladder { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); }
+.pr-track small { font-size: 13px; color: var(--muted); line-height: 1.45; }
+.practice .pr-back { justify-self: start; }
+
+.pr-topic { padding: 18px 20px; display: grid; gap: 8px; }
+.pr-topic h2 { font-size: 18px; font-weight: 700; }
+.pr-topic ul { list-style: none; margin: 0; padding: 0; display: grid; }
+.pr-topic li + li { border-top: 1px solid var(--line); }
+.pr-item { width: 100%; min-height: 56px; display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 6px 12px; text-align: left; font: inherit; color: inherit; background: none; border: 0; padding: 8px 4px; cursor: pointer; border-radius: 10px; }
+.pr-item:hover .pr-item-title { color: var(--accent); }
+.pr-item-title { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.pr-chip { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--soft); color: var(--accent); }
+.pr-min, .pr-state { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.pr-state.is-done { color: var(--accent); font-weight: 650; }
+.mirror-landing.practice :where(.pr-item, .pr-track):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (max-width: 520px) {
+  .pr-item { grid-template-columns: minmax(0, 1fr) auto; }
+  .pr-item-title { grid-column: 1 / -1; }
+}

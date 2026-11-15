@@ -2,9 +2,16 @@ import type {
   AddTurnInput,
   CreateInterviewInput,
   InterviewRow,
+  PracticeAttemptInput,
+  PracticeAttemptRow,
+  ProfileInput,
+  ProfileRow,
   ReflectionRow,
   Repository,
   SaveReflectionInput,
+  Target,
+  CreateTargetInput,
+  TargetPatch,
   TurnRow,
 } from './types.js'
 
@@ -16,6 +23,9 @@ interface WorkspaceBucket {
 
 export function createMemoryRepository(): Repository {
   const workspaces = new Map<string, WorkspaceBucket>()
+  const profiles = new Map<string, ProfileRow>()
+  const targets = new Map<string, Target[]>() // per workspace, oldest first
+  const attempts = new Map<string, PracticeAttemptRow[]>() // per workspace, oldest first
 
   const bucket = (slug: string): WorkspaceBucket => {
     let b = workspaces.get(slug)
@@ -69,6 +79,10 @@ export function createMemoryRepository(): Repository {
       return [...b.interviews.values()].filter(i => i.role === role)
     },
 
+    async listInterviews(workspace: string): Promise<InterviewRow[]> {
+      return [...(workspaces.get(workspace)?.interviews.values() ?? [])].reverse()
+    },
+
     async addTurn(workspace: string, interviewId: string, input: AddTurnInput): Promise<TurnRow> {
       const b = bucket(workspace)
       const row: TurnRow = {
@@ -105,6 +119,7 @@ export function createMemoryRepository(): Repository {
         readinessRange: input.readinessRange,
         evidence: input.evidence,
         focus: input.focus,
+        suggestion: input.suggestion,
         model: input.model,
         createdAt: existing?.createdAt ?? new Date().toISOString(),
       }
@@ -114,6 +129,66 @@ export function createMemoryRepository(): Repository {
 
     async getReflection(workspace: string, interviewId: string): Promise<ReflectionRow | null> {
       return workspaces.get(workspace)?.reflections.get(interviewId) ?? null
+    },
+
+    async getProfile(workspace: string): Promise<ProfileRow | null> {
+      return profiles.get(workspace) ?? null
+    },
+
+    async deleteProfile(workspace: string): Promise<void> {
+      profiles.delete(workspace)
+    },
+
+    async saveProfile(workspace: string, input: ProfileInput): Promise<ProfileRow> {
+      const row: ProfileRow = { ...input, workspaceId: workspace, createdAt: new Date().toISOString() }
+      profiles.set(workspace, row)
+      return row
+    },
+
+    async createTarget(workspace: string, input: CreateTargetInput): Promise<Target> {
+      const row: Target = {
+        ...input,
+        id: crypto.randomUUID(),
+        status: 'scouting',
+        skills: [],
+        rounds: [],
+        events: [],
+        debriefs: [],
+        nextStep: null,
+        createdAt: new Date().toISOString(),
+      }
+      targets.set(workspace, [...(targets.get(workspace) ?? []), row])
+      return row
+    },
+
+    async getTarget(workspace: string, id: string): Promise<Target | null> {
+      return targets.get(workspace)?.find(t => t.id === id) ?? null
+    },
+
+    async listTargets(workspace: string): Promise<Target[]> {
+      return [...(targets.get(workspace) ?? [])].reverse()
+    },
+
+    async updateTarget(workspace: string, id: string, patch: TargetPatch): Promise<Target | null> {
+      const list = targets.get(workspace)
+      const i = list?.findIndex(t => t.id === id) ?? -1
+      if (!list || i < 0) return null
+      list[i] = { ...list[i], ...patch }
+      return list[i]
+    },
+
+    async deleteTarget(workspace: string, id: string): Promise<void> {
+      targets.set(workspace, (targets.get(workspace) ?? []).filter(t => t.id !== id))
+    },
+
+    async addPracticeAttempt(workspace: string, input: PracticeAttemptInput): Promise<PracticeAttemptRow> {
+      const row: PracticeAttemptRow = { ...input, id: crypto.randomUUID(), createdAt: new Date().toISOString() }
+      attempts.set(workspace, [...(attempts.get(workspace) ?? []), row])
+      return row
+    },
+
+    async getPracticeAttempts(workspace: string, sinceIso?: string): Promise<PracticeAttemptRow[]> {
+      return (attempts.get(workspace) ?? []).filter(a => !sinceIso || a.createdAt >= sinceIso).slice(0, 5000)
     },
   }
 }

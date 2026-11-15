@@ -4,9 +4,16 @@ import type {
   CreateInterviewInput,
   EvidenceItem,
   InterviewRow,
+  PracticeAttemptInput,
+  PracticeAttemptRow,
+  ProfileInput,
+  ProfileRow,
   ReflectionRow,
   Repository,
   SaveReflectionInput,
+  Target,
+  CreateTargetInput,
+  TargetPatch,
   TurnRow,
 } from './types.js'
 
@@ -36,12 +43,103 @@ interface ReflectionRecord {
   workspace_id: string
   interview_id: string
   role: string
-  readiness_label: 'emerging' | 'solid' | 'strong'
+  readiness_label: 'emerging' | 'solid' | 'strong' | null
+  suggestion: string | null
   readiness_range: { low: number; high: number } | null
   evidence: EvidenceItem[]
   focus: string
   model: string
   created_at: string
+}
+
+interface ProfileRecord {
+  workspace_id: string
+  role: string
+  story: string
+  pressure_question: string
+  pressure_answer: string
+  summary: string
+  focus: string
+  first_question: string
+  resume_text: string | null
+  resume_name: string | null
+  mode: 'text' | 'voice'
+  created_at: string
+}
+
+interface TargetRecord {
+  id: string
+  company: string
+  role: string
+  interview_date: string | null
+  jd: string
+  status: Target['status']
+  skills: Target['skills'] | null
+  rounds: Target['rounds'] | null
+  events: Target['events'] | null
+  debriefs: Target['debriefs'] | null
+  next_step: string | null
+  created_at: string
+}
+
+interface PracticeAttemptRecord {
+  id: string
+  item_id: string
+  track: PracticeAttemptRow['track']
+  topic: string
+  level: PracticeAttemptRow['level']
+  correct: boolean
+  seconds: number
+  hints_used: number
+  created_at: string
+}
+
+function toAttempt(r: PracticeAttemptRecord): PracticeAttemptRow {
+  return {
+    id: r.id,
+    itemId: r.item_id,
+    track: r.track,
+    topic: r.topic,
+    level: r.level,
+    correct: r.correct,
+    seconds: r.seconds,
+    hintsUsed: r.hints_used,
+    createdAt: r.created_at,
+  }
+}
+
+function toTarget(r: TargetRecord): Target {
+  return {
+    id: r.id,
+    company: r.company,
+    role: r.role,
+    interviewDate: r.interview_date,
+    jd: r.jd,
+    status: r.status,
+    skills: r.skills ?? [],
+    rounds: r.rounds ?? [],
+    events: r.events ?? [],
+    debriefs: r.debriefs ?? [],
+    nextStep: r.next_step,
+    createdAt: r.created_at,
+  }
+}
+
+function toProfileRow(r: ProfileRecord): ProfileRow {
+  return {
+    workspaceId: r.workspace_id,
+    role: r.role,
+    story: r.story,
+    pressureQuestion: r.pressure_question,
+    pressureAnswer: r.pressure_answer,
+    summary: r.summary,
+    focus: r.focus,
+    firstQuestion: r.first_question,
+    resumeText: r.resume_text,
+    resumeName: r.resume_name ?? null,
+    mode: r.mode,
+    createdAt: r.created_at,
+  }
 }
 
 function toInterviewRow(r: InterviewRecord): InterviewRow {
@@ -79,6 +177,7 @@ function toReflectionRow(r: ReflectionRecord): ReflectionRow {
     readinessRange: r.readiness_range,
     evidence: r.evidence,
     focus: r.focus,
+    suggestion: r.suggestion ?? null,
     model: r.model,
     createdAt: r.created_at,
   }
@@ -90,6 +189,9 @@ export const PHASE1_TABLES = {
   interviews: 'mirror_interviews',
   turns: 'mirror_turns',
   reflections: 'mirror_reflections',
+  profiles: 'mirror_profiles',
+  targets: 'mirror_targets',
+  practiceAttempts: 'mirror_practice_attempts',
 } as const
 
 export class PersistenceError extends Error {
@@ -173,6 +275,17 @@ export function createSupabaseRepository(url: string, secretKey: string): Reposi
       return (data as InterviewRecord[]).map(toInterviewRow)
     },
 
+    async listInterviews(workspace: string): Promise<InterviewRow[]> {
+      const { data, error } = await client
+        .from(PHASE1_TABLES.interviews)
+        .select()
+        .eq('workspace_id', workspace)
+        .order('created_at', { ascending: false })
+        .limit(20)
+      throwIf(error, 'list interviews')
+      return (data as InterviewRecord[]).map(toInterviewRow)
+    },
+
     async addTurn(workspace: string, interviewId: string, input: AddTurnInput): Promise<TurnRow> {
       const { data, error } = await client
         .from(PHASE1_TABLES.turns)
@@ -213,6 +326,7 @@ export function createSupabaseRepository(url: string, secretKey: string): Reposi
             readiness_range: input.readinessRange,
             evidence: input.evidence,
             focus: input.focus,
+            suggestion: input.suggestion,
             model: input.model,
           },
           { onConflict: 'interview_id' },
@@ -232,6 +346,119 @@ export function createSupabaseRepository(url: string, secretKey: string): Reposi
         .maybeSingle()
       if (error || !data) return null
       return toReflectionRow(data as ReflectionRecord)
+    },
+
+    async getProfile(workspace: string): Promise<ProfileRow | null> {
+      const { data, error } = await client.from(PHASE1_TABLES.profiles).select().eq('workspace_id', workspace).maybeSingle()
+      if (error || !data) return null
+      return toProfileRow(data as ProfileRecord)
+    },
+
+    async deleteProfile(workspace: string): Promise<void> {
+      const { error } = await client.from(PHASE1_TABLES.profiles).delete().eq('workspace_id', workspace)
+      throwIf(error, 'delete profile')
+    },
+
+    async saveProfile(workspace: string, input: ProfileInput): Promise<ProfileRow> {
+      const { data, error } = await client
+        .from(PHASE1_TABLES.profiles)
+        .upsert(
+          {
+            workspace_id: workspace,
+            role: input.role,
+            story: input.story,
+            pressure_question: input.pressureQuestion,
+            pressure_answer: input.pressureAnswer,
+            summary: input.summary,
+            focus: input.focus,
+            first_question: input.firstQuestion,
+            resume_text: input.resumeText,
+            resume_name: input.resumeName,
+            mode: input.mode,
+          },
+          { onConflict: 'workspace_id' },
+        )
+        .select()
+        .single()
+      throwIf(error, 'save profile')
+      return toProfileRow(data as ProfileRecord)
+    },
+
+    async createTarget(workspace: string, input: CreateTargetInput): Promise<Target> {
+      const { data, error } = await client
+        .from(PHASE1_TABLES.targets)
+        .insert({ workspace_id: workspace, company: input.company, role: input.role, interview_date: input.interviewDate, jd: input.jd })
+        .select()
+        .single()
+      throwIf(error, 'create target')
+      return toTarget(data as TargetRecord)
+    },
+
+    async getTarget(workspace: string, id: string): Promise<Target | null> {
+      const { data, error } = await client.from(PHASE1_TABLES.targets).select().eq('id', id).eq('workspace_id', workspace).maybeSingle()
+      if (error || !data) return null
+      return toTarget(data as TargetRecord)
+    },
+
+    async listTargets(workspace: string): Promise<Target[]> {
+      const { data, error } = await client
+        .from(PHASE1_TABLES.targets)
+        .select()
+        .eq('workspace_id', workspace)
+        .order('created_at', { ascending: false })
+        .limit(50)
+      throwIf(error, 'list targets')
+      return (data as TargetRecord[]).map(toTarget)
+    },
+
+    async updateTarget(workspace: string, id: string, patch: TargetPatch): Promise<Target | null> {
+      const { nextStep, interviewDate, ...rest } = patch
+      const record = {
+        ...rest, // status, skills, rounds, events, debriefs, company, role, jd share column names
+        ...(nextStep !== undefined ? { next_step: nextStep } : {}),
+        ...(interviewDate !== undefined ? { interview_date: interviewDate } : {}),
+      }
+      const { data, error } = await client
+        .from(PHASE1_TABLES.targets)
+        .update(record)
+        .eq('id', id)
+        .eq('workspace_id', workspace)
+        .select()
+        .maybeSingle()
+      throwIf(error, 'update target')
+      return data ? toTarget(data as TargetRecord) : null
+    },
+
+    async deleteTarget(workspace: string, id: string): Promise<void> {
+      const { error } = await client.from(PHASE1_TABLES.targets).delete().eq('id', id).eq('workspace_id', workspace)
+      throwIf(error, 'delete target')
+    },
+
+    async addPracticeAttempt(workspace: string, input: PracticeAttemptInput): Promise<PracticeAttemptRow> {
+      const { data, error } = await client
+        .from(PHASE1_TABLES.practiceAttempts)
+        .insert({
+          workspace_id: workspace,
+          item_id: input.itemId,
+          track: input.track,
+          topic: input.topic,
+          level: input.level,
+          correct: input.correct,
+          seconds: input.seconds,
+          hints_used: input.hintsUsed,
+        })
+        .select()
+        .single()
+      throwIf(error, 'add practice attempt')
+      return toAttempt(data as PracticeAttemptRecord)
+    },
+
+    async getPracticeAttempts(workspace: string, sinceIso?: string): Promise<PracticeAttemptRow[]> {
+      let q = client.from(PHASE1_TABLES.practiceAttempts).select().eq('workspace_id', workspace)
+      if (sinceIso) q = q.gte('created_at', sinceIso)
+      const { data, error } = await q.order('created_at', { ascending: true }).limit(5000)
+      throwIf(error, 'list practice attempts')
+      return (data as PracticeAttemptRecord[]).map(toAttempt)
     },
   }
 }

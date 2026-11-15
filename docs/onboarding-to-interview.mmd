@@ -1,0 +1,121 @@
+---
+title: MIRROR - Landing to Interview (current behaviour)
+---
+flowchart TD
+  %% ---------- ENTRY ----------
+  LAND["Landing page (view=home)<br/>CTA: Start with one moment"]
+  LOAD{"Page load:<br/>sessionStorage has sessionId?"}
+  LOAD -- yes --> HYD["GET /interviews/:id<br/>restore role, answers, question, reflection<br/>(view stays home, no 'continue' prompt)"]
+  LOAD -- no --> LAND
+  HYD --> LAND
+  LAND -- "click CTA" --> GOAL
+
+  %% ---------- ONBOARDING ----------
+  subgraph ONB["Onboarding (4 steps, local state only)"]
+    GOAL["Step 1: Goal<br/>pick 1 of 4 cards<br/>(only used as a label on Review)"]
+    DIR["Step 2: Direction<br/>role (sent), industry (sent),<br/>timing (local), job description (discarded)"]
+    STORY["Step 3: Story<br/>textarea, min 20 chars<br/>(never sent, never used)"]
+    REVIEW["Step 4: Review<br/>edit links + Readiness: Not assessed"]
+    GOAL -- "Continue (needs a goal)" --> DIR
+    DIR -- "Back goes to Review (quirk)" --> REVIEW
+    DIR -- Continue --> STORY
+    STORY -- "Back" --> DIR
+    STORY -- "Review my profile<br/>(20+ chars)" --> REVIEW
+    STORY -- "under 20 chars" --> STORYERR["Toast: write a sentence<br/>or use guided interview"]
+    STORYERR --> STORY
+    STORY -- "Voice preview toggle" --> VM["voiceMode = true<br/>(persists, stale 'not connected' toast)"]
+    VM --> STORY
+    REVIEW -- "Edit goal" --> GOAL
+    REVIEW -- "Edit direction" --> DIR
+    REVIEW -- "Edit story" --> STORY
+  end
+  GOAL -- "Skip for now" --> WS
+  REVIEW -- "Enter my workspace" --> WS
+  GOAL -. "logo" .-> LAND
+
+  %% ---------- WORKSPACE ----------
+  WS["Workspace (Overview)<br/>sidebar: Stories, Interviews, Role history,<br/>Reflections, Settings, Profile<br/>(partly hard-coded demo data)"]
+  WS --> START_ANY
+  STORY -- "Not ready? Start guided interview<br/>(skips Review)" --> START_ANY
+
+  START_ANY["Any start button:<br/>Overview hero, readiness card, next-step card,<br/>Interviews page, Reflections empty state,<br/>Role review 'Practise this role', Report"]
+  START_ANY --> SI
+
+  %% ---------- START INTERVIEW ----------
+  subgraph START["startInterview(role)"]
+    SI{"busy?"}
+    SI -- yes --> IGN["ignored"]
+    SI -- no --> RESET["flowState=starting, reset client answers,<br/>orb=thinking"]
+    RESET --> POSTI["POST /interviews {role, industry}"]
+    POSTI -- "201: status in_progress,<br/>askedQuestions=[opening question]" --> OK["store sessionId (+sessionStorage)<br/>currentQuestion, questionIndex=0, orb=speaking"]
+    POSTI -- "error" --> FAIL["classify error, toast 'Could not start',<br/>stay on previous page, no retry, orb stuck thinking"]
+  end
+  OK --> VMODE{"voiceMode on?"}
+  VMODE -- yes --> VSTART["voice.start(interviewId)<br/>(mic prompt appears on entry)"]
+  VMODE -- no --> INT
+  VSTART --> INT
+
+  %% ---------- INTERVIEW ----------
+  INT["INTERVIEW SCREEN (view=interview)<br/>refresh via GET /interviews/:id<br/>Question N of 4, orb, question, composer"]
+  INT --> PATH{"Answer by?"}
+  PATH -- "type" --> TXT
+  PATH -- "Speak button / voiceMode" --> VOICE
+
+  %% ---- text path ----
+  subgraph TEXT["Text path: submitAnswer()"]
+    TXT["Send answer"]
+    TXT --> V1{"sessionId?"}
+    V1 -- no --> E1["Toast: start an interview first"]
+    V1 -- yes --> V2{"answer 20+ chars?"}
+    V2 -- no --> E2["Toast: add more detail"]
+    V2 -- yes --> POSTT["POST /interviews/:id/turns<br/>{questionIndex, answer, source:text}"]
+    POSTT --> SRV{"Server addTurn rules"}
+    SRV -- "404/409/400<br/>(not found, completed, abandoned,<br/>duplicate/out-of-order index, empty)" --> E3["flowState by classifyApiError,<br/>toast 'answer not accepted'"]
+    SRV -- "saved, index 0-2" --> NQ["Generate next question<br/>NIM follow-up or fixed catalog"]
+    NQ -- ok --> NEXTQ["show next question, orb=speaking"]
+    NQ -- "provider fails: 503 saved=true" --> RETRYQ["answer kept, 'Retry next question'<br/>POST /next-question<br/>(composer still enabled: stale index risk)"]
+    RETRYQ -- "retry ok" --> NEXTQ
+    SRV -- "saved, index 3 (last)" --> DONE["server marks interview completed"]
+  end
+  E1 --> INT
+  E2 --> INT
+  E3 --> INT
+  NEXTQ --> INT
+
+  %% ---- voice path ----
+  subgraph VOICE_P["Voice path (WebSocket gateway)"]
+    VOICE["requesting_permission"]
+    VOICE -- denied --> VERR["toast: voice unavailable, type instead"]
+    VOICE -- granted --> CONN["connecting: hello {interviewId, token:dev}"]
+    CONN -- "interview_not_found / rate_limited /<br/>invalid_hello / unreachable" --> VERR
+    CONN --> READY["session_ready"]
+    READY --> SPEAK["speaking: MIRROR asks (TTS)<br/>mic muted (half-duplex), can Stop speaking"]
+    SPEAK -- "playback_complete" --> LISTEN["listening<br/>live partial transcript"]
+    LISTEN -- "Send spoken answer / end of speech" --> PROC["processing_speech<br/>STT final (8s timeout)"]
+    PROC -- "empty / stt_error / too long (3 min)" --> LISTEN
+    PROC -- "final_transcript" --> VTURN["submit as turn (source:voice)<br/>same addTurn rules"]
+    VTURN -- "accepted, more questions" --> SPEAK
+    VTURN -- "last question accepted" --> VDONE["state completed"]
+    VTURN -- "turn_rejected" --> LISTEN
+    LISTEN -- "silence 30s / session 30 min /<br/>drop (60s reconnect window)" --> VERR2["error: Reconnect or Type instead"]
+  end
+  VERR --> INT
+  VERR2 -- "Type instead" --> INT
+  VERR2 -- "Reconnect" --> CONN
+  LISTEN -- "Type instead" --> INT
+
+  %% ---------- LEAVE ----------
+  INT -- "End session" --> ABN["voice.stop, POST /abandon<br/>(409 ignored if completed)"]
+  ABN --> WS
+  INT -. "reload / browser back" .-> LAND
+  LAND -. "no resume offer;<br/>Start creates a NEW session" .-> GOAL
+
+  %% ---------- FINISH ----------
+  DONE --> CMP
+  VDONE --> CMP
+  CMP["POST /complete (needs 4 turns)<br/>POST /reflect"]
+  CMP -- "LLM ok + quotes verified verbatim" --> REP["Report: readiness label/range,<br/>evidence quotes, focus"]
+  CMP -- "503 no provider / 400 invalid quote / 5xx" --> REPF["Report page, 'answers are saved'<br/>+ Retry reflection"]
+  REPF -- "Retry reflection" --> CMP
+  REP --> WS
+  REPF --> WS

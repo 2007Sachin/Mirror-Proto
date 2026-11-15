@@ -61,14 +61,15 @@ describe('workspace isolation', () => {
     await repo.saveReflection('dev', {
       interviewId: idA,
       role: 'Product Analyst',
-      readinessLabel: 'solid',
-      readinessRange: { low: 62, high: 72 },
+      readinessLabel: null,
+      readinessRange: null,
       evidence: [],
       focus: 'Make the result concrete.',
+      suggestion: 'Say the result first.',
       model: 'test-model',
     })
     const mine = await app.request(`/interviews/${idA}`, { headers: WS })
-    expect((await j(mine)).reflection.readinessLabel).toBe('solid')
+    expect((await j(mine)).reflection.focus).toBe('Make the result concrete.')
     const theirs = await app.request(`/interviews/${idA}`, { headers: { 'X-Dev-Workspace': 'intruder' } })
     expect(theirs.status).toBe(404)
   })

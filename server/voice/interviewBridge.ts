@@ -32,6 +32,22 @@ export async function submitVoiceTurn(
   const interview = await repo.getInterview(workspace, interviewId)
   if (!interview) return { ok: false, code: 'interview_not_found', status: 404 }
   const turns = await repo.getTurns(workspace, interviewId)
+  // Retry after a follow-up hiccup: this answer is already saved, so never add it twice.
+  // Just produce the next question from what is saved.
+  if (
+    questionIndex < turns.length &&
+    turns.length < TOTAL_QUESTIONS &&
+    interview.status !== 'completed' &&
+    interview.status !== 'abandoned'
+  ) {
+    try {
+      const nextQuestion = await persistFollowUpQuestion(repo, interview, turns, provider)
+      return { ok: true, turn: turns[questionIndex], nextQuestionIndex: turns.length, nextQuestion, completed: false }
+    } catch (err) {
+      if (err instanceof ProviderFailure) return { ok: false, code: 'followup_provider_unavailable', status: 503 }
+      throw err
+    }
+  }
   const asked = interview.askedQuestions[questionIndex] ?? ''
   const result = addTurn(interview, turns, {
     questionIndex,

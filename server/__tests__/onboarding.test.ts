@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { OPENING_QUESTION } from '../domain/questions.js'
 import { ProviderFailure } from '../providers/nim.js'
+import { createMockStt } from '../voice/stt/mockStt.js'
 import { j, makeApp, WS } from './helpers.js'
 
 const JSON_HEADERS = { ...WS, 'Content-Type': 'application/json' }
@@ -88,11 +89,18 @@ describe('resume upload', () => {
 })
 
 describe('dictation', () => {
-  it('turns recorded audio into text (mock speech-to-text)', async () => {
-    const { app } = makeApp()
+  it('turns recorded audio into text when speech-to-text is supplied', async () => {
+    const { app } = makeApp({ stt: createMockStt({ finalText: 'I led the redesign.', emitPartials: false }) })
     const res = await app.request('/onboarding/transcribe', { method: 'POST', headers: WS, body: new Uint8Array(640) })
     expect(res.status).toBe(200)
-    expect((await j<{ text: string }>(res)).text.length).toBeGreaterThan(0)
+    expect((await j<{ text: string }>(res)).text).toBe('I led the redesign.')
+  })
+
+  it('says voice is unavailable instead of inventing text when no provider is set', async () => {
+    const { app } = makeApp()
+    const res = await app.request('/onboarding/transcribe', { method: 'POST', headers: WS, body: new Uint8Array(640) })
+    expect(res.status).toBe(503)
+    expect((await j<{ error: string }>(res)).error).toBe('voice_unavailable')
   })
 
   it('rejects empty audio', async () => {

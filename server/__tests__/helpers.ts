@@ -28,7 +28,7 @@ export function makeEnv(overrides: Partial<Env> = {}): Env {
 export function makeApp(deps: Partial<AppDeps> = {}) {
   const env = deps.env ?? makeEnv()
   const repo = deps.repo ?? createMemoryRepository()
-  const app = buildApp({ env, repo, provider: deps.provider, log: deps.log })
+  const app = buildApp({ env, repo, provider: deps.provider, stt: deps.stt, log: deps.log })
   return { app, repo, env }
 }
 

@@ -9,6 +9,7 @@ import { interviewContext, nextFollowUpQuestion, persistFollowUpQuestion } from 
 import { addTurnSchema, createInterviewSchema } from './domain/schemas.js'
 import { extractResumeText, onboardingStepSchema, profileSchema, runOnboardingStep, MAX_RESUME_BYTES } from './domain/onboarding.js'
 import { createMockStt } from './voice/stt/mockStt.js'
+import { sttProviderName } from './voice/sttProvider.js'
 import { createRestSarvamStt } from './voice/stt/createStt.js'
 import type { SttProvider } from './voice/providers/types.js'
 import { addTurn, canAbandon, canComplete, validateEvidence } from './domain/stateMachine.js'
@@ -193,7 +194,7 @@ export function buildApp(deps: AppDeps): Hono {
       uptime: Math.round((Date.now() - startedAt) / 1000),
       voice: {
         configured: isSarvamConfigured(env),
-        provider: isSarvamConfigured(env) ? 'sarvam' : 'mock',
+        provider: sttProviderName(env),
         sttTransport: env.sarvamSttTransport,
       },
     }),
@@ -206,7 +207,7 @@ export function buildApp(deps: AppDeps): Hono {
       voice: {
         configured: isSarvamConfigured(env),
         live: isSarvamConfigured(env),
-        provider: isSarvamConfigured(env) ? 'sarvam' : 'mock',
+        provider: sttProviderName(env),
         sttTransport: env.sarvamSttTransport,
         sttModel: env.sarvamSttTransport === 'rest' ? env.sarvamSttModel : env.sarvamSttRealtimeModel,
         ttsModel: env.sarvamTtsModel,
@@ -419,7 +420,9 @@ export function buildApp(deps: AppDeps): Hono {
   api.post('/onboarding/transcribe', async c => {
     const pcm = Buffer.from(await c.req.arrayBuffer())
     if (pcm.length === 0 || pcm.length > 6 * 1024 * 1024) throw new AppError(400, 'invalid_audio')
-    const stt = deps.stt ?? (isSarvamConfigured(env) ? createRestSarvamStt(env) : createMockStt())
+    const sttName = sttProviderName(env)
+    if (!deps.stt && sttName === 'none') throw new AppError(503, 'voice_unavailable')
+    const stt = deps.stt ?? (sttName === 'sarvam' ? createRestSarvamStt(env) : createMockStt())
     const stream = stt.startStream({ language: env.sarvamLanguage, sampleRate: 16000 })
     try {
       stream.sendAudio(pcm)

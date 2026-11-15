@@ -55,7 +55,6 @@ export function createSarvamRealtimeStt(deps: SarvamRealtimeSttDeps): SttProvide
       let closed = false
       let utteranceOpen = false
       let utteranceFinalized = false
-      let _droppedFrames = 0
       const queue: Buffer[] = []
       let pendingFinal: {
         resolve: (text: string) => void
@@ -190,10 +189,7 @@ export function createSarvamRealtimeStt(deps: SarvamRealtimeSttDeps): SttProvide
             sendJson({ event: 'audio_input', audio: chunk.toString('base64') })
             return
           }
-          if (queue.length >= maxQueued) {
-            _droppedFrames += 1
-            return
-          }
+          if (queue.length >= maxQueued) return
           queue.push(Buffer.from(chunk))
         },
         onPartial(cb) {

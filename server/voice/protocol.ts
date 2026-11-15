@@ -88,6 +88,7 @@ export type ServerMessageType =
   | 'error'
   | 'pong'
   | 'close'
+  | 'voice_unavailable'
 
 export interface ServerEnvelope<T = unknown> {
   v: typeof PROTOCOL_VERSION

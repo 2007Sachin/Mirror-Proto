@@ -97,6 +97,7 @@ export default function App() {
     },
     onCompleted: () => {
       const id = sessionIdRef.current ?? sessionStorage.getItem(SESSION_STORAGE_KEY)
+      setVoiceMode(false) // the voice hook has already stopped itself on completion
       if (!id) return
       setFlowState('generating_reflection')
       void (async () => {
@@ -137,7 +138,7 @@ export default function App() {
       go('interview')
       if (voiceOn) {
         void voice.start(session.id).then(ok => {
-          if (!ok) notify('Voice is unavailable — type your answer instead.')
+          if (!ok) { setVoiceMode(false); notify(voice.failureNotice()) }
         })
       }
     } catch (err) {
@@ -266,7 +267,7 @@ export default function App() {
     if (!sessionId) return notify('Start the interview, then speak.')
     setVoiceMode(true)
     void voice.start(sessionId).then(ok => {
-      if (!ok) { setVoiceMode(false); notify('Voice is unavailable. Type your answer instead.') }
+      if (!ok) { setVoiceMode(false); notify(voice.failureNotice()) }
     })
   }
   /** Let an unfinished interview go: close it on the server and forget it here. */

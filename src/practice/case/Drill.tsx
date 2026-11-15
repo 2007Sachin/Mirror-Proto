@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import type { Database } from 'sql.js'
-import { runQuery, type QueryResult } from '../../pages/target/sqlEngine'
+import type { QueryResult } from '../../pages/target/sqlEngine'
+import { cancelSql, disposeSql, runSql, warmSql } from '../sql/worker/sqlRunner'
 import type { DrillProps } from '../types'
-import { cases, createCaseDb, type Pick } from './data'
+import { cases, type Pick } from './data'
 import './drill.css'
+
+// a wrapper, so the render-purity lint sees the clock read in a handler as such
+const nowMs = () => Date.now()
 
 function ResultTable({ result }: { result: QueryResult }) {
   if ('error' in result) return <p className="csd-error">{result.error}</p>
@@ -13,7 +16,9 @@ function ResultTable({ result }: { result: QueryResult }) {
       <table><thead><tr>{result.columns.map(c => <th key={c}>{c}</th>)}</tr></thead>
         <tbody>{result.rows.map((r, i) => <tr key={i}>{r.map((v, j) => <td key={j}>{v === null ? <i>NULL</i> : String(v)}</td>)}</tr>)}</tbody></table>
     </div>
-    {result.total > result.rows.length && <p className="csd-note">Showing the first {result.rows.length} of {result.total} rows.</p>}
+    {result.truncated
+      ? <p className="csd-note">Showing the first {result.rows.length} rows.</p>
+      : result.total > result.rows.length && <p className="csd-note">Showing the first {result.rows.length} of {result.total} rows.</p>}
   </>
 }
 
@@ -37,7 +42,8 @@ function Choices({ name, legend, opts, value, onPick, locked, best, tag }: {
 
 export default function Drill({ item, onAttempt, onClose }: DrillProps) {
   const c = cases.find(x => x.id === item.id)
-  const [db, setDb] = useState<Database | null>(null)
+  const [ready, setReady] = useState(false)
+  const [running, setRunning] = useState(false)
   const [loadFailed, setLoadFailed] = useState(false)
   const [loadTry, setLoadTry] = useState(0)
   const [query, setQuery] = useState('')
@@ -48,16 +54,23 @@ export default function Drill({ item, onAttempt, onClose }: DrillProps) {
   const [done, setDone] = useState(false)
   const [start] = useState(Date.now)
   const sent = useRef(false)
+  const busy = useRef(false)
 
   useEffect(() => {
     let live = true
-    if (c) createCaseDb(c.id).then(d => { if (live) setDb(d) }, () => { if (live) setLoadFailed(true) })
+    if (c) warmSql(`case:${c.id}`).then(() => { if (live) setReady(true) }, () => { if (live) setLoadFailed(true) })
     return () => { live = false }
   }, [c, loadTry])
+  useEffect(() => disposeSql, []) // end the SQL worker when this screen closes
 
   if (!c) return <div className="mirror-landing csd"><p className="csd-error" role="alert">This case is not available.</p><button className="ml-btn" onClick={onClose}>Back</button></div>
 
-  const run = () => { if (db) setResult(runQuery(db, query)) }
+  const run = async (sql = query) => {
+    if (!ready || busy.current) return
+    busy.current = true
+    setRunning(true)
+    try { setResult(await runSql(`case:${c.id}`, sql)) } finally { busy.current = false; setRunning(false) }
+  }
   const finish = () => {
     if (!cause || !rec || sent.current) return
     sent.current = true
@@ -65,12 +78,12 @@ export default function Drill({ item, onAttempt, onClose }: DrillProps) {
     onAttempt({
       itemId: item.id, track: 'case', topic: item.topic, level: item.level,
       correct: cause === c.cause && c.recs.find(r => r.id === rec)?.kind === 'best',
-      seconds: Math.min(3600, Math.round((Date.now() - start) / 1000)),
+      seconds: Math.min(3600, Math.round((nowMs() - start) / 1000)),
       hintsUsed: 0,
     })
   }
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); run(); return }
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void run(); return }
     if (e.key === 'Tab' && !e.shiftKey) {
       e.preventDefault()
       const el = e.currentTarget
@@ -108,8 +121,9 @@ export default function Drill({ item, onAttempt, onClose }: DrillProps) {
           <textarea id="csd-query" spellCheck={false} autoCapitalize="off" autoCorrect="off" value={query}
             placeholder="SELECT ..." onChange={e => setQuery(e.target.value)} onKeyDown={onKey} />
           <div className="csd-row">
-            <button className="ml-btn" disabled={!db} onClick={run}>Run</button>
-            <span className="csd-note">{loadFailed ? '' : db ? 'Run as many queries as you like. Ctrl or Cmd + Enter also runs it.' : 'Setting up the case data…'}</span>
+            <button className="ml-btn" disabled={!ready || running} onClick={() => void run()}>Run</button>
+            {running && <button className="ml-btn ml-btn--quiet" onClick={cancelSql}>Cancel</button>}
+            <span className="csd-note" role="status">{loadFailed ? '' : running ? 'Running…' : ready ? 'Run as many queries as you like. Ctrl or Cmd + Enter also runs it.' : 'Setting up the case data…'}</span>
           </div>
           {loadFailed && <p className="csd-error" role="alert">The case data did not load. <button className="csd-link" onClick={() => { setLoadFailed(false); setLoadTry(n => n + 1) }}>Retry</button></p>}
         </div>
@@ -145,7 +159,7 @@ export default function Drill({ item, onAttempt, onClose }: DrillProps) {
             {c.debrief.queries.map(q => <div key={q.label} className="csd-q-ex">
               <p className="csd-note">{q.label}</p>
               <pre className="csd-code">{q.sql}</pre>
-              <button className="ml-btn ml-btn--quiet" onClick={() => { setQuery(q.sql); if (db) setResult(runQuery(db, q.sql)) }}>Run this query</button>
+              <button className="ml-btn ml-btn--quiet" onClick={() => { setQuery(q.sql); void run(q.sql) }}>Run this query</button>
             </div>)}
             <h3>What a strong answer says</h3>
             <p className="csd-text">{c.debrief.strong}</p>

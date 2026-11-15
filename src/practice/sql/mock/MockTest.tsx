@@ -1,8 +1,8 @@
 import { Suspense, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import type { Database } from 'sql.js'
-import { runQuery, sameResult, type QueryResult } from '../../../pages/target/sqlEngine'
+import { sameResult, type QueryResult } from '../../../pages/target/sqlEngine'
+import { cancelSql, disposeSql, isStopped, runSql, warmSql } from '../worker/sqlRunner'
 import type { AttemptReport } from '../../types'
-import { createPracticeDb, practiceTables } from '../db'
+import { practiceTables } from '../db'
 import { QueryExplainer, TablePeek } from '../explain'
 import { tablesIn } from '../lesson/logic'
 import type { SqlProblem } from '../problems'
@@ -57,7 +57,9 @@ function ResultTable({ result }: { result: QueryResult }) {
       <table><thead><tr>{result.columns.map(c => <th key={c}>{c}</th>)}</tr></thead>
         <tbody>{result.rows.map((r, i) => <tr key={i}>{r.map((v, j) => <td key={j}>{v === null ? <i>NULL</i> : String(v)}</td>)}</tr>)}</tbody></table>
     </div>
-    {result.total > result.rows.length && <p className="sqd-note">Showing the first {result.rows.length} of {result.total} rows.</p>}
+    {result.truncated
+      ? <p className="sqd-note">Showing the first {result.rows.length} rows.</p>
+      : result.total > result.rows.length && <p className="sqd-note">Showing the first {result.rows.length} of {result.total} rows.</p>}
   </>
 }
 
@@ -146,7 +148,8 @@ function Picker({ problems, concepts, onStart, onResume, onBack, initialPreset }
 // ---------------- the exam ----------------
 function Exam({ problems, concepts, onAttempt, st0, onDone }: MockProps & { st0: St; onDone(st: St, usedMs: number): void }) {
   const [st, setSt] = useState(st0)
-  const [db, setDb] = useState<Database | null>(null)
+  const [ready, setReady] = useState(false)
+  const [running, setRunning] = useState(false)
   const [loadFailed, setLoadFailed] = useState(false)
   const [loadTry, setLoadTry] = useState(0)
   const [now, setNow] = useState(nowMs)
@@ -159,23 +162,29 @@ function Exam({ problems, concepts, onAttempt, st0, onDone }: MockProps & { st0:
   useEffect(() => { mark.current = nowMs() }, [])
   const said = useRef<number | null>(null)
   const finished = useRef(false)
+  const busy = useRef(false)
+  const inflight = useRef<Promise<void> | null>(null) // the Run or Submit that is working now
+  const stRef = useRef(st) // the latest answers, for code that outlives a render (finish)
+  useEffect(() => { stRef.current = st }, [st])
   const pById = useMemo(() => new Map(problems.map(p => [p.id, p])), [problems])
   const cById = useMemo(() => new Map(concepts.map(c => [c.id, c])), [concepts])
 
   useEffect(() => { save(st) }, [st])
   useEffect(() => {
     let live = true
-    createPracticeDb().then(d => { if (live) setDb(d) }, () => { if (live) setLoadFailed(true) })
+    warmSql('practice').then(() => { if (live) setReady(true) }, () => { if (live) setLoadFailed(true) })
     return () => { live = false }
   }, [loadTry])
+  useEffect(() => disposeSql, []) // end the SQL worker when the exam closes
 
   const q = st.qs[st.idx]
   const left = remainingMs(st.startedAt, st.deadline, now)
   const total = st.deadline - st.startedAt
   useEffect(() => { const t = setInterval(() => setNow(nowMs()), 1000); return () => clearInterval(t) }, [])
 
-  // submit the open answer into a state copy; reports once per Submit answer
-  const submitInto = (s: St, id: string): St => {
+  // Submits the open answer: grades it (a worker round trip for SQL), reports once, then records it.
+  // Returns the state with the answer recorded. `s` is the state to read the draft from.
+  const submitInto = async (s: St, id: string): Promise<St> => {
     const a = s.ans[id] ?? blank()
     const kind = s.qs.find(x => x.id === id)?.kind
     const secs = Math.min(3600, Math.round(((s.spent[id] ?? 0) + (s.qs[s.idx].id === id ? nowMs() - mark.current : 0)) / 1000))
@@ -187,26 +196,45 @@ function Exam({ problems, concepts, onAttempt, st0, onDone }: MockProps & { st0:
       onAttempt({ itemId: id, track: 'sql', topic: c.topic, level: c.level, correct: ok, seconds: secs, hintsUsed: 0 })
     } else {
       const p = pById.get(id)
-      if (!p || !db || !a.draft.trim()) return s
-      ok = sameResult(runQuery(db, a.draft), runQuery(db, p.solution), p.ordered); sub = a.draft
+      if (!p || !ready || !a.draft.trim()) return s
+      const got = await runSql('practice', a.draft)
+      if (isStopped(got)) return s // cancelled: nothing is recorded
+      const want = await runSql('practice', p.solution)
+      if (isStopped(want)) return s
+      ok = sameResult(got, want, p.ordered); sub = a.draft
       onAttempt({ itemId: id, track: 'sql', topic: p.topic, level: p.level, correct: ok, seconds: secs, hintsUsed: 0 })
     }
-    return { ...s, ans: { ...s.ans, [id]: { ...a, sub, tries: a.tries + 1, ok, first: a.tries === 0 ? ok : a.first } } }
+    const next = (cur: St): St => {
+      const b = cur.ans[id] ?? blank()
+      return { ...cur, ans: { ...cur.ans, [id]: { ...b, sub, tries: b.tries + 1, ok, first: b.tries === 0 ? ok : b.first } } }
+    }
+    stRef.current = next(stRef.current)
+    setSt(next) // pure updater: the report above has already fired, once
+    return next(s)
+  }
+  // One Run or Submit at a time; finish() can wait for it or stop it.
+  const work = (job: () => Promise<void>) => {
+    if (busy.current) return
+    busy.current = true
+    setRunning(true)
+    inflight.current = job().finally(() => { busy.current = false; setRunning(false) })
   }
   const pending = (s: St, id: string) => { const a = s.ans[id]; return !!a && (s.qs.find(x => x.id === id)?.kind === 'concept' ? a.picked !== null && a.picked !== a.sub : a.draft.trim() !== '' && a.draft !== a.sub) }
   const bank = (s: St): St => ({ ...s, spent: { ...s.spent, [s.qs[s.idx].id]: (s.spent[s.qs[s.idx].id] ?? 0) + nowMs() - mark.current } })
 
-  const finish = () => {
+  const finish = async () => {
     if (finished.current) return
     finished.current = true
-    let s = bank(st)
+    cancelSql() // a Run or Submit that is stuck must not hold the test open
+    await inflight.current
+    let s = bank(stRef.current)
     const id = s.qs[s.idx].id
-    if (pending(s, id)) s = submitInto(s, id) // the open question is submitted as it stands
+    if (pending(s, id)) s = await submitInto(s, id) // the open question is submitted as it stands
     onDone(s, Math.min(total, nowMs() - st.startedAt))
   }
   const finishRef = useRef(finish)
   useEffect(() => { finishRef.current = finish })
-  useEffect(() => { if (left <= 0 && (db || loadFailed)) finishRef.current() }, [left, db, loadFailed])
+  useEffect(() => { if (left <= 0 && (ready || loadFailed)) void finishRef.current() }, [left, ready, loadFailed])
 
   // calm announcements at 10, 5 and 1 minutes; no sound
   const ms = milestone(left, total)
@@ -225,8 +253,11 @@ function Exam({ problems, concepts, onAttempt, st0, onDone }: MockProps & { st0:
   const problem = q.kind === 'sql' ? pById.get(q.id) : undefined
   const concept = q.kind === 'concept' ? cById.get(q.id) : undefined
 
-  const run = () => { if (db && problem) { setResult(runQuery(db, a.draft)); setMob('a') } }
-  const submit = () => { setSt(submitInto(st, q.id)); setMob('a') } // not inside an updater: onAttempt must fire once
+  const run = () => {
+    if (!ready || !problem) return
+    work(async () => { setResult(await runSql('practice', a.draft)); setMob('a') })
+  }
+  const submit = () => work(async () => { await submitInto(stRef.current, q.id); setMob('a') }) // onAttempt fires once, inside submitInto
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); run(); return }
     if (e.key === 'Tab' && !e.shiftKey) {
@@ -281,7 +312,7 @@ function Exam({ problems, concepts, onAttempt, st0, onDone }: MockProps & { st0:
           <ul>{unanswered.map(({ i, x }) => <li key={x.id}>{i + 1}. {title(x.id)}</li>)}</ul>
         </> : <p>Every question has an answer. You can still change them until you submit.</p>}
         <div className="sqd-row">
-          <button type="button" className="sqd-run" autoFocus onClick={() => { setConfirm(false); finish() }}>Submit test</button>
+          <button type="button" className="sqd-run" autoFocus onClick={() => { setConfirm(false); void finish() }}>Submit test</button>
           <button type="button" className="sqd-btn" onClick={() => setConfirm(false)}>Keep working</button>
         </div>
       </div>
@@ -310,9 +341,10 @@ function Exam({ problems, concepts, onAttempt, st0, onDone }: MockProps & { st0:
           <label className="ml-sr" htmlFor="mk-query">SQL query</label>
           <textarea id="mk-query" className="sqd-editor" spellCheck={false} autoCapitalize="off" autoCorrect="off" value={a.draft} placeholder="SELECT ..." onChange={e => patch({ draft: e.target.value })} onKeyDown={onKey} />
           <div className="sqd-actions">
-            <button type="button" className="sqd-btn" disabled={!db || !a.draft.trim()} onClick={run}>Run</button>
-            <button type="button" className="sqd-run" disabled={!db || !a.draft.trim()} onClick={submit}>Submit answer</button>
-            <span className="sqd-note" role="status">{loadFailed ? '' : !db ? 'Setting up your practice database…' : submitted ? 'Answer submitted. You can change it until the test ends.' : a.tries > 0 ? 'Changed since you last submitted.' : 'Run tests your query. Submit answer records it.'}</span>
+            <button type="button" className="sqd-btn" disabled={!ready || running || !a.draft.trim()} onClick={run}>Run</button>
+            <button type="button" className="sqd-run" disabled={!ready || running || !a.draft.trim()} onClick={submit}>Submit answer</button>
+            {running && <button type="button" className="sqd-btn" onClick={cancelSql}>Cancel</button>}
+            <span className="sqd-note" role="status">{loadFailed ? '' : !ready ? 'Setting up your practice database…' : running ? 'Running…' : submitted ? 'Answer submitted. You can change it until the test ends.' : a.tries > 0 ? 'Changed since you last submitted.' : 'Run tests your query. Submit answer records it.'}</span>
             {loadFailed && <span className="sqd-error" role="alert">The practice database did not load. <button className="sqd-link" onClick={() => { setLoadFailed(false); setLoadTry(n => n + 1) }}>Retry</button></span>}
           </div>
           <div className="sqd-out"><div className="sqd-panel" aria-label="Result of Run">{result ? <ResultTable result={result} /> : <p className="sqd-note">Run shows your result here.</p>}</div></div>
@@ -327,7 +359,7 @@ function Exam({ problems, concepts, onAttempt, st0, onDone }: MockProps & { st0:
             ))}
           </div>
           <div className="sqd-actions">
-            <button type="button" className="sqd-run" disabled={a.picked === null} onClick={submit}>Submit answer</button>
+            <button type="button" className="sqd-run" disabled={a.picked === null || running} onClick={submit}>Submit answer</button>
             <span className="sqd-note" role="status">{submitted ? 'Answer submitted. You can change it until the test ends.' : a.tries > 0 ? 'Changed since you last submitted.' : ''}</span>
           </div>
         </>}

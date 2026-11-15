@@ -147,7 +147,7 @@ describe('data.ts: server backend', () => {
     vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
       const path = String(url).replace(/^\/api/, '')
       const headers = new Headers(init?.headers)
-      calls.push({ path, method: init?.method ?? 'GET', body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined, ws: headers.get('the old dev header'), cred: init?.credentials })
+      calls.push({ path, method: init?.method ?? 'GET', body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined, ws: headers.get('X-Dev-Workspace'), cred: init?.credentials })
       if (path === '/capabilities') return reply({ newData: 'server', screenLongCalls: true })
       if (path.startsWith('/stories/missing')) return reply({ error: 'story_not_found' }, 404)
       if (path.startsWith('/targets/') && path.endsWith('/match')) return reply({ matches: [] })

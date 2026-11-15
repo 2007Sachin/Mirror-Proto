@@ -39,19 +39,25 @@ function clipAtWord(s: string, max: number): string {
 
 const skillsIn = (s: string) => DICTIONARY.filter(d => [...s.matchAll(d.re)].length > 0).map(d => d.name)
 
+/** The derived flags of one résumé line. `hasVerb` is only used to decide whether a line is a claim at all. */
+export function describeClaim(quote: string): Claim & { hasVerb: boolean } {
+  const skills = skillsIn(quote)
+  const hasNumber = /\d/.test(quote)
+  const hasVerb = ACTION.test(quote)
+  const bareList = !hasVerb && !hasNumber && skills.length > 0
+  const vague = (WEAK.test(quote) && !hasNumber) || bareList
+  return { quote, skills, hasNumber, vague, hasVerb }
+}
+
 export function extractClaims(resumeText: string): Claim[] {
   const claims: Claim[] = []
   for (const piece of cleanResume(resumeText).split(SPLIT)) {
     if (!piece) continue
     const quote = clipAtWord(trimEdges(piece), MAX_CLAIM)
     if (quote.length < 12) continue
-    const skills = skillsIn(quote)
-    const hasNumber = /\d/.test(quote)
-    const hasVerb = ACTION.test(quote)
-    if (!hasVerb && !hasNumber && skills.length === 0) continue
-    const bareList = !hasVerb && !hasNumber && skills.length > 0
-    const vague = (WEAK.test(quote) && !hasNumber) || bareList
-    claims.push({ quote, skills, hasNumber, vague })
+    const { hasVerb, ...claim } = describeClaim(quote)
+    if (!hasVerb && !claim.hasNumber && claim.skills.length === 0) continue
+    claims.push(claim)
   }
   return claims
 }

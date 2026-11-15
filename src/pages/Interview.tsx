@@ -3,6 +3,7 @@ import '../landing.css'
 import './interview.css'
 import { LiveOrb, type OrbState } from '../components/LiveOrb'
 import { CHANGED, DID, countWords } from '../lib/analyse'
+import ReplayPanel from '../features/replay/ReplayPanel'
 import type { VoiceSessionApi } from '../voice/useVoiceSession'
 import { ArrowRight, Captions, CircleHelp, Mic, MicOff, MessageSquare, Repeat, RotateCcw, Square, Volume2, VolumeX, X } from 'lucide-react'
 
@@ -75,6 +76,8 @@ export type InterviewProps = {
   onEnd: () => void
   onSwitchToType: () => void
   onSwitchToSpeak: () => void
+  /** Adds a Replay tab: a calm look at the latest answer and a way to say it again. */
+  replay?: boolean
 }
 
 const SHORTCUTS: [string, string][] = [['M', 'Mute or unmute'], ['C', 'Captions on or off'], ['T', 'Switch between speaking and typing'], ['P', 'Show or hide the side panel'], ['R', 'Repeat the question'], ['Esc', 'Close a dialog or panel']]
@@ -84,7 +87,7 @@ export default function Interview(p: InterviewProps) {
   const [confirming, setConfirming] = useState(false)
   const [panel, setPanel] = useState(() => matches(DESKTOP))
   const [desktop, setDesktop] = useState(() => matches(DESKTOP))
-  const [tab, setTab] = useState<'chat' | 'tips'>('chat')
+  const [tab, setTab] = useState<'chat' | 'tips' | 'replay'>('chat')
   const [captions, setCaptions] = useState(true)
   const [help, setHelp] = useState(false)
   const [sec, setSec] = useState(0)
@@ -224,9 +227,10 @@ export default function Interview(p: InterviewProps) {
   const onTabKey = (e: KeyboardEvent) => {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
     e.preventDefault()
-    const next = tab === 'chat' ? 'tips' : 'chat'
+    const order: ('chat' | 'tips' | 'replay')[] = p.replay ? ['chat', 'tips', 'replay'] : ['chat', 'tips']
+    const next = order[(order.indexOf(tab) + (e.key === 'ArrowRight' ? 1 : order.length - 1)) % order.length]
     setTab(next)
-    tabs.current[next === 'chat' ? 0 : 1]?.focus()
+    tabs.current[order.indexOf(next)]?.focus()
   }
   // Light focus trap while the panel is a bottom sheet.
   const onPanelKey = (e: KeyboardEvent) => {
@@ -258,7 +262,7 @@ export default function Interview(p: InterviewProps) {
   const sheetOpen = panel && !desktop
   const endFromSheet = () => { setPanel(false); setConfirming(true) }
 
-  const tabPanelHidden = (t: 'chat' | 'tips') => tab !== t
+  const tabPanelHidden = (t: 'chat' | 'tips' | 'replay') => tab !== t
 
   return (
     <div className={`mirror-landing iv ${panel ? 'has-panel' : ''} ${sheetOpen ? 'has-sheet' : ''}`}>
@@ -372,8 +376,8 @@ export default function Interview(p: InterviewProps) {
         <aside ref={panelRef} className="ml-glass iv-panel" aria-label="Chat and tips" onKeyDown={onPanelKey}>
           <div className="iv-panel-h">
             <div role="tablist" aria-label="Side panel" className="iv-tabs" onKeyDown={onTabKey}>
-              {(['chat', 'tips'] as const).map((t, i) => (
-                <button key={t} ref={el => { tabs.current[i] = el }} type="button" role="tab" id={`iv-tab-${t}`} aria-selected={tab === t} aria-controls={`iv-tp-${t}`} tabIndex={tab === t ? 0 : -1} onClick={() => setTab(t)}>{t === 'chat' ? 'Chat' : 'Tips'}</button>
+              {(p.replay ? (['chat', 'tips', 'replay'] as const) : (['chat', 'tips'] as const)).map((t, i) => (
+                <button key={t} ref={el => { tabs.current[i] = el }} type="button" role="tab" id={`iv-tab-${t}`} aria-selected={tab === t} aria-controls={`iv-tp-${t}`} tabIndex={tab === t ? 0 : -1} onClick={() => setTab(t)}>{t === 'chat' ? 'Chat' : t === 'tips' ? 'Tips' : 'Replay'}</button>
               ))}
             </div>
             <button ref={closeBtn} type="button" className="iv-ico" aria-label="Close side panel" onClick={() => setPanel(false)}><X size={20} aria-hidden="true" /></button>
@@ -405,6 +409,12 @@ export default function Interview(p: InterviewProps) {
             <p className="iv-pace" aria-live="off">{pace}</p>
             <p className="iv-pace">Time on this answer: <span className="iv-num">{clock(sec - answerFrom.at)}</span></p>
           </div>
+
+          {p.replay && (
+            <div id="iv-tp-replay" role="tabpanel" aria-labelledby="iv-tab-replay" hidden={tabPanelHidden('replay')} className="iv-tp">
+              <ReplayPanel interviewId={p.sessionId} answers={p.answers} />
+            </div>
+          )}
 
           <div className="iv-comp">
             <div className="iv-seg" role="radiogroup" aria-label="How you answer">

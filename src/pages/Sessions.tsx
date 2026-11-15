@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import './sessions.css'
 import { api, type InterviewSession, type InterviewSummary } from '../lib/api'
+import SessionAnswers from '../features/replay/SessionAnswers'
+import type { Turn } from '../lib/api'
 import FallbackNote from '../components/FallbackNote'
 import { BarChart3, Check, RotateCcw, Target } from 'lucide-react'
 
@@ -9,12 +11,14 @@ const when = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day:
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`
 
 /** Every finished session, newest first, read from the server so a reload loses nothing. */
-export default function Sessions({ openId, refreshKey, onPractise }: {
+export default function Sessions({ openId, refreshKey, onPractise, onSaveStory }: {
   /** The session that just finished, opened first when there is one. */
   openId: string | null
   /** Changes when new notes land, so the list reads again. */
   refreshKey?: string
   onPractise: () => void
+  /** Offered next to each answer when provided (the story bank wires it). */
+  onSaveStory?: (turn: Turn) => void
 }) {
   const [rows, setRows] = useState<InterviewSummary[] | null>(null)
   const [more, setMore] = useState(false)
@@ -134,6 +138,7 @@ export default function Sessions({ openId, refreshKey, onPractise }: {
               <FallbackNote source={reflection.source} />
             </>
           )}
+          {shown && <SessionAnswers key={shown.id} interviewId={shown.id} turns={shown.turns} onSaveStory={onSaveStory} />}
           {shown && !reflection && (
             <div className="sessions-actions">
               <p>Your answers are saved. The notes are not written yet.</p>

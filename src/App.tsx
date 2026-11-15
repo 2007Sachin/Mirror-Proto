@@ -8,17 +8,18 @@ import Targets from './pages/Targets'
 import Practice from './pages/Practice'
 import Interview from './pages/Interview'
 import Sessions from './pages/Sessions'
+import Stories from './pages/Stories'
 import { useVoiceSession } from './voice/useVoiceSession'
 import * as data from './lib/data'
 import {
-  AudioLines, BookOpen,
+  AudioLines, BookMarked, BookOpen,
   Check, ChevronDown, Circle, Fingerprint, Home as HomeIcon,
   Menu, MessageCircle, Pause,
   Settings, Target,
   Trash2, Volume2, X,
 } from 'lucide-react'
 
-type View = 'home' | 'firstInterview' | 'workspace' | 'targets' | 'practice' | 'interview' | 'reports' | 'report' | 'profile' | 'settings'
+type View = 'home' | 'firstInterview' | 'workspace' | 'targets' | 'practice' | 'interview' | 'reports' | 'report' | 'stories' | 'profile' | 'settings'
 type Answer = { question: string; answer: string }
 type FlowState = 'not_completed' | 'idle' | 'starting' | 'saving' | 'waiting_nim' | 'generating_reflection' | 'provider_unavailable' | 'retryable_failure' | 'validation_failure'
 
@@ -125,6 +126,10 @@ export default function App() {
   const total = questionCap ?? QUESTION_COUNT
   const completed = answers.length === total && assessedRole === role && Boolean(sessionId)
 
+  const [storyQuestion, setStoryQuestion] = useState<string | null>(null)
+  /** Opens the Story bank, optionally with a question to suggest a story for (Today and Interview can call this). */
+  const openStories = (question?: string) => { setStoryQuestion(question ?? null); go('stories') }
+  void openStories
   const go = (next: View) => { setView(next); setMobileNav(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2600) }
   const startInterview = async (roleName = role, openingQuestion?: string, voiceOn = voiceMode) => {
@@ -376,6 +381,7 @@ export default function App() {
     { id: 'practice', label: 'Practice', icon: BookOpen },
     { id: 'targets', label: 'Targets', icon: Target },
     { id: 'reports', label: 'Sessions', icon: MessageCircle },
+    { id: 'stories', label: 'Stories', icon: BookMarked },
   ]
   return <div className={`app workspace-app ${calmMotion ? 'reduce-motion' : ''}`}><div className="ambient ambient--two" />
     <aside className={`sidebar ${mobileNav ? 'sidebar--open' : ''}`}><div className="sidebar-top"><Brand onClick={() => go('home')} /><button className="mobile-close" onClick={() => setMobileNav(false)}><X /></button></div><nav>{navItems.map(item => <button key={item.id} className={view === item.id || (view === 'report' && item.id === 'reports') ? 'active' : ''} onClick={() => { if (item.id === 'targets') setTargetId(null); go(item.id) }}><item.icon size={18} />{item.label}</button>)}</nav><div className="sidebar-bottom"><button onClick={() => go('settings')} className={view === 'settings' ? 'active' : ''}><Settings size={18} />Settings</button><button className="demo-profile" onClick={() => go('profile')}><span>{profileName.charAt(0)}</span><div><b>{profileName}’s workspace</b><small>View candidate profile</small></div></button></div></aside>
@@ -386,6 +392,7 @@ export default function App() {
       {view === 'practice' && <Practice initialItemId={practiceItem} onInitialConsumed={() => setPracticeItem(null)} />}
       {view === 'profile' && <div className="workspace-content profile-content"><div className="page-title"><div><p className="eyebrow">YOUR CANDIDATE PROFILE</p><h1>Profile</h1><p>Shape the context MIRROR uses. Nothing here becomes an assessment by itself.</p></div><Button onClick={() => notify('Profile changes saved in this prototype.')}><Check size={15} /> Save profile</Button></div><section className="profile-identity"><div className="profile-avatar">{profileName.charAt(0)}</div><div><h2>{profileName}</h2><p>{role} · {profileLocation}</p><span><Circle size={7} fill="currentColor" /> Prototype profile · No account connected</span></div></section><div className="profile-layout"><section className="profile-form"><div className="profile-form-title"><h2>About you</h2><p>Keep this brief. Your interview answers matter more than this form.</p></div><div className="profile-field-grid"><div><FieldLabel>Display name</FieldLabel><input value={profileName} onChange={e => setProfileName(e.target.value)} /></div><div><FieldLabel>Location</FieldLabel><input value={profileLocation} onChange={e => setProfileLocation(e.target.value)} /></div><div><FieldLabel>Experience</FieldLabel><div className="select-wrap"><select value={profileExperience} onChange={e => setProfileExperience(e.target.value)}><option>Student / recent graduate</option><option>0–2 years</option><option>2–4 years</option><option>5–8 years</option><option>8+ years</option></select><ChevronDown size={16} /></div></div><div><FieldLabel>Current direction</FieldLabel><div className="profile-role-link">{role}</div></div></div><FieldLabel>Short introduction</FieldLabel><textarea value={profileBio} onChange={e => setProfileBio(e.target.value)} /></section><aside className="profile-summary"><div className="card-label">PROFILE SNAPSHOT</div><h3>{profile?.focus ?? 'Interview practice'}</h3><dl><div><dt>Experience</dt><dd>{profileExperience}</dd></div><div><dt>Sessions done</dt><dd>{completed ? 1 : 0}</dd></div></dl><div className="profile-evidence-note"><Fingerprint size={17} /><p>Profile details personalise your practice. They never generate a readiness score.</p></div></aside></div></div>}
       {(view === 'reports' || view === 'report') && <Sessions openId={view === 'report' ? sessionId : null} refreshKey={reflection?.interviewId} onPractise={() => void startInterview()} />}
+      {view === 'stories' && <Stories initialQuestion={storyQuestion} onInitialConsumed={() => setStoryQuestion(null)} />}
       {view === 'settings' && <div className="workspace-content settings-content"><div className="page-title"><div><p className="eyebrow">MAKE THE EXPERIENCE YOURS</p><h1>Settings</h1><p>Preferences for this interactive prototype. No account is connected.</p></div></div><section className="settings-section"><div><h3>Voice experience</h3><p>Preview the interface planned for Sarvam speech-to-text and text-to-speech.</p></div><div className="setting-row"><span><Volume2 size={18} /><b>Voice playback speed</b></span><div className="segmented">{['Slow', 'Natural', 'Fast'].map(item => <button key={item} className={voiceSpeed === item ? 'active' : ''} onClick={() => { setVoiceSpeed(item); notify(`Voice speed set to ${item.toLowerCase()} for this preview.`) }}>{item}</button>)}</div></div><div className="setting-row"><span><AudioLines size={18} /><b>Conversation language</b></span><div className="select-wrap small-select"><select value={language} onChange={e => setLanguage(e.target.value)}><option>English</option><option>हिन्दी</option><option>தமிழ்</option><option>తెలుగు</option></select><ChevronDown size={16} /></div></div></section><section className="settings-section"><div><h3>Comfort</h3><p>Reduce visual movement while preserving the live orb’s current state.</p></div><div className="setting-row"><span><Pause size={18} /><b>Calm motion</b></span><button className={`switch ${calmMotion ? 'on' : ''}`} onClick={() => setCalmMotion(!calmMotion)} role="switch" aria-checked={calmMotion}><i /></button></div></section><section className="settings-section"><div><h3>Technology plan</h3><p>The intended production integrations for the next build phase.</p></div><div className="tech-plan"><span>NVIDIA NIM<small>LLM orchestration</small></span><span>Sarvam<small>STT + TTS</small></span><span>Supabase<small>Backend</small></span></div></section><section className="settings-section danger-section"><div><h3>Reset prototype</h3><p>Clear demonstration answers, stories, and onboarding selections.</p></div><Button variant="ghost" onClick={resetDemo}><Trash2 size={15} /> Reset demo data</Button></section></div>}
     </main>{toast && <div className="toast">{toast}</div>}</div>
 }

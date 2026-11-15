@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import '../landing.css'
 import './targets.css'
+import FallbackNote from '../components/FallbackNote'
 import { api, type Skill, type SkillArea, type Target, type TargetSummary } from '../lib/api'
 
 // The SQL round (and sql.js with it) loads only when someone opens it.
@@ -251,6 +252,7 @@ function Mission({ id, onBack, onPractise }: { id: string; onBack: () => void; o
             <section className="ml-glass tg-card-body tg-plan">
               <p className="ml-eyebrow">The Planner&rsquo;s plan</p>
               <p className="tg-next">{target.nextStep}</p>
+              <FallbackNote source={target.nextStepSource} />
             </section>
           )}
 

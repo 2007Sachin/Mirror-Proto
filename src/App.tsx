@@ -7,12 +7,13 @@ import Overview from './pages/Overview'
 import Targets from './pages/Targets'
 import Practice from './pages/Practice'
 import Interview from './pages/Interview'
+import Sessions from './pages/Sessions'
 import { useVoiceSession } from './voice/useVoiceSession'
 import {
-  ArrowRight, AudioLines, BarChart3, BookOpen,
+  AudioLines, BookOpen,
   Check, ChevronDown, Circle, Fingerprint, Home as HomeIcon,
   Menu, MessageCircle, Pause,
-  RotateCcw, Settings, Target,
+  Settings, Target,
   Trash2, Volume2, X,
 } from 'lucide-react'
 
@@ -116,6 +117,7 @@ export default function App() {
     },
   })
   const interviewOrb = voice.active ? voice.orbState : orbState
+
   const completed = answers.length === QUESTION_COUNT && assessedRole === role && Boolean(sessionId)
 
   const go = (next: View) => { setView(next); setMobileNav(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
@@ -222,22 +224,6 @@ export default function App() {
     }
   }
 
-  const retryReflection = async () => {
-    if (!sessionId || busy) return
-    setBusy(true)
-    setFlowState('generating_reflection')
-    try {
-      await api.complete(sessionId)
-      const report = await api.reflect(sessionId)
-      setReflection(report)
-      setFlowState('idle')
-    } catch (err) {
-      setFlowState(classifyApiError(err))
-    } finally {
-      setBusy(false)
-    }
-  }
-
   /** Never let a voice teardown problem block leaving the screen. */
   const stopVoice = () => { try { voice.stop() } catch { /* already closed */ } }
   /** Leave and come back: the session stays open on the server and in this tab. */
@@ -316,7 +302,8 @@ export default function App() {
         setOrbState(session.pendingFollowUp ? 'thinking' : 'idle')
         setView('workspace') // the Overview's Continue panel is the way back in
       })
-      .catch(forget)
+      // Only a missing session is forgotten; a network slip keeps the breadcrumb so the open interview is not lost.
+      .catch(err => (err instanceof ApiError && err.status === 404 ? forget() : setView('workspace')))
   }, [])
 
   useEffect(() => {
@@ -388,7 +375,7 @@ export default function App() {
       {view === 'targets' && <Targets openId={targetId} onOpen={setTargetId} onPractise={r => void startInterview(r)} />}
       {view === 'practice' && <Practice initialItemId={practiceItem} onInitialConsumed={() => setPracticeItem(null)} />}
       {view === 'profile' && <div className="workspace-content profile-content"><div className="page-title"><div><p className="eyebrow">YOUR CANDIDATE PROFILE</p><h1>Profile</h1><p>Shape the context MIRROR uses. Nothing here becomes an assessment by itself.</p></div><Button onClick={() => notify('Profile changes saved in this prototype.')}><Check size={15} /> Save profile</Button></div><section className="profile-identity"><div className="profile-avatar">{profileName.charAt(0)}</div><div><h2>{profileName}</h2><p>{role} · {profileLocation}</p><span><Circle size={7} fill="currentColor" /> Prototype profile · No account connected</span></div></section><div className="profile-layout"><section className="profile-form"><div className="profile-form-title"><h2>About you</h2><p>Keep this brief. Your interview answers provide the real evidence.</p></div><div className="profile-field-grid"><div><FieldLabel>Display name</FieldLabel><input value={profileName} onChange={e => setProfileName(e.target.value)} /></div><div><FieldLabel>Location</FieldLabel><input value={profileLocation} onChange={e => setProfileLocation(e.target.value)} /></div><div><FieldLabel>Experience</FieldLabel><div className="select-wrap"><select value={profileExperience} onChange={e => setProfileExperience(e.target.value)}><option>Student / recent graduate</option><option>0–2 years</option><option>2–4 years</option><option>5–8 years</option><option>8+ years</option></select><ChevronDown size={16} /></div></div><div><FieldLabel>Current direction</FieldLabel><div className="profile-role-link">{role}</div></div></div><FieldLabel>Short introduction</FieldLabel><textarea value={profileBio} onChange={e => setProfileBio(e.target.value)} /></section><aside className="profile-summary"><div className="card-label">PROFILE SNAPSHOT</div><h3>{profile?.focus ?? 'Interview practice'}</h3><dl><div><dt>Experience</dt><dd>{profileExperience}</dd></div><div><dt>Reflections</dt><dd>{completed ? 1 : 0}</dd></div></dl><div className="profile-evidence-note"><Fingerprint size={17} /><p>Profile details personalise your practice. They never generate a readiness score.</p></div></aside></div></div>}
-      {(view === 'reports' || view === 'report') && <div className="workspace-content">{!completed ? <><div className="page-title"><div><p className="eyebrow">EVIDENCE BEFORE ASSESSMENT</p><h1>Reflections</h1><p>Your feedback will appear here after a completed conversation.</p></div></div><div className="empty-state"><BarChart3 size={30} /><h2>No reflection yet.</h2><p>MIRROR won’t guess your readiness from a profile. Complete one interview to create an evidence-linked reflection.</p><Button onClick={() => void startInterview()}>Start first reflection <ArrowRight size={15} /></Button></div></> : <><div className="report-heading"><div><p className="eyebrow">LATEST REFLECTION · EXPERIENCE DEEP-DIVE</p><h1>{reflection ? 'Your notes from this session.' : 'Your answers are saved.'}</h1><p>{reflection ? 'Every quote below is something you said.' : 'The reflection has not been generated yet. Saved answers were not duplicated.'}</p></div><Button onClick={() => void startInterview()}><RotateCcw size={15} /> Practise again</Button></div>{flowLabel(flowState) && <p className="flow-banner" role="status">{flowLabel(flowState)}</p>}{!reflection && (flowState === 'provider_unavailable' || flowState === 'retryable_failure' || flowState === 'validation_failure' || flowState === 'generating_reflection') && <Button variant="secondary" onClick={() => void retryReflection()} disabled={busy}>Retry reflection</Button>}{reflection && <><section className="reflection-block"><div className="card-label"><Check size={16} /> WHAT STOOD OUT</div><ul role="list">{reflection.evidence.map((item, i) => <li key={i}><blockquote>“{item.quote}”</blockquote></li>)}</ul></section><section className="reflection-block"><div className="card-label"><Target size={16} /> KEEP WORKING ON</div><h2>{reflection.focus}</h2></section>{reflection.suggestion && <section className="next-step"><div><div className="eyebrow">SUGGESTION</div><h3>{reflection.suggestion}</h3></div><Button onClick={() => void startInterview()}>Try it in a new practice <ArrowRight size={16} /></Button></section>}</>}</>}</div>}
+      {(view === 'reports' || view === 'report') && <Sessions openId={view === 'report' ? sessionId : null} refreshKey={reflection?.interviewId} onPractise={() => void startInterview()} />}
       {view === 'settings' && <div className="workspace-content settings-content"><div className="page-title"><div><p className="eyebrow">MAKE THE EXPERIENCE YOURS</p><h1>Settings</h1><p>Preferences for this interactive prototype. No account is connected.</p></div></div><section className="settings-section"><div><h3>Voice experience</h3><p>Preview the interface planned for Sarvam speech-to-text and text-to-speech.</p></div><div className="setting-row"><span><Volume2 size={18} /><b>Voice playback speed</b></span><div className="segmented">{['Slow', 'Natural', 'Fast'].map(item => <button key={item} className={voiceSpeed === item ? 'active' : ''} onClick={() => { setVoiceSpeed(item); notify(`Voice speed set to ${item.toLowerCase()} for this preview.`) }}>{item}</button>)}</div></div><div className="setting-row"><span><AudioLines size={18} /><b>Conversation language</b></span><div className="select-wrap small-select"><select value={language} onChange={e => setLanguage(e.target.value)}><option>English</option><option>हिन्दी</option><option>தமிழ்</option><option>తెలుగు</option></select><ChevronDown size={16} /></div></div></section><section className="settings-section"><div><h3>Comfort</h3><p>Reduce visual movement while preserving the live orb’s current state.</p></div><div className="setting-row"><span><Pause size={18} /><b>Calm motion</b></span><button className={`switch ${calmMotion ? 'on' : ''}`} onClick={() => setCalmMotion(!calmMotion)} role="switch" aria-checked={calmMotion}><i /></button></div></section><section className="settings-section"><div><h3>Technology plan</h3><p>The intended production integrations for the next build phase.</p></div><div className="tech-plan"><span>NVIDIA NIM<small>LLM orchestration</small></span><span>Sarvam<small>STT + TTS</small></span><span>Supabase<small>Backend</small></span></div></section><section className="settings-section danger-section"><div><h3>Reset prototype</h3><p>Clear demonstration answers, stories, and onboarding selections.</p></div><Button variant="ghost" onClick={resetDemo}><Trash2 size={15} /> Reset demo data</Button></section></div>}
     </main>{toast && <div className="toast">{toast}</div>}</div>
 }

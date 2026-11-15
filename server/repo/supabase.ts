@@ -275,13 +275,14 @@ export function createSupabaseRepository(url: string, secretKey: string): Reposi
       return (data as InterviewRecord[]).map(toInterviewRow)
     },
 
-    async listInterviews(workspace: string): Promise<InterviewRow[]> {
-      const { data, error } = await client
+    async listInterviews(workspace: string, page?: { limit?: number; before?: string }): Promise<InterviewRow[]> {
+      let query = client
         .from(PHASE1_TABLES.interviews)
         .select()
         .eq('workspace_id', workspace)
         .order('created_at', { ascending: false })
-        .limit(20)
+      if (page?.before) query = query.lt('created_at', page.before)
+      const { data, error } = await query.limit(page?.limit ?? 20)
       throwIf(error, 'list interviews')
       return (data as InterviewRecord[]).map(toInterviewRow)
     },
@@ -333,7 +334,7 @@ export function createSupabaseRepository(url: string, secretKey: string): Reposi
         )
         .select()
         .single()
-      throwIf(error, 'save reflection')
+      throwIf(error, 'save notes')
       return toReflectionRow(data as ReflectionRecord)
     },
 

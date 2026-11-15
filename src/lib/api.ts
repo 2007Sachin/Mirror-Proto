@@ -19,6 +19,9 @@ export interface Turn {
   createdAt?: string
 }
 
+/** Where a piece of text came from: the assistant, or the plain fallback built from the learner's own words. */
+export type Source = 'ai' | 'fallback'
+
 export interface EvidenceItem {
   turnId: string
   quote: string
@@ -36,6 +39,7 @@ export interface Reflection {
   focus: string
   suggestion: string | null
   model: string
+  source: Source
   createdAt?: string
 }
 
@@ -60,6 +64,7 @@ export interface TurnResponse {
   nextQuestionIndex: number | null
   status: InterviewStatus
   saved: boolean
+  source: Source
 }
 
 /** What The First Interview learned. Saved once; the agent reads it for every later interview. */
@@ -84,7 +89,7 @@ export interface InterviewSummary {
   createdAt: string
   answered: number
   /** Present once a finished session has its notes. */
-  notes: { keepWorkingOn: string; quotes: string[] } | null
+  notes: { keepWorkingOn: string; quotes: string[]; source: Source } | null
 }
 
 /** The Overview's Coach's note. `practiceQuestion` opens the suggested practice. */
@@ -93,6 +98,7 @@ export interface CoachNote {
   nextPractice: string
   practiceQuestion: string
   basedOn: 'interview' | 'first-interview'
+  source: Source
 }
 
 export type OnboardingStep =
@@ -113,9 +119,9 @@ export interface Debrief {
 export interface Target {
   id: string; company: string; role: string; interviewDate: string | null; jd: string
   status: 'scouting' | 'ready'; skills: Skill[]; rounds: Round[]; events: AgentEvent[]
-  debriefs: Debrief[]; nextStep: string | null; createdAt: string
+  debriefs: Debrief[]; nextStep: string | null; nextStepSource?: Source; createdAt: string
 }
-export type TargetSummary = Pick<Target, 'id' | 'company' | 'role' | 'interviewDate' | 'status' | 'nextStep' | 'createdAt'>
+export type TargetSummary = Pick<Target, 'id' | 'company' | 'role' | 'interviewDate' | 'status' | 'nextStep' | 'nextStepSource' | 'createdAt'>
 export interface SqlTurnBody {
   problem: { id: string; title: string; prompt: string }
   query: string; passed: boolean; error?: string; resultPreview?: string
@@ -156,7 +162,13 @@ export const api = {
   health: () => request<{ status: string; mode: string; uptime: number }>('/health'),
   createInterview: (role: string, industry?: string, openingQuestion?: string) =>
     request<InterviewSession>('/interviews', { method: 'POST', body: JSON.stringify({ role, industry, openingQuestion }) }),
-  listInterviews: () => request<InterviewSummary[]>('/interviews'),
+  /** Newest first. No arguments gives the recent few; Sessions pages with limit and a `before` createdAt cursor. */
+  listInterviews: (page?: { limit?: number; before?: string }) => {
+    const q = new URLSearchParams()
+    if (page?.limit) q.set('limit', String(page.limit))
+    if (page?.before) q.set('before', page.before)
+    return request<InterviewSummary[]>(`/interviews${q.size ? `?${q}` : ''}`)
+  },
   coachNote: () => request<CoachNote>('/coach-note'),
   submitTurn: (interviewId: string, questionIndex: number, answer: string) =>
     request<TurnResponse>(
@@ -164,7 +176,7 @@ export const api = {
       { method: 'POST', body: JSON.stringify({ questionIndex, answer, transcriptSource: 'text' }) },
     ),
   nextQuestion: (interviewId: string) =>
-    request<{ nextQuestion: string; nextQuestionIndex: number; status: InterviewStatus }>(
+    request<{ nextQuestion: string; nextQuestionIndex: number; status: InterviewStatus; source: Source }>(
       `/interviews/${interviewId}/next-question`,
       { method: 'POST' },
     ),
@@ -184,7 +196,7 @@ export const api = {
     return request<{ text: string }>('/onboarding/resume', { method: 'POST', body: form })
   },
   onboardingStep: (body: OnboardingStep) =>
-    request<Record<string, string>>('/onboarding/step', { method: 'POST', body: JSON.stringify(body) }),
+    request<Record<string, string> & { source?: Source }>('/onboarding/step', { method: 'POST', body: JSON.stringify(body) }),
   createTarget: (body: { company: string; role: string; interviewDate?: string; jd: string }) =>
     request<Target>('/targets', { method: 'POST', body: JSON.stringify(body) }),
   listTargets: () => request<TargetSummary[]>('/targets'),
@@ -194,9 +206,9 @@ export const api = {
   practiceSummary: () => request<PracticeSummary>('/practice/summary'),
   deleteTarget: (id: string) => request<null>(`/targets/${id}`, { method: 'DELETE' }),
   sqlTurn: (id: string, body: SqlTurnBody) =>
-    request<{ followUp: string }>(`/targets/${id}/sql-turn`, { method: 'POST', body: JSON.stringify(body) }),
+    request<{ followUp: string; source: Source }>(`/targets/${id}/sql-turn`, { method: 'POST', body: JSON.stringify(body) }),
   sqlDebrief: (id: string, body: { attempts: { problemId: string; title: string; query: string; passed: boolean }[] }) =>
-    request<Debrief>(`/targets/${id}/sql-debrief`, { method: 'POST', body: JSON.stringify(body) }),
+    request<Debrief & { source: Source; nextStepSource: Source }>(`/targets/${id}/sql-debrief`, { method: 'POST', body: JSON.stringify(body) }),
   /** Dictation: raw PCM16 16 kHz mono in, text out. */
   transcribe: (pcm: Uint8Array) =>
     request<{ text: string }>('/onboarding/transcribe', { method: 'POST', body: pcm as unknown as BodyInit }),

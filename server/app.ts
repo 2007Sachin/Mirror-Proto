@@ -4,8 +4,9 @@ import { cors } from 'hono/cors'
 import { createClient } from '@supabase/supabase-js'
 import type { Env } from './config.js'
 import { isNimConfigured, isSarvamConfigured, isSupabaseConfigured } from './config.js'
-import { FALLBACK_QUESTIONS, OPENING_QUESTION, TOTAL_QUESTIONS } from './domain/questions.js'
-import { interviewContext, nextFollowUpQuestion, persistFollowUpQuestion } from './domain/followUp.js'
+import { FALLBACK_QUESTIONS, TOTAL_QUESTIONS } from './domain/questions.js'
+import { interviewContext, nextFollowUp, persistFollowUp as persistFollowUpDomain } from './domain/followUp.js'
+import { fallbackNotes } from './domain/fallbacks.js'
 import { addTurnSchema, createInterviewSchema } from './domain/schemas.js'
 import { extractResumeText, onboardingStepSchema, profileSchema, runOnboardingStep, MAX_RESUME_BYTES } from './domain/onboarding.js'
 import { createMockStt } from './voice/stt/mockStt.js'
@@ -18,7 +19,7 @@ import { z } from 'zod'
 import { summarise } from './domain/practice.js'
 import { buildRounds, extractSkills } from './domain/scout.js'
 import type { ReflectionProvider } from './providers/types.js'
-import { ProviderFailure, createNimClient, type NimLog } from './providers/nim.js'
+import { ProviderFailure, createNimClient, withDeadline, type NimLog } from './providers/nim.js'
 import { workspaceMiddleware } from './middleware/workspace.js'
 import { AppError, errorHandler } from './middleware/errors.js'
 
@@ -27,11 +28,16 @@ export interface AppDeps {
   repo: Repository
   provider?: ReflectionProvider | null
   log?: NimLog
+  /** One overall budget per AI call, in ms. Default 8 s; tests use a few ms. */
+  aiDeadlineMs?: number
   /** Speech-to-text for onboarding dictation. Defaults to Sarvam REST, or a mock without keys. */
   stt?: SttProvider
 }
 
 const startedAt = Date.now()
+
+/** Notes written without the model are saved with model 'fallback', so a reload still knows. */
+const reflectionSource = (r: ReflectionRow) => (r.model === 'fallback' ? 'fallback' : 'ai')
 
 function serializeInterview(interview: InterviewRow, turns: TurnRow[], reflection: ReflectionRow | null) {
   const pendingFollowUp =
@@ -59,7 +65,7 @@ function serializeInterview(interview: InterviewRow, turns: TurnRow[], reflectio
       transcriptSource: t.transcriptSource,
       createdAt: t.createdAt,
     })),
-    reflection,
+    reflection: reflection && { ...reflection, source: reflectionSource(reflection) },
     createdAt: interview.createdAt,
   }
 }
@@ -74,18 +80,26 @@ function serializeReflection(reflection: ReflectionRow) {
     focus: reflection.focus,
     suggestion: reflection.suggestion,
     model: reflection.model,
+    source: reflectionSource(reflection),
     createdAt: reflection.createdAt,
   }
 }
 
 export function buildApp(deps: AppDeps): Hono {
   const { env, repo } = deps
-  const provider =
+  const deadlineMs = deps.aiDeadlineMs ?? 8_000
+  const rawProvider =
     deps.provider !== undefined
       ? deps.provider
       : isNimConfigured(env)
-        ? createNimClient(env, fetch, deps.log)
+        ? createNimClient(env, fetch, deps.log, undefined, undefined, undefined, deadlineMs)
         : null
+  // Every AI call gets the same overall deadline; a miss is a ProviderFailure, and each call site falls back.
+  const provider: ReflectionProvider | null = rawProvider && {
+    generateReflection: r => withDeadline(rawProvider.generateReflection(r), deadlineMs),
+    generateFollowUp: rawProvider.generateFollowUp && (r => withDeadline(rawProvider.generateFollowUp!(r), deadlineMs)),
+    generateOnboarding: rawProvider.generateOnboarding && (r => withDeadline(rawProvider.generateOnboarding!(r), deadlineMs)),
+  }
 
   const idempotency = new Map<string, unknown>()
 
@@ -104,46 +118,45 @@ export function buildApp(deps: AppDeps): Hono {
     }
   }
 
-  async function persistFollowUp(interview: InterviewRow, turns: TurnRow[]): Promise<string> {
-    try {
-      return await persistFollowUpQuestion(repo, interview, turns, provider)
-    } catch (err) {
-      if (err instanceof ProviderFailure) {
-        throw new AppError(503, 'followup_provider_unavailable', { answers: turns.length })
-      }
-      throw err
-    }
-  }
+  /** Never fails on the model: a slow or broken provider gives a catalogue question with source 'fallback'. */
+  const persistFollowUp = (interview: InterviewRow, turns: TurnRow[]) => persistFollowUpDomain(repo, interview, turns, provider)
 
   /** Question 1 starts from their story or focus when The First Interview gave us one; else the catalog opener. */
   async function firstQuestion(profile: ProfileRow | null, role: string, industry?: string): Promise<string> {
     const context = interviewContext(profile)
-    if (!context || !provider?.generateFollowUp) return OPENING_QUESTION
-    try {
-      const draft = { id: '', workspaceId: '', role, industry: industry ?? null, status: 'in_progress' as const, askedQuestions: [], createdAt: '' }
-      // ponytail: 6 s budget; the model call retries for minutes when NIM is slow, and starting must not wait on it.
-      const slow = new Promise<string>(resolve => setTimeout(() => resolve(OPENING_QUESTION), 6000))
-      return await Promise.race([nextFollowUpQuestion(draft, [], provider, context), slow])
-    } catch (err) {
-      if (err instanceof ProviderFailure) return OPENING_QUESTION // never block the start of an interview on the model
-      throw err
-    }
+    const draft = { id: '', workspaceId: '', role, industry: industry ?? null, status: 'in_progress' as const, askedQuestions: [], createdAt: '' }
+    // The shared deadline bounds the call; a miss falls back to the catalogue opener.
+    return (await nextFollowUp(draft, [], context ? provider : null, context)).question
   }
 
   async function generateAndSaveReflection(interview: InterviewRow, turns: TurnRow[]) {
-    if (!provider) throw new AppError(503, 'reflection_provider_unavailable')
     const profile = await repo.getProfile(interview.workspaceId)
-    const output = await provider.generateReflection({
-      role: interview.role,
-      industry: interview.industry,
-      questions: interview.askedQuestions,
-      turns: turns.map(t => ({ id: t.id, question: t.question, answer: t.answer })),
-      context: profile && { focus: profile.focus, primaryStory: profile.story },
-      previousFocus: await previousReflectionFocus(interview),
-    })
-    // Quotes must be verbatim from this session's answers. The server checks; the model is not trusted to.
-    const quotes = output.whatStoodOut.map(q => ({ turnId: q.turnId, quote: q.quote, observation: '', competency: '' }))
-    const evidenceResult = validateEvidence(turns, quotes)
+    const toQuotes = (o: { whatStoodOut: { turnId: string; quote: string }[] }) =>
+      o.whatStoodOut.map(q => ({ turnId: q.turnId, quote: q.quote, observation: '', competency: '' }))
+    let output = fallbackNotes(turns, profile?.focus)
+    let model = 'fallback'
+    let evidenceResult = validateEvidence(turns, toQuotes(output))
+    if (provider) {
+      try {
+        const ai = await provider.generateReflection({
+          role: interview.role,
+          industry: interview.industry,
+          questions: interview.askedQuestions,
+          turns: turns.map(t => ({ id: t.id, question: t.question, answer: t.answer })),
+          context: profile && { focus: profile.focus, primaryStory: profile.story },
+          previousFocus: await previousReflectionFocus(interview),
+        })
+        // Quotes must be verbatim from this session's answers. The server checks; a bad quote also falls back.
+        const checked = validateEvidence(turns, toQuotes(ai))
+        if (checked.ok) {
+          output = ai
+          model = env.nimModel
+          evidenceResult = checked
+        }
+      } catch (err) {
+        if (!(err instanceof ProviderFailure)) throw err
+      }
+    }
     if (!evidenceResult.ok) throw new AppError(evidenceResult.status, evidenceResult.error)
     return repo.saveReflection(interview.workspaceId, {
       interviewId: interview.id,
@@ -153,7 +166,7 @@ export function buildApp(deps: AppDeps): Hono {
       evidence: evidenceResult.evidence,
       focus: output.keepWorkingOn.charAt(0).toUpperCase() + output.keepWorkingOn.slice(1),
       suggestion: output.suggestion,
-      model: env.nimModel,
+      model,
     })
   }
 
@@ -233,8 +246,10 @@ export function buildApp(deps: AppDeps): Hono {
   // Overview: recent practice, newest first.
   api.get('/interviews', async c => {
     const workspace = c.get('workspace')
-    const rows = (await repo.listInterviews(workspace)).slice(0, 10)
-    // ponytail: one turns query per row; fine for 10 rows, add a turn-count column if the list grows
+    // Today asks for the default recent few; Sessions pages with ?limit= and ?before=<createdAt>.
+    const limit = Math.min(Math.max(Number.parseInt(c.req.query('limit') ?? '', 10) || 10, 1), 100)
+    const rows = await repo.listInterviews(workspace, { limit, before: c.req.query('before') || undefined })
+    // ponytail: one turns query per row; fine for 100 rows, add a turn-count column if the list grows
     const list = await Promise.all(
       rows.map(async i => ({
         id: i.id,
@@ -243,7 +258,7 @@ export function buildApp(deps: AppDeps): Hono {
         createdAt: i.createdAt,
         answered: (await repo.getTurns(workspace, i.id)).length,
         // The notes, so Today can show lines that landed and how the gap moved without another call.
-        notes: await repo.getReflection(workspace, i.id).then(r => r && { keepWorkingOn: r.focus, quotes: r.evidence.map(e => e.quote) }),
+        notes: await repo.getReflection(workspace, i.id).then(r => r && { keepWorkingOn: r.focus, quotes: r.evidence.map(e => e.quote), source: reflectionSource(r) }),
       })),
     )
     return c.json(list)
@@ -285,30 +300,13 @@ export function buildApp(deps: AppDeps): Hono {
     }
 
     let nextQuestion: string | null = null
+    let source: 'ai' | 'fallback' = 'ai'
     if (!result.completed) {
       const fresh = (await repo.getInterview(workspace, interviewId)) ?? interview
       const savedTurns = await repo.getTurns(workspace, interviewId)
-      try {
-        nextQuestion = await persistFollowUp(fresh, savedTurns)
-      } catch (err) {
-        if (err instanceof AppError) {
-          throw new AppError(err.status, err.code, {
-            ...err.extra,
-            turn: {
-              id: turn.id,
-              questionIndex: turn.questionIndex,
-              question: turn.question,
-              answer: turn.answer,
-              transcriptSource: turn.transcriptSource,
-              createdAt: turn.createdAt,
-            },
-            nextQuestionIndex: body.questionIndex + 1,
-            status: 'in_progress',
-            saved: true,
-          })
-        }
-        throw err
-      }
+      const next = await persistFollowUp(fresh, savedTurns)
+      nextQuestion = next.question
+      source = next.source
     }
 
     const responseBody = {
@@ -324,6 +322,7 @@ export function buildApp(deps: AppDeps): Hono {
       nextQuestionIndex: result.completed ? null : body.questionIndex + 1,
       status: result.status,
       saved: true,
+      source,
     }
     if (idemKey) idempotency.set(idemStoreKey, responseBody)
     return c.json(responseBody, 201)
@@ -338,8 +337,9 @@ export function buildApp(deps: AppDeps): Hono {
     }
     const turns = await repo.getTurns(workspace, interview.id)
     if (turns.length >= TOTAL_QUESTIONS) throw new AppError(409, 'interview_already_completed')
-    const question = await persistFollowUp(interview, turns)
+    const { question, source } = await persistFollowUp(interview, turns)
     return c.json({
+      source,
       nextQuestion: question,
       nextQuestionIndex: turns.length,
       status: interview.status,
@@ -391,7 +391,7 @@ export function buildApp(deps: AppDeps): Hono {
     if (!check.ok) {
       throw new AppError(check.status, check.error, {
         ...(check.answers !== undefined ? { answers: check.answers } : {}),
-        message: 'This session was not completed. No reflection was generated.',
+        message: 'This session was not finished, so there are no notes to write yet.',
       })
     }
     if (interview.status !== 'completed') {
@@ -457,7 +457,8 @@ export function buildApp(deps: AppDeps): Hono {
       inProgress: interviews.some(i => i.status === 'in_progress'),
       reflectionFocus: done ? (await repo.getReflection(workspace, done.id))?.focus : undefined,
     })
-    coachNotes.set(key, note)
+    // A fallback is not cached: a short outage must not stick to this key.
+    if (note.source === 'ai') coachNotes.set(key, note)
     return c.json({ ...note, basedOn: done ? 'interview' : 'first-interview' })
   })
 
@@ -465,8 +466,8 @@ export function buildApp(deps: AppDeps): Hono {
   /** Scout runs after the response. Each REAL step appends an event; any failure still ends in 'ready'. */
   async function runScout(workspace: string, target: Target): Promise<void> {
     const events: AgentEvent[] = []
-    const say = async (agent: AgentEvent['agent'], text: string) => {
-      events.push({ at: new Date().toISOString(), agent, text })
+    const say = async (agent: AgentEvent['agent'], text: string, source?: 'ai' | 'fallback') => {
+      events.push({ at: new Date().toISOString(), agent, text, ...(source ? { source } : {}) })
       await repo.updateTarget(workspace, target.id, { events: [...events] })
     }
     let skills: Target['skills'] = []
@@ -487,7 +488,7 @@ export function buildApp(deps: AppDeps): Hono {
         interviewDate: target.interviewDate,
       })
       nextStep = plan.nextStep.charAt(0).toUpperCase() + plan.nextStep.slice(1)
-      await say('Planner', nextStep)
+      await say('Planner', nextStep, plan.source === 'fallback' ? 'fallback' : 'ai')
     } catch (err) {
       console.error('scout failed', err instanceof Error ? err.message : err)
       if (rounds.length === 0) rounds = buildRounds(skills)
@@ -517,6 +518,10 @@ export function buildApp(deps: AppDeps): Hono {
   const sqlDebriefSchema = z.object({
     attempts: z.array(z.object({ problemId: short(80), title: short(200), query: short(5000), passed: z.boolean() })).min(1).max(8),
   })
+
+  /** The latest Planner event carries where the next step came from; older targets have none and read as 'ai'. */
+  const nextStepSource = (t: Target): 'ai' | 'fallback' =>
+    [...t.events].reverse().find(e => e.agent === 'Planner')?.source === 'fallback' ? 'fallback' : 'ai'
 
   const loadTarget = async (workspace: string, id: string) => {
     const target = await repo.getTarget(workspace, id)
@@ -557,10 +562,13 @@ export function buildApp(deps: AppDeps): Hono {
 
   api.get('/targets', async c => {
     const list = await repo.listTargets(c.get('workspace'))
-    return c.json(list.map(({ id, company, role, interviewDate, status, nextStep, createdAt }) => ({ id, company, role, interviewDate, status, nextStep, createdAt })))
+    return c.json(list.map(t => ({ id: t.id, company: t.company, role: t.role, interviewDate: t.interviewDate, status: t.status, nextStep: t.nextStep, nextStepSource: nextStepSource(t), createdAt: t.createdAt })))
   })
 
-  api.get('/targets/:id', async c => c.json(await loadTarget(c.get('workspace'), c.req.param('id'))))
+  api.get('/targets/:id', async c => {
+    const target = await loadTarget(c.get('workspace'), c.req.param('id'))
+    return c.json({ ...target, nextStepSource: nextStepSource(target) })
+  })
 
   api.delete('/targets/:id', async c => {
     await repo.deleteTarget(c.get('workspace'), c.req.param('id'))
@@ -571,7 +579,7 @@ export function buildApp(deps: AppDeps): Hono {
     await loadTarget(c.get('workspace'), c.req.param('id'))
     const body = sqlTurnSchema.parse(await c.req.json().catch(() => ({})))
     const out = await runOnboardingStep(provider, { step: 'sqlFollowUp', ...body })
-    return c.json({ followUp: out.question })
+    return c.json({ followUp: out.question, source: out.source })
   })
 
   api.post('/targets/:id/sql-debrief', async c => {
@@ -607,11 +615,11 @@ export function buildApp(deps: AppDeps): Hono {
       events: [
         ...target.events,
         { at, agent: 'Coach', text: `Wrote up the SQL round: ${solved} of ${attempts.length} problems solved.` },
-        { at, agent: 'Planner', text: nextStep },
+        { at, agent: 'Planner', text: nextStep, source: plan.source === 'fallback' ? 'fallback' : 'ai' },
       ],
       nextStep,
     })
-    return c.json(debrief)
+    return c.json({ ...debrief, source: out.source, nextStepSource: plan.source })
   })
 
   api.get('/profile', async c => {

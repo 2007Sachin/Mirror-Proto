@@ -79,8 +79,10 @@ export function createMemoryRepository(): Repository {
       return [...b.interviews.values()].filter(i => i.role === role)
     },
 
-    async listInterviews(workspace: string): Promise<InterviewRow[]> {
-      return [...(workspaces.get(workspace)?.interviews.values() ?? [])].reverse()
+    async listInterviews(workspace: string, page?: { limit?: number; before?: string }): Promise<InterviewRow[]> {
+      const all = [...(workspaces.get(workspace)?.interviews.values() ?? [])].reverse()
+      const older = page?.before ? all.filter(i => i.createdAt < page.before!) : all
+      return page?.limit ? older.slice(0, page.limit) : older
     },
 
     async addTurn(workspace: string, interviewId: string, input: AddTurnInput): Promise<TurnRow> {

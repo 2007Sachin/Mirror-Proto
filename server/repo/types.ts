@@ -113,6 +113,8 @@ export interface AgentEvent {
   at: string
   agent: 'Scout' | 'Planner' | 'Interviewer' | 'Coach'
   text: string
+  /** Set on Planner lines: whether the model or the plain fallback wrote it. */
+  source?: 'ai' | 'fallback'
 }
 
 export interface Debrief {
@@ -168,8 +170,8 @@ export interface Repository {
   updateInterviewStatus(workspace: string, id: string, status: InterviewStatus): Promise<void>
   appendAskedQuestion(workspace: string, id: string, question: string): Promise<InterviewRow | null>
   listInterviewsByRole(workspace: string, role: string): Promise<InterviewRow[]>
-  /** Newest first. */
-  listInterviews(workspace: string): Promise<InterviewRow[]>
+  /** Newest first. `before` is a createdAt cursor: only older rows. Without `limit`, memory returns all and Supabase 20. */
+  listInterviews(workspace: string, page?: { limit?: number; before?: string }): Promise<InterviewRow[]>
   addTurn(workspace: string, interviewId: string, input: AddTurnInput): Promise<TurnRow>
   getTurns(workspace: string, interviewId: string): Promise<TurnRow[]>
   saveReflection(workspace: string, input: SaveReflectionInput): Promise<ReflectionRow>

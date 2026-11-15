@@ -56,6 +56,13 @@ export interface InterviewSession {
   turns: Turn[]
   reflection: Reflection | null
   createdAt: string
+  /** Set by the server; absent on older responses, which read as a practice interview. */
+  kind?: 'practice' | 'screen'
+  /** How many questions this interview asks. Absent or null means the practice default. */
+  questionCap?: number | null
+  timeCapSeconds?: number | null
+  startedAt?: string | null
+  targetId?: string | null
 }
 
 export interface TurnResponse {
@@ -127,7 +134,8 @@ export interface SqlTurnBody {
   query: string; passed: boolean; error?: string; resultPreview?: string
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+/** The one fetch wrapper: workspace header, JSON in and out, ApiError on a non-2xx. */
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...init,
     headers: {
@@ -181,8 +189,9 @@ export const api = {
       { method: 'POST' },
     ),
   getInterview: (interviewId: string) => request<InterviewSession>(`/interviews/${interviewId}`),
-  complete: (interviewId: string) =>
-    request<InterviewSession>(`/interviews/${interviewId}/complete`, { method: 'POST' }),
+  /** `early` ends a screening call at the time cap or when the learner ends it; practice interviews ignore it. */
+  complete: (interviewId: string, opts?: { early?: boolean }) =>
+    request<InterviewSession>(`/interviews/${interviewId}/complete`, { method: 'POST', ...(opts?.early ? { body: JSON.stringify({ early: true }) } : {}) }),
   abandon: (interviewId: string) =>
     request<InterviewSession>(`/interviews/${interviewId}/abandon`, { method: 'POST' }),
   reflect: (interviewId: string) =>

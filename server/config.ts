@@ -29,6 +29,7 @@ const envSchema = z
     SARVAM_TTS_MODEL: z.string().optional(),
     SARVAM_LANGUAGE: z.string().optional(),
     SARVAM_SPEAKER: z.string().optional(),
+    SCREEN_DB_READY: z.string().optional(),
   })
   .transform((env, ctx) => {
     const nimBaseRaw = env.NVIDIA_NIM_BASE_URL || env.NIM_BASE_URL || DEFAULT_NIM_BASE
@@ -80,6 +81,8 @@ const envSchema = z
       sarvamTtsModel: present(env.SARVAM_TTS_MODEL) ?? 'bulbul:v3',
       sarvamLanguage: present(env.SARVAM_LANGUAGE) ?? 'en-IN',
       sarvamSpeaker: present(env.SARVAM_SPEAKER) ?? 'shubh',
+      /** Migration 0008 is applied: screens may use variable length and the new columns. */
+      screenDbReady: present(env.SCREEN_DB_READY) === '1',
     }
   })
 

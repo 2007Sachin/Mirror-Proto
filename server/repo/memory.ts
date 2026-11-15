@@ -1,5 +1,16 @@
 import type {
   AddTurnInput,
+  AnswerAttemptFilter,
+  AnswerAttemptInput,
+  AnswerAttemptRow,
+  GapMatchInput,
+  GapMatchRow,
+  ReplayItemInput,
+  ReplayItemRow,
+  ResumeClaimInput,
+  ResumeClaimRow,
+  StoryInput,
+  StoryRow,
   CreateInterviewInput,
   InterviewRow,
   PracticeAttemptInput,
@@ -26,6 +37,15 @@ export function createMemoryRepository(): Repository {
   const profiles = new Map<string, ProfileRow>()
   const targets = new Map<string, Target[]>() // per workspace, oldest first
   const attempts = new Map<string, PracticeAttemptRow[]>() // per workspace, oldest first
+  const answerAttempts = new Map<string, AnswerAttemptRow[]>() // oldest first
+  const stories = new Map<string, StoryRow[]>() // oldest first
+  const claims = new Map<string, ResumeClaimRow[]>()
+  const gapMatches = new Map<string, GapMatchRow[]>() // per workspace, all targets
+  const replay = new Map<string, ReplayItemRow[]>()
+  const now = () => new Date().toISOString()
+  const clearNew = (workspace: string) => {
+    for (const m of [answerAttempts, stories, claims, gapMatches, replay]) m.delete(workspace)
+  }
 
   const bucket = (slug: string): WorkspaceBucket => {
     let b = workspaces.get(slug)
@@ -49,8 +69,13 @@ export function createMemoryRepository(): Repository {
         role: input.role,
         industry: input.industry ?? null,
         status: 'in_progress',
-        askedQuestions: [input.openingQuestion],
+        askedQuestions: input.askedQuestions?.length ? [...input.askedQuestions] : [input.openingQuestion],
         createdAt: new Date().toISOString(),
+        kind: input.kind ?? 'practice',
+        questionCap: input.questionCap ?? null,
+        timeCapSeconds: input.timeCapSeconds ?? null,
+        startedAt: input.startedAt ?? null,
+        targetId: input.targetId ?? null,
       }
       b.interviews.set(row.id, row)
       b.turns.set(row.id, [])
@@ -139,6 +164,7 @@ export function createMemoryRepository(): Repository {
 
     async deleteProfile(workspace: string): Promise<void> {
       profiles.delete(workspace)
+      clearNew(workspace)
     },
 
     async saveProfile(workspace: string, input: ProfileInput): Promise<ProfileRow> {
@@ -181,6 +207,7 @@ export function createMemoryRepository(): Repository {
 
     async deleteTarget(workspace: string, id: string): Promise<void> {
       targets.set(workspace, (targets.get(workspace) ?? []).filter(t => t.id !== id))
+      gapMatches.set(workspace, (gapMatches.get(workspace) ?? []).filter(m => m.targetId !== id))
     },
 
     async addPracticeAttempt(workspace: string, input: PracticeAttemptInput): Promise<PracticeAttemptRow> {
@@ -191,6 +218,86 @@ export function createMemoryRepository(): Repository {
 
     async getPracticeAttempts(workspace: string, sinceIso?: string): Promise<PracticeAttemptRow[]> {
       return (attempts.get(workspace) ?? []).filter(a => !sinceIso || a.createdAt >= sinceIso).slice(0, 5000)
+    },
+
+    async addAnswerAttempt(workspace: string, input: AnswerAttemptInput) {
+      const row: AnswerAttemptRow = { ...input, itemId: input.itemId ?? null, id: crypto.randomUUID(), workspaceId: workspace, createdAt: now() }
+      answerAttempts.set(workspace, [...(answerAttempts.get(workspace) ?? []), row])
+      return row
+    },
+    async listAnswerAttempts(workspace: string, f?: AnswerAttemptFilter) {
+      return (answerAttempts.get(workspace) ?? []).filter(
+        a => (!f?.interviewId || a.interviewId === f.interviewId) && (!f?.itemId || a.itemId === f.itemId) && (!f?.kind || a.kind === f.kind),
+      )
+    },
+    async deleteAnswerAttempts(workspace: string) {
+      answerAttempts.delete(workspace)
+    },
+
+    async createStory(workspace: string, input: StoryInput) {
+      const at = now()
+      const row: StoryRow = { ...input, id: crypto.randomUUID(), workspaceId: workspace, createdAt: at, updatedAt: at }
+      stories.set(workspace, [...(stories.get(workspace) ?? []), row])
+      return row
+    },
+    async listStories(workspace: string) {
+      return [...(stories.get(workspace) ?? [])].reverse()
+    },
+    async getStory(workspace: string, id: string) {
+      return stories.get(workspace)?.find(s => s.id === id) ?? null
+    },
+    async updateStory(workspace: string, id: string, patch: Partial<StoryInput>) {
+      const list = stories.get(workspace)
+      const i = list?.findIndex(s => s.id === id) ?? -1
+      if (!list || i < 0) return null
+      list[i] = { ...list[i], ...patch, id, workspaceId: workspace, createdAt: list[i].createdAt, updatedAt: now() }
+      return list[i]
+    },
+    async deleteStory(workspace: string, id: string) {
+      stories.set(workspace, (stories.get(workspace) ?? []).filter(s => s.id !== id))
+    },
+    async deleteAllStories(workspace: string) {
+      stories.delete(workspace)
+    },
+
+    async replaceResumeClaims(workspace: string, input: ResumeClaimInput[]) {
+      const rows = input.map(c => ({ ...c, id: crypto.randomUUID(), workspaceId: workspace, createdAt: now() }))
+      claims.set(workspace, rows)
+      return [...rows]
+    },
+    async listResumeClaims(workspace: string) {
+      return [...(claims.get(workspace) ?? [])]
+    },
+    async deleteResumeClaims(workspace: string) {
+      claims.delete(workspace)
+    },
+
+    async replaceGapMatches(workspace: string, targetId: string, input: Omit<GapMatchInput, 'targetId'>[]) {
+      const rows = input.map(m => ({ ...m, targetId, id: crypto.randomUUID(), workspaceId: workspace, createdAt: now() }))
+      gapMatches.set(workspace, [...(gapMatches.get(workspace) ?? []).filter(m => m.targetId !== targetId), ...rows])
+      return rows
+    },
+    async listGapMatches(workspace: string, targetId: string) {
+      return (gapMatches.get(workspace) ?? []).filter(m => m.targetId === targetId)
+    },
+
+    async upsertReplayItem(workspace: string, input: ReplayItemInput) {
+      const list = replay.get(workspace) ?? []
+      const i = list.findIndex(r => r.itemId === input.itemId)
+      const row: ReplayItemRow = { ...input, id: i >= 0 ? list[i].id : crypto.randomUUID(), workspaceId: workspace, updatedAt: now() }
+      if (i >= 0) list[i] = row
+      else list.push(row)
+      replay.set(workspace, list)
+      return row
+    },
+    async listReplaySchedule(workspace: string) {
+      return [...(replay.get(workspace) ?? [])].sort((a, b) => a.dueAt.localeCompare(b.dueAt))
+    },
+    async deleteReplayItem(workspace: string, itemId: string) {
+      replay.set(workspace, (replay.get(workspace) ?? []).filter(r => r.itemId !== itemId))
+    },
+    async deleteAllNewData(workspace: string) {
+      clearNew(workspace)
     },
   }
 }

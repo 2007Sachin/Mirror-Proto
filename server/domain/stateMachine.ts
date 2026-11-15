@@ -1,4 +1,4 @@
-import { TOTAL_QUESTIONS } from './questions.js'
+import { totalFor } from './questions.js'
 import type {
   AddTurnInput,
   EvidenceItem,
@@ -45,7 +45,8 @@ export function addTurn(
     return { ok: false, error: 'empty_answer', status: 400 }
   }
   const expected = turns.length
-  if (expected >= TOTAL_QUESTIONS) {
+  const total = totalFor(interview)
+  if (expected >= total) {
     return { ok: false, error: 'interview_already_completed', status: 409 }
   }
   if (input.questionIndex < expected) {
@@ -58,7 +59,7 @@ export function addTurn(
   if (!asked) {
     return { ok: false, error: 'followup_not_ready', status: 409, expected }
   }
-  const completed = input.questionIndex === TOTAL_QUESTIONS - 1
+  const completed = input.questionIndex === total - 1
   const turn: TurnRow = {
     id: crypto.randomUUID(),
     interviewId: interview.id,
@@ -72,12 +73,14 @@ export function addTurn(
   return { ok: true, turn, status: completed ? 'completed' : 'in_progress', completed }
 }
 
-export function canComplete(interview: InterviewRow | null, turns: TurnRow[]): CompletionCheck {
+/** `early` (time cap or the learner ends the call) only counts for a screen with at least one answer. */
+export function canComplete(interview: InterviewRow | null, turns: TurnRow[], opts?: { early?: boolean }): CompletionCheck {
   if (!interview) return { ok: false, error: 'interview_not_found', status: 404 }
   if (interview.status === 'abandoned') {
     return { ok: false, error: 'interview_abandoned', status: 409 }
   }
-  if (turns.length < TOTAL_QUESTIONS) {
+  const early = opts?.early === true && interview.kind === 'screen' && turns.length >= 1
+  if (turns.length < totalFor(interview) && !early) {
     return { ok: false, error: 'interview_incomplete', status: 409, answers: turns.length }
   }
   return { ok: true }

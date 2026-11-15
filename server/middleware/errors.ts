@@ -31,6 +31,7 @@ export const errorHandler: ErrorHandler = (err, c) => {
     return c.json({ error: 'reflection_provider_failed' }, 502)
   }
   if (err instanceof PersistenceError) {
+    if (err.message === 'storage_not_ready') return c.json({ error: 'storage_not_ready' }, 503)
     return c.json({ error: 'persistence_unavailable' }, 503)
   }
   console.error('unhandled error', err.message)

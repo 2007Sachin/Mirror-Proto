@@ -1,4 +1,4 @@
-import { TOTAL_QUESTIONS } from '../domain/questions.js'
+import { totalFor } from '../domain/questions.js'
 import { persistFollowUpQuestion } from '../domain/followUp.js'
 import { addTurn } from '../domain/stateMachine.js'
 import { ProviderFailure } from '../providers/nim.js'
@@ -36,7 +36,7 @@ export async function submitVoiceTurn(
   // Just produce the next question from what is saved.
   if (
     questionIndex < turns.length &&
-    turns.length < TOTAL_QUESTIONS &&
+    turns.length < totalFor(interview) &&
     interview.status !== 'completed' &&
     interview.status !== 'abandoned'
   ) {
@@ -98,7 +98,7 @@ export async function interviewProgress(
   const turns = await repo.getTurns(workspace, interviewId)
   return {
     questionIndex: turns.length,
-    questionCount: TOTAL_QUESTIONS,
+    questionCount: totalFor(interview),
     currentQuestion: interview.askedQuestions[turns.length] ?? null,
   }
 }

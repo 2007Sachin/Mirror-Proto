@@ -1,4 +1,4 @@
-import { TOTAL_QUESTIONS, fallbackQuestionAt } from './questions.js'
+import { totalFor, fallbackQuestionAt } from './questions.js'
 import { ProviderFailure } from '../providers/nim.js'
 import { quotedFollowUp } from './fallbacks.js'
 import type { InterviewRow, Repository, TurnRow } from '../repo/types.js'
@@ -58,7 +58,8 @@ export async function persistFollowUp(
   turns: TurnRow[],
   provider: ReflectionProvider | null,
 ): Promise<{ question: string; source: Source }> {
-  if (turns.length >= TOTAL_QUESTIONS) return { question: interview.askedQuestions[TOTAL_QUESTIONS - 1], source: 'ai' }
+  const total = totalFor(interview)
+  if (turns.length >= total) return { question: interview.askedQuestions[total - 1], source: 'ai' }
   if (interview.askedQuestions.length > turns.length) return { question: interview.askedQuestions[turns.length], source: 'ai' }
   const profile = interviewContext(await repo.getProfile(interview.workspaceId))
   const next = await nextFollowUp(interview, turns, provider, profile)

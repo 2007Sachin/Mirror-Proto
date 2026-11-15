@@ -1,0 +1,95 @@
+/* SQL practice: three tabs (Journey, Free practice, Mock tests). Tokens come from .mirror-landing (landing.css). */
+.sp { display: grid; gap: 12px; min-width: 0; font-size: 13px; line-height: 1.5; }
+.sp h1, .sp h2 { margin: 0; letter-spacing: -.03em; line-height: 1.12; text-wrap: balance; }
+.sp h1 { font-size: 18px; }
+.sp h2 { font-size: 14px; }
+.sp-lede { margin: 4px 0 0; max-width: 62ch; color: var(--muted); font-size: 13px; text-wrap: pretty; }
+.sp-meta { margin: 0; font-size: 12px; color: var(--muted); text-wrap: pretty; }
+.sp :where(button, input, summary):focus-visible, .sp label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sp input[type=radio], .sp input[type=checkbox] { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+
+/* tab bar */
+.sp-tabs { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--glass); width: fit-content; max-width: 100%; }
+.sp-tabs button { min-height: 36px; padding: 0 16px; font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); background: none; border: 0; border-radius: 9px; cursor: pointer; white-space: nowrap; }
+.sp-tabs button.is-on { background: var(--accent); color: #fff; }
+.sp-panel { display: grid; gap: 12px; min-width: 0; }
+@media (max-width: 420px) { .sp-tabs { width: 100%; } .sp-tabs button { flex: 1 1 0; padding: 0 6px; } }
+
+/* free practice */
+.sp-free { display: grid; gap: 16px; min-width: 0; }
+.sp-free > section { display: grid; gap: 6px; min-width: 0; }
+.sp-fold { border: 1px solid var(--line); border-radius: 12px; background: var(--glass); padding: 0 12px; }
+.sp-fold > summary { min-height: 36px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 650; cursor: pointer; }
+.sp-fold[open] > summary { border-bottom: 1px solid var(--line); }
+.sp-rows { list-style: none; margin: 0; padding: 0; display: grid; }
+.sp-fold .sp-rows { padding: 4px 0; }
+.sp-free > section > .sp-rows { border: 1px solid var(--line); border-radius: 12px; background: var(--glass); padding: 4px 12px; }
+.sp-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.sp-row + .sp-row { border-top: 1px solid var(--line); }
+.sp-row--end { padding: 6px 0; }
+.sp-rowbtn { flex: 1 1 auto; min-width: 0; min-height: 40px; display: flex; align-items: center; gap: 10px; text-align: left; font: inherit; color: inherit; background: none; border: 0; padding: 0; }
+button.sp-rowbtn { cursor: pointer; }
+button.sp-rowbtn:hover b { color: var(--accent); }
+.sp-rowbtn b { font-size: 13px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.sp-rowbtn .sp-meta { margin-left: auto; flex: none; white-space: nowrap; }
+.sp-ring { flex: none; display: grid; }
+.sp-ring-bg { fill: none; stroke: var(--line); stroke-width: 4; }
+.sp-ring-fg { fill: none; stroke: var(--accent); stroke-width: 4; stroke-linecap: round; transition: stroke-dasharray .6s ease; }
+@media (max-width: 420px) { .sp-rowbtn { flex-wrap: wrap; padding: 4px 0; } .sp-rowbtn .sp-meta { margin-left: 32px; flex-basis: 100%; } }
+
+/* module screen */
+.sp-crumbs { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px; }
+.sp-mod { display: grid; gap: 12px; min-width: 0; }
+.sp-brief { margin: 0; padding: 8px 12px; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 14px; background: var(--soft); font-size: 13px; }
+.sp-brief p { margin: 6px 0 0; line-height: 1.5; max-width: 62ch; text-wrap: pretty; }
+.sp-cols { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+.sp-scene { padding: 8px; min-width: 0; overflow: hidden; }
+.sp-skel { min-height: 160px; display: grid; place-items: center; color: var(--muted); font-size: 13px; border-radius: 12px; background: linear-gradient(90deg, var(--soft), var(--glass), var(--soft)); background-size: 200% 100%; animation: sp-shimmer 2.4s ease-in-out infinite; }
+@keyframes sp-shimmer { to { background-position: -200% 0; } }
+.sp-side { display: grid; gap: 8px; min-width: 0; }
+.sp-points { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-width: 62ch; font-size: 13px; line-height: 1.45; }
+.sp-points li { display: grid; grid-template-columns: 20px minmax(0, 1fr); text-wrap: pretty; }
+.sp-points li::before { content: ''; width: 6px; height: 6px; margin: 7px 0 0 5px; border-radius: 50%; background: var(--accent); }
+.sp-probs { list-style: none; margin: 0; padding: 0; display: grid; }
+.sp-probs li + li { border-top: 1px solid var(--line); }
+.sp-prob { width: 100%; min-height: 36px; display: grid; grid-template-columns: 20px minmax(0, 1fr) 64px 52px; align-items: center; gap: 6px 10px; font: inherit; font-size: 13px; text-align: left; color: inherit; background: none; border: 0; padding: 2px 4px; border-radius: 10px; cursor: pointer; }
+.sp-prob:hover .sp-prob-title { color: var(--accent); }
+.sp-prob .sp-lv { justify-self: end; font-size: 12px; white-space: nowrap; }
+.sp-prob .sp-mn { justify-self: end; font-size: 12px; }
+.sp-prob-title { font-weight: 600; overflow-wrap: anywhere; }
+.sp-tick { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: 12px; color: #fff; }
+.sp-tick.is-done { background: var(--accent); border-color: var(--accent); }
+.sp-go { justify-self: start; min-height: 36px; }
+
+/* running strip: one slim row */
+.sp-strip { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: nowrap; gap: 8px; align-items: center; justify-content: space-between; min-height: 40px; max-height: 40px; padding: 0 8px 0 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--glass); backdrop-filter: blur(8px); font-weight: 600; font-size: 12.5px; }
+.sp-strip-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-strip-actions { display: flex; flex-wrap: nowrap; flex: none; gap: 6px; }
+.sp-strip .ml-btn { min-height: 32px; height: 32px; padding: 0 12px; font-size: 12.5px; white-space: nowrap; }
+@media (max-width: 480px) { .sp-strip .ml-btn { padding: 0 8px; } }
+
+/* build a set */
+.sp-custom { padding: 12px 0; display: grid; gap: 12px; }
+.sp-fold > .sp-custom { background: none; border: 0; box-shadow: none; }
+.sp-fs { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; min-width: 0; }
+.sp-fs legend { font-weight: 650; font-size: 13px; padding: 0; margin-bottom: 6px; }
+.sp-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+.sp-opts label { position: relative; min-height: 32px; display: grid; place-items: center; padding: 0 14px; border-radius: 9px; cursor: pointer; font-weight: 600; font-size: 13px; color: var(--muted); border: 1px solid var(--line); background: var(--glass); }
+.sp-opts label.is-on { border-color: var(--accent); color: var(--accent); background: var(--soft); }
+.sp-sum { display: flex; flex-wrap: wrap; gap: 12px; margin: 0; }
+.sp-sum div { flex: 1 1 110px; padding: 12px; border-radius: 14px; background: var(--soft); }
+.sp-sum dt { font-size: 12px; color: var(--muted); }
+.sp-sum dd { margin: 4px 0 0; font-size: 20px; font-weight: 700; }
+section.sp-custom.ml-glass { padding: 12px; }
+
+/* "See the idea" drawer (used by Drill) */
+.sqd-drawer { position: fixed; inset: 0; z-index: 50; display: flex; justify-content: flex-end; background: rgba(0, 0, 0, .28); }
+.sqd-drawer-panel { width: min(640px, 100%); height: 100%; overflow: auto; background: #fff; padding: 16px; display: grid; gap: 12px; align-content: start; }
+.sqd-drawer-panel:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+@media (max-width: 760px) { .sp-cols { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 420px) { .sp-prob { grid-template-columns: 20px minmax(0, 1fr) auto; } .sp-prob .sp-lv { grid-column: 2; justify-self: start; } .sp-prob .sp-mn { grid-column: 3; } }
+@media (prefers-reduced-motion: reduce) { .sp-skel { animation: none; } .sp-ring-fg { transition: none; } }
+
+/* Mock test running: hide the tab chrome so the exam workbench has the room */
+.sp--exam .pr-back, .sp--exam .sp-tabs { display: none; }

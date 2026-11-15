@@ -185,17 +185,9 @@ describe('voice gateway', () => {
         },
         async generateReflection(request) {
           return {
-            readinessLabel: 'solid' as const,
-            readinessRange: { low: 55, high: 70 },
-            evidence: [
-              {
-                turnId: request.turns[0].id,
-                quote: 'simplified onboarding',
-                observation: 'Owned a concrete product change.',
-                competency: 'Ownership',
-              },
-            ],
-            focus: 'Quantify the outcome of the onboarding change.',
+            whatStoodOut: [{ turnId: request.turns[0].id, quote: 'simplified onboarding' }],
+            keepWorkingOn: 'Quantify the outcome of the onboarding change.',
+            suggestion: 'Lead with the number next time.',
           }
         },
       },

@@ -1,14 +1,22 @@
 import { Hono } from 'hono'
+import { bodyLimit } from 'hono/body-limit'
 import { cors } from 'hono/cors'
 import { createClient } from '@supabase/supabase-js'
 import type { Env } from './config.js'
 import { isNimConfigured, isSarvamConfigured, isSupabaseConfigured } from './config.js'
 import { FALLBACK_QUESTIONS, OPENING_QUESTION, TOTAL_QUESTIONS } from './domain/questions.js'
-import { persistFollowUpQuestion } from './domain/followUp.js'
+import { interviewContext, nextFollowUpQuestion, persistFollowUpQuestion } from './domain/followUp.js'
 import { addTurnSchema, createInterviewSchema } from './domain/schemas.js'
-import { addTurn, canAbandon, canComplete, reconcileReadinessRange, validateEvidence } from './domain/stateMachine.js'
+import { extractResumeText, onboardingStepSchema, profileSchema, runOnboardingStep, MAX_RESUME_BYTES } from './domain/onboarding.js'
+import { createMockStt } from './voice/stt/mockStt.js'
+import { createRestSarvamStt } from './voice/stt/createStt.js'
+import type { SttProvider } from './voice/providers/types.js'
+import { addTurn, canAbandon, canComplete, validateEvidence } from './domain/stateMachine.js'
 import { PHASE1_TABLES } from './repo/supabase.js'
-import type { InterviewRow, ReflectionRow, Repository, TurnRow } from './repo/types.js'
+import type { AgentEvent, Debrief, InterviewRow, ProfileRow, ReflectionRow, Repository, Target, TurnRow } from './repo/types.js'
+import { z } from 'zod'
+import { summarise } from './domain/practice.js'
+import { buildRounds, extractSkills } from './domain/scout.js'
 import type { ReflectionProvider } from './providers/types.js'
 import { ProviderFailure, createNimClient, type NimLog } from './providers/nim.js'
 import { workspaceMiddleware } from './middleware/workspace.js'
@@ -19,6 +27,8 @@ export interface AppDeps {
   repo: Repository
   provider?: ReflectionProvider | null
   log?: NimLog
+  /** Speech-to-text for onboarding dictation. Defaults to Sarvam REST, or a mock without keys. */
+  stt?: SttProvider
 }
 
 const startedAt = Date.now()
@@ -62,6 +72,7 @@ function serializeReflection(reflection: ReflectionRow) {
     readinessRange: reflection.readinessRange,
     evidence: reflection.evidence,
     focus: reflection.focus,
+    suggestion: reflection.suggestion,
     model: reflection.model,
     createdAt: reflection.createdAt,
   }
@@ -104,31 +115,76 @@ export function buildApp(deps: AppDeps): Hono {
     }
   }
 
+  /** Question 1 starts from their story or focus when The First Interview gave us one; else the catalog opener. */
+  async function firstQuestion(profile: ProfileRow | null, role: string, industry?: string): Promise<string> {
+    const context = interviewContext(profile)
+    if (!context || !provider?.generateFollowUp) return OPENING_QUESTION
+    try {
+      const draft = { id: '', workspaceId: '', role, industry: industry ?? null, status: 'in_progress' as const, askedQuestions: [], createdAt: '' }
+      // ponytail: 6 s budget; the model call retries for minutes when NIM is slow, and starting must not wait on it.
+      const slow = new Promise<string>(resolve => setTimeout(() => resolve(OPENING_QUESTION), 6000))
+      return await Promise.race([nextFollowUpQuestion(draft, [], provider, context), slow])
+    } catch (err) {
+      if (err instanceof ProviderFailure) return OPENING_QUESTION // never block the start of an interview on the model
+      throw err
+    }
+  }
+
   async function generateAndSaveReflection(interview: InterviewRow, turns: TurnRow[]) {
     if (!provider) throw new AppError(503, 'reflection_provider_unavailable')
-    const output = reconcileReadinessRange(
-      await provider.generateReflection({
-        role: interview.role,
-        questions: interview.askedQuestions,
-        turns: turns.map(t => ({ id: t.id, question: t.question, answer: t.answer })),
-      }),
-    )
-    const evidenceResult = validateEvidence(turns, output.evidence)
+    const profile = await repo.getProfile(interview.workspaceId)
+    const output = await provider.generateReflection({
+      role: interview.role,
+      industry: interview.industry,
+      questions: interview.askedQuestions,
+      turns: turns.map(t => ({ id: t.id, question: t.question, answer: t.answer })),
+      context: profile && { focus: profile.focus, primaryStory: profile.story },
+      previousFocus: await previousReflectionFocus(interview),
+    })
+    // Quotes must be verbatim from this session's answers. The server checks; the model is not trusted to.
+    const quotes = output.whatStoodOut.map(q => ({ turnId: q.turnId, quote: q.quote, observation: '', competency: '' }))
+    const evidenceResult = validateEvidence(turns, quotes)
     if (!evidenceResult.ok) throw new AppError(evidenceResult.status, evidenceResult.error)
     return repo.saveReflection(interview.workspaceId, {
       interviewId: interview.id,
       role: interview.role,
-      readinessLabel: output.readinessLabel,
-      readinessRange: output.readinessRange,
+      readinessLabel: null,
+      readinessRange: null,
       evidence: evidenceResult.evidence,
-      focus: output.focus,
+      focus: output.keepWorkingOn.charAt(0).toUpperCase() + output.keepWorkingOn.slice(1),
+      suggestion: output.suggestion,
       model: env.nimModel,
     })
+  }
+
+  /** "Keep working on" from the most recent earlier completed session, if it has one. */
+  async function previousReflectionFocus(interview: InterviewRow): Promise<string | null> {
+    const earlier = (await repo.listInterviews(interview.workspaceId)).filter(i => i.status === 'completed' && i.id !== interview.id)
+    for (const i of earlier) {
+      const r = await repo.getReflection(interview.workspaceId, i.id)
+      if (r) return r.focus
+    }
+    return null
   }
 
   const api = new Hono()
   api.use('/interviews', workspaceMiddleware(repo))
   api.use('/interviews/*', workspaceMiddleware(repo))
+  api.use('/onboarding/*', workspaceMiddleware(repo))
+  api.use('/profile', workspaceMiddleware(repo))
+  api.use('/coach-note', workspaceMiddleware(repo))
+  api.use('/targets', workspaceMiddleware(repo))
+  api.use('/targets/*', workspaceMiddleware(repo))
+  api.use('/practice/*', workspaceMiddleware(repo))
+  // Cap request sizes before anything is buffered: 6 MB for the PDF and the audio, 64 KB for JSON.
+  const limit = (maxSize: number) => bodyLimit({ maxSize, onError: c => c.json({ error: 'payload_too_large' }, 413) })
+  api.use('/onboarding/resume', limit(6 * 1024 * 1024))
+  api.use('/onboarding/transcribe', limit(6 * 1024 * 1024))
+  api.use('/onboarding/step', limit(64 * 1024))
+  api.use('/profile', limit(64 * 1024))
+  api.use('/targets', limit(64 * 1024))
+  api.use('/targets/*', limit(64 * 1024))
+  api.use('/practice/*', limit(64 * 1024))
 
   api.get('/health', c =>
     c.json({
@@ -162,12 +218,35 @@ export function buildApp(deps: AppDeps): Hono {
 
   api.post('/interviews', async c => {
     const body = createInterviewSchema.parse(await c.req.json().catch(() => ({})))
-    const interview = await repo.createInterview(c.get('workspace'), {
+    // The First Interview queues a personalised opener for the FIRST interview in the role it was built for.
+    const workspace = c.get('workspace')
+    const profile = await repo.getProfile(workspace)
+    const queued = profile && profile.role === body.role && (await repo.listInterviewsByRole(workspace, body.role)).length === 0
+    const interview = await repo.createInterview(workspace, {
       role: body.role,
       industry: body.industry,
-      openingQuestion: OPENING_QUESTION,
+      openingQuestion: body.openingQuestion ?? (queued ? profile.firstQuestion : await firstQuestion(profile, body.role, body.industry)),
     })
     return c.json(serializeInterview(interview, [], null), 201)
+  })
+
+  // Overview: recent practice, newest first.
+  api.get('/interviews', async c => {
+    const workspace = c.get('workspace')
+    const rows = (await repo.listInterviews(workspace)).slice(0, 10)
+    // ponytail: one turns query per row; fine for 10 rows, add a turn-count column if the list grows
+    const list = await Promise.all(
+      rows.map(async i => ({
+        id: i.id,
+        role: i.role,
+        status: i.status,
+        createdAt: i.createdAt,
+        answered: (await repo.getTurns(workspace, i.id)).length,
+        // The notes, so Today can show lines that landed and how the gap moved without another call.
+        notes: await repo.getReflection(workspace, i.id).then(r => r && { keepWorkingOn: r.focus, quotes: r.evidence.map(e => e.quote) }),
+      })),
+    )
+    return c.json(list)
   })
 
   api.post('/interviews/:id/turns', async c => {
@@ -310,13 +389,245 @@ export function buildApp(deps: AppDeps): Hono {
     const turns = await repo.getTurns(workspace, interview.id)
     const check = canComplete(interview, turns)
     if (!check.ok) {
-      throw new AppError(check.status, check.error, check.answers !== undefined ? { answers: check.answers } : undefined)
+      throw new AppError(check.status, check.error, {
+        ...(check.answers !== undefined ? { answers: check.answers } : {}),
+        message: 'This session was not completed. No reflection was generated.',
+      })
     }
     if (interview.status !== 'completed') {
       await repo.updateInterviewStatus(workspace, interview.id, 'completed')
     }
     const reflection = await generateAndSaveReflection(interview, turns)
     return c.json(serializeReflection(reflection), 201)
+  })
+
+  // ---- The First Interview (replaces onboarding) ----
+  api.post('/onboarding/resume', async c => {
+    const file = (await c.req.parseBody()).file
+    if (!(file instanceof File) || file.size > MAX_RESUME_BYTES) throw new AppError(400, 'invalid_resume')
+    const text = await extractResumeText(new Uint8Array(await file.arrayBuffer()))
+    if (!text) throw new AppError(422, 'resume_unreadable')
+    return c.json({ text })
+  })
+
+  api.post('/onboarding/step', async c => {
+    const body = onboardingStepSchema.parse(await c.req.json().catch(() => ({})))
+    return c.json(await runOnboardingStep(provider, body))
+  })
+
+  // Dictation: raw PCM16 16 kHz mono in, text out. The text goes into the answer box for the user to review.
+  api.post('/onboarding/transcribe', async c => {
+    const pcm = Buffer.from(await c.req.arrayBuffer())
+    if (pcm.length === 0 || pcm.length > 6 * 1024 * 1024) throw new AppError(400, 'invalid_audio')
+    const stt = deps.stt ?? (isSarvamConfigured(env) ? createRestSarvamStt(env) : createMockStt())
+    const stream = stt.startStream({ language: env.sarvamLanguage, sampleRate: 16000 })
+    try {
+      stream.sendAudio(pcm)
+      return c.json({ text: (await stream.finalize()).trim() })
+    } catch {
+      throw new AppError(502, 'transcription_failed')
+    }
+  })
+
+  // Overview: the Coach's note. Built from the latest completed session, else from The First Interview.
+  // ponytail: regenerated on every visit (~1s); cache by (latest session, profile) if the model cost matters
+  // Today's rep stays the same until something it was built from changes (a new finished session, a new focus,
+  // an interview opened or closed). ponytail: in-memory, so a server restart rewrites it once; persist it if that matters.
+  const coachNotes = new Map<string, Record<string, string>>()
+  api.get('/coach-note', async c => {
+    const workspace = c.get('workspace')
+    const profile = await repo.getProfile(workspace)
+    if (!profile) throw new AppError(404, 'profile_not_found')
+    const interviews = await repo.listInterviews(workspace)
+    const done = interviews.find(i => i.status === 'completed')
+    const transcript = done
+      ? (await repo.getTurns(workspace, done.id)).map(t => ({ question: t.question, answer: t.answer }))
+      : [
+          { question: 'Tell me about something you did that you’re proud of.', answer: profile.story },
+          { question: profile.pressureQuestion, answer: profile.pressureAnswer },
+        ]
+    const key = `${workspace}:${done?.id ?? 'first'}:${profile.focus}:${interviews.some(i => i.status === 'in_progress')}`
+    const cached = coachNotes.get(key)
+    if (cached) return c.json({ ...cached, basedOn: done ? 'interview' : 'first-interview' })
+    const note = await runOnboardingStep(provider, {
+      step: 'coach',
+      role: profile.role,
+      focus: profile.focus,
+      transcript,
+      inProgress: interviews.some(i => i.status === 'in_progress'),
+      reflectionFocus: done ? (await repo.getReflection(workspace, done.id))?.focus : undefined,
+    })
+    coachNotes.set(key, note)
+    return c.json({ ...note, basedOn: done ? 'interview' : 'first-interview' })
+  })
+
+  // ---- The Loop: targets ----
+  /** Scout runs after the response. Each REAL step appends an event; any failure still ends in 'ready'. */
+  async function runScout(workspace: string, target: Target): Promise<void> {
+    const events: AgentEvent[] = []
+    const say = async (agent: AgentEvent['agent'], text: string) => {
+      events.push({ at: new Date().toISOString(), agent, text })
+      await repo.updateTarget(workspace, target.id, { events: [...events] })
+    }
+    let skills: Target['skills'] = []
+    let rounds: Target['rounds'] = []
+    let nextStep: string | null = null
+    try {
+      await say('Scout', `Read the job description (${target.jd.split(/\s+/).filter(Boolean).length} words).`)
+      skills = extractSkills(target.jd)
+      await say('Scout', skills.length ? `Found ${skills.length} skills: ${skills.map(s => s.name).join(', ')}.` : 'Found no skills I know by name.')
+      rounds = buildRounds(skills)
+      await say('Scout', `Built ${rounds.length} rounds from them.`)
+      const plan = await runOnboardingStep(provider, {
+        step: 'planner',
+        company: target.company,
+        role: target.role,
+        skills: skills.map(s => s.name),
+        rounds: rounds.map(r => ({ title: r.title, available: r.available })),
+        interviewDate: target.interviewDate,
+      })
+      nextStep = plan.nextStep.charAt(0).toUpperCase() + plan.nextStep.slice(1)
+      await say('Planner', nextStep)
+    } catch (err) {
+      console.error('scout failed', err instanceof Error ? err.message : err)
+      if (rounds.length === 0) rounds = buildRounds(skills)
+      events.push({ at: new Date().toISOString(), agent: 'Scout', text: 'I could not finish the plan, so this one is basic.' })
+    }
+    await repo.updateTarget(workspace, target.id, { skills, rounds, nextStep, events, status: 'ready' }).catch(() => null)
+  }
+
+  const short = (max: number) => z.string().trim().min(1).max(max)
+  const createTargetSchema = z.object({
+    company: short(120),
+    role: short(120),
+    interviewDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .refine(d => !Number.isNaN(Date.parse(d)))
+      .optional(),
+    jd: z.string().trim().min(20).max(20_000),
+  })
+  const sqlTurnSchema = z.object({
+    problem: z.object({ id: short(80), title: short(200), prompt: short(2000) }),
+    query: short(5000),
+    passed: z.boolean(),
+    error: z.string().max(2000).optional(),
+    resultPreview: z.string().max(2000).optional(),
+  })
+  const sqlDebriefSchema = z.object({
+    attempts: z.array(z.object({ problemId: short(80), title: short(200), query: short(5000), passed: z.boolean() })).min(1).max(8),
+  })
+
+  const loadTarget = async (workspace: string, id: string) => {
+    const target = await repo.getTarget(workspace, id)
+    if (!target) throw new AppError(404, 'target_not_found')
+    return target
+  }
+
+  // ---- Practice hub ----
+  const attemptSchema = z.object({
+    itemId: z.string().min(1).max(120),
+    track: z.enum(['sql', 'python', 'stats', 'case']),
+    topic: z.string().min(1).max(120),
+    level: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+    correct: z.boolean(),
+    seconds: z.number().int().min(0).max(3600),
+    hintsUsed: z.number().int().min(0).max(20),
+  })
+
+  api.post('/practice/attempts', async c => {
+    const body = attemptSchema.parse(await c.req.json().catch(() => ({})))
+    const row = await repo.addPracticeAttempt(c.get('workspace'), body)
+    return c.json({ id: row.id }, 201)
+  })
+
+  api.get('/practice/summary', async c => {
+    // ponytail: reads up to 5000 attempts and folds in memory; move to SQL aggregation if a user ever exceeds that.
+    return c.json(summarise(await repo.getPracticeAttempts(c.get('workspace'))))
+  })
+
+  api.post('/targets', async c => {
+    const workspace = c.get('workspace')
+    const body = createTargetSchema.parse(await c.req.json().catch(() => ({})))
+    const target = await repo.createTarget(workspace, { ...body, interviewDate: body.interviewDate ?? null })
+    // ponytail: in-process background job; a server restart mid-scout leaves 'scouting'. Move to a queue if that matters.
+    void runScout(workspace, target)
+    return c.json(target, 201)
+  })
+
+  api.get('/targets', async c => {
+    const list = await repo.listTargets(c.get('workspace'))
+    return c.json(list.map(({ id, company, role, interviewDate, status, nextStep, createdAt }) => ({ id, company, role, interviewDate, status, nextStep, createdAt })))
+  })
+
+  api.get('/targets/:id', async c => c.json(await loadTarget(c.get('workspace'), c.req.param('id'))))
+
+  api.delete('/targets/:id', async c => {
+    await repo.deleteTarget(c.get('workspace'), c.req.param('id'))
+    return c.body(null, 204)
+  })
+
+  api.post('/targets/:id/sql-turn', async c => {
+    await loadTarget(c.get('workspace'), c.req.param('id'))
+    const body = sqlTurnSchema.parse(await c.req.json().catch(() => ({})))
+    const out = await runOnboardingStep(provider, { step: 'sqlFollowUp', ...body })
+    return c.json({ followUp: out.question })
+  })
+
+  api.post('/targets/:id/sql-debrief', async c => {
+    const workspace = c.get('workspace')
+    const target = await loadTarget(workspace, c.req.param('id'))
+    const { attempts } = sqlDebriefSchema.parse(await c.req.json().catch(() => ({})))
+    const out = await runOnboardingStep(provider, { step: 'sqlDebrief', role: target.role, attempts })
+    const solved = attempts.filter(a => a.passed).length
+    const debrief: Debrief = {
+      id: crypto.randomUUID(),
+      kind: 'sql',
+      createdAt: new Date().toISOString(),
+      solved,
+      total: attempts.length,
+      wentWell: out.wentWell,
+      keepWorkingOn: out.keepWorkingOn,
+      suggestion: out.suggestion,
+    }
+    const plan = await runOnboardingStep(provider, {
+      step: 'planner',
+      company: target.company,
+      role: target.role,
+      skills: target.skills.map(s => s.name),
+      rounds: target.rounds.map(r => ({ title: r.title, available: r.available })),
+      interviewDate: target.interviewDate,
+      keepWorkingOn: debrief.keepWorkingOn,
+    })
+    const nextStep = plan.nextStep.charAt(0).toUpperCase() + plan.nextStep.slice(1)
+    const at = new Date().toISOString()
+    // ponytail: read-modify-write on events; two debriefs at the same instant could drop one. Fine for one user.
+    await repo.updateTarget(workspace, target.id, {
+      debriefs: [...target.debriefs, debrief],
+      events: [
+        ...target.events,
+        { at, agent: 'Coach', text: `Wrote up the SQL round: ${solved} of ${attempts.length} problems solved.` },
+        { at, agent: 'Planner', text: nextStep },
+      ],
+      nextStep,
+    })
+    return c.json(debrief)
+  })
+
+  api.get('/profile', async c => {
+    const profile = await repo.getProfile(c.get('workspace'))
+    if (!profile) throw new AppError(404, 'profile_not_found')
+    return c.json(profile)
+  })
+
+  api.delete('/profile', async c => {
+    await repo.deleteProfile(c.get('workspace'))
+    return c.body(null, 204)
+  })
+
+  api.put('/profile', async c => {
+    const body = profileSchema.parse(await c.req.json().catch(() => ({})))
+    return c.json(await repo.saveProfile(c.get('workspace'), body))
   })
 
   const app = new Hono()

@@ -171,7 +171,15 @@ const FluidOrb = ({
     }
     render(start)
 
+    // Only animate while on screen, so off-screen orbs don't burn GPU.
+    const observer = new IntersectionObserver(([entry]) => {
+      cancelAnimationFrame(raf)
+      if (entry.isIntersecting && !reduce) raf = requestAnimationFrame(render)
+    })
+    observer.observe(canvas)
+
     return () => {
+      observer.disconnect()
       cancelAnimationFrame(raf)
       gl.deleteProgram(program)
       gl.deleteShader(vert)

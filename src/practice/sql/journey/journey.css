@@ -1,0 +1,102 @@
+.jm { color: var(--ink); font-size: 13px; padding-bottom: 80px; }
+.jm button { font: inherit; cursor: pointer; }
+.jm :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.jm-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+.jm-top { position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--glass-b); backdrop-filter: blur(14px); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+.jm-coach { display: flex; align-items: center; gap: 12px; flex: 1 1 420px; min-width: 0; }
+.jm-orb { width: 44px; height: 44px; min-width: 44px; flex: none; position: relative; overflow: hidden; border-radius: 50%; }
+.jm-orb .orb-wrap { width: 100%; min-width: 0; max-width: none; height: 100%; aspect-ratio: 1; } /* the global .orb-wrap--compact is 130px */
+.jm-orb .orb-wrap > div, .jm-orb canvas { width: 100% !important; height: 100% !important; }
+.jm-bubble { position: relative; margin: 0; flex: 1; min-width: 0; padding: 8px 12px; border-radius: 12px; background: var(--soft); font-size: 13px; line-height: 1.4; }
+.jm-bubble::before { content: ''; position: absolute; left: -5px; top: 50%; width: 10px; height: 10px; background: inherit; transform: translateY(-50%) rotate(45deg); }
+.jm-spark { color: var(--circled-ink); margin-right: 5px; vertical-align: -2px; }
+.jm-cta { min-height: 44px; padding: 0 22px; border: 0; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 14px; font-weight: 700; box-shadow: 0 6px 18px var(--clear); transition: transform .2s var(--ease); }
+.jm-cta:hover { transform: translateY(-1px); }
+
+.jm-player { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.jm-level { display: grid; gap: 3px; min-width: 150px; }
+.jm-level strong { font-size: 13px; }
+.jm-level small { color: var(--muted); font-size: 12px; }
+.jm-bar { height: 7px; border-radius: 99px; background: var(--soft); overflow: hidden; }
+.jm-bar i { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width .6s var(--ease); }
+.jm-quest { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 99px; background: var(--circled); color: var(--circled-ink); font-size: 12px; }
+.jm-quest.is-done { background: var(--soft); color: var(--accent); }
+.jm-medals { display: flex; gap: 5px; }
+.jm-medal { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; border: 1.5px dashed var(--line); color: var(--muted); opacity: .6; position: relative; overflow: hidden; }
+.jm-medal.is-earned { background: var(--accent); border: 1.5px solid var(--accent); color: var(--accent-ink); opacity: 1; box-shadow: 0 2px 8px var(--clear); }
+.jm-medal.is-earned::after { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.7) 50%, transparent 65%); transform: translateX(-100%); animation: jm-shine 3.5s ease-in-out infinite; }
+
+.jm-map { display: grid; gap: 28px; padding: 22px 0; }
+.jm-world { display: grid; justify-items: center; gap: 10px; }
+.jm-banner { width: min(100%, 560px); max-width: 100%; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--glass); }
+.jm-banner h2 { margin: 0; font-size: 18px; }
+.jm-banner p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.jm-count { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+
+.jm-path { position: relative; list-style: none; margin: 0; padding: 0; max-width: 100%; }
+.jm-line { position: absolute; inset: 0; pointer-events: none; }
+.jm-line path { fill: none; stroke: var(--line); stroke-width: 4; stroke-dasharray: 3 9; stroke-linecap: round; }
+.jm-line path.is-done { stroke: var(--accent); stroke-dasharray: none; }
+.jm-node { position: absolute; left: 0; width: 100%; }
+.jm-node.is-open { z-index: 10; }
+.jm-hit { position: absolute; top: 8px; display: grid; place-items: center; }
+.jm-btn { position: relative; z-index: 1; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 50%; background: var(--bg); color: var(--accent); display: grid; place-items: center; box-shadow: 0 4px 14px var(--clear); transition: transform .2s var(--ease); }
+.jm-btn:hover { transform: scale(1.05); }
+.jm-btn > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.jm-ico svg { display: block; flex: none; }
+.jm-ring-bg { fill: none; stroke: var(--line); stroke-width: 4; }
+.jm-ring { fill: none; stroke: var(--accent); stroke-width: 4; stroke-linecap: round; }
+.jm-ico { position: relative; display: grid; place-items: center; color: var(--accent); }
+.jm-ico svg { stroke: currentColor; }
+.jm-node.is-done .jm-btn { background: var(--accent); color: var(--accent-ink); }
+.jm-node.is-done .jm-ico { color: var(--accent-ink); }
+.jm-node.is-boss .jm-ico { color: var(--circled-ink); }
+.jm-node.is-boss.is-done .jm-ico { color: var(--accent-ink); }
+.jm-node.is-done .jm-ring-bg, .jm-node.is-done .jm-ring { stroke: var(--accent-ink); opacity: .35; }
+.jm-node.is-current .jm-btn { box-shadow: 0 0 0 5px var(--clear), 0 6px 22px var(--clear); animation: jm-pulse 2s ease-in-out infinite; }
+.jm-node.is-boss .jm-btn { border: 3px double var(--circled-ink); background: var(--circled); color: var(--circled-ink); }
+.jm-node.is-boss.is-done .jm-btn { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.jm-stars { position: absolute; bottom: -19px; display: flex; gap: 2px; }
+.jm-stars svg { color: var(--muted); fill: none; stroke-width: 2; opacity: .7; }
+.jm-stars .on { color: var(--accent); fill: var(--accent); opacity: 1; }
+.jm-pin { position: absolute; top: -26px; left: 50%; transform: translateX(-50%); display: inline-flex; gap: 3px; align-items: center; padding: 2px 8px; border-radius: 99px; background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 600; white-space: nowrap; }
+.jm-title { position: absolute; top: 20px; display: grid; gap: 2px; max-width: 150px; }
+.jm-title.is-left { text-align: right; }
+.jm-title b { font-size: 13px; line-height: 1.25; }
+.jm-title small { color: var(--muted); font-size: 12px; }
+
+.jm-sheet { position: fixed; z-index: 60; left: 50%; bottom: 20px; transform: translateX(-50%); width: min(420px, calc(100vw - 24px)); box-sizing: border-box; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--bg); box-shadow: var(--shadow); display: grid; gap: 8px; animation: jm-in .25s var(--ease); }
+.jm-sheet h3 { margin: 0; font-size: 15px; padding-right: 32px; }
+.jm-sheet p { margin: 0; color: var(--muted); }
+.jm-sheet dl { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin: 0; }
+.jm-sheet dl div { display: grid; }
+.jm-sheet dt { color: var(--muted); font-size: 12px; }
+.jm-sheet dd { margin: 0; font-weight: 600; }
+.jm-x { position: absolute; top: 0; right: 0; width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; color: var(--muted); }
+.jm-jump { position: fixed; right: 18px; bottom: 18px; z-index: 25; min-height: 44px; display: inline-flex; align-items: center; gap: 6px; padding: 0 16px; border-radius: 99px; border: 1px solid var(--line); background: var(--bg); color: var(--accent); font-weight: 600; box-shadow: var(--shadow); }
+
+.jm-burst { position: absolute; inset: 0; pointer-events: none; }
+.jm-burst i { position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; margin: -3px; border-radius: 50%; background: var(--accent); animation: jm-pop .7s ease-out forwards; }
+.jm-burst i:nth-child(3n) { background: var(--circled-ink); }
+
+@keyframes jm-pulse { 50% { box-shadow: 0 0 0 11px transparent, 0 6px 22px var(--clear); } }
+@keyframes jm-pop { to { transform: rotate(var(--a)) translateY(-52px) scale(.4); opacity: 0; } }
+@keyframes jm-in { from { opacity: 0; margin-bottom: -8px; } }
+@keyframes jm-shine { 60%, 100% { transform: translateX(100%); } }
+
+@media (max-width: 640px) {
+  .jm-top { position: static; }
+  .jm-coach { flex-basis: 100%; flex-wrap: wrap; }
+  .jm-bubble { flex-basis: calc(100% - 60px); }
+  .jm-cta { width: 100%; }
+  .jm-player { width: 100%; }
+  .jm-banner { flex-direction: column; align-items: flex-start; }
+  .jm-sheet { left: 0; right: 0; bottom: 0; transform: none; width: auto; border-radius: 18px 18px 0 0; padding-bottom: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jm-node.is-current .jm-btn, .jm-burst i, .jm-sheet, 
+.jm-medal.is-earned::after { animation: none !important; }
+  .jm-burst { display: none; }
+  .jm-btn, .jm-cta, .jm-bar i { transition: none; }
+}

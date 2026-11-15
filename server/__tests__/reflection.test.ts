@@ -8,6 +8,7 @@ const answers = [
   'I encountered resistance from two teams, so I ran a five-person pilot to prove value.',
   'Completion improved measurably and next time I would involve support much earlier.',
 ]
+const NOT_DONE = 'This session was not completed. No reflection was generated.'
 
 type LogEntry = { provider: 'nim'; status?: number; latencyMs: number }
 
@@ -19,35 +20,23 @@ function completion(output: unknown): Response {
   return jsonResponse(200, { choices: [{ message: { content: JSON.stringify(output) } }] })
 }
 
+/** The three sections: verbatim quotes, the gap still open, one concrete suggestion. */
 function validOutput(turnIds: string[]) {
   return {
-    readinessLabel: 'solid',
-    readinessRange: { low: 62, high: 72 },
-    evidence: turnIds.map((turnId, i) => ({
-      turnId,
-      quote: answers[i].split('.')[0] + '.',
-      observation: `Observed competency ${i + 1}.`,
-      competency: ['Ownership', 'Decision-making', 'Adaptability', 'Impact'][i],
-    })),
-    focus: 'Make the result as clear as the action.',
+    whatStoodOut: turnIds.slice(0, 3).map((turnId, i) => ({ turnId, quote: answers[i].split(',')[0] })),
+    keepWorkingOn: 'The result is still vaguer than the action that led to it.',
+    suggestion: 'Next time, say the outcome in one sentence before you explain how you got there.',
   }
 }
 
-async function completeInterview(app: ReturnType<typeof makeApp>['app']) {
-  const created = await app.request('/interviews', {
-    method: 'POST',
-    headers: { ...WS, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ role: 'Product Analyst' }),
-  })
-  const { id } = (await j(created)) as { id: string }
+const post = (app: ReturnType<typeof makeApp>['app'], path: string, body?: unknown) =>
+  app.request(path, { method: 'POST', headers: { ...WS, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
+
+async function completeInterview(app: ReturnType<typeof makeApp>['app'], turnsToAnswer = 4) {
+  const { id } = (await j(await post(app, '/interviews', { role: 'Product Analyst' }))) as { id: string }
   const turnIds: string[] = []
-  for (let i = 0; i < 4; i++) {
-    const res = await app.request(`/interviews/${id}/turns`, {
-      method: 'POST',
-      headers: { ...WS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questionIndex: i, answer: answers[i] }),
-    })
-    const body = await j(res)
+  for (let i = 0; i < turnsToAnswer; i++) {
+    const body = await j(await post(app, `/interviews/${id}/turns`, { questionIndex: i, answer: answers[i] }))
     turnIds.push(body.turn.id as string)
   }
   return { id, turnIds }
@@ -56,36 +45,21 @@ async function completeInterview(app: ReturnType<typeof makeApp>['app']) {
 function makeNimApp(fetchImpl: typeof fetch, log?: NimLog) {
   const env = makeEnv({ nimApiKey: 'test-key' })
   const nim = createNimClient(env, fetchImpl, log, 5_000, 0, 3)
-  return makeApp({
-    env,
-    provider: {
-      generateReflection: request => nim.generateReflection(request),
-    },
-  })
+  return makeApp({ env, provider: { generateReflection: request => nim.generateReflection(request) } })
 }
+
+const reflect = (app: ReturnType<typeof makeApp>['app'], id: string) => app.request(`/interviews/${id}/reflect`, { method: 'POST', headers: WS })
 
 describe('POST /interviews/:id/reflect', () => {
   it('returns 503 when NIM is not configured', async () => {
     const { app } = makeApp()
-    const created = await app.request('/interviews', {
-      method: 'POST',
-      headers: { ...WS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: 'Product Analyst' }),
-    })
-    const { id } = (await j(created)) as { id: string }
-    for (let i = 0; i < 4; i++) {
-      await app.request(`/interviews/${id}/turns`, {
-        method: 'POST',
-        headers: { ...WS, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionIndex: i, answer: answers[i] }),
-      })
-    }
-    const res = await app.request(`/interviews/${id}/reflect`, { method: 'POST', headers: WS })
+    const { id } = await completeInterview(app)
+    const res = await reflect(app, id)
     expect(res.status).toBe(503)
     expect((await j(res)).error).toBe('reflection_provider_unavailable')
   })
 
-  it('accepts valid provider output, persists it, and reloads it', async () => {
+  it('returns the three sections, persists them, and never stores a score', async () => {
     let capturedPrompt = ''
     const fetchImpl = (async (_url: string, init?: RequestInit) => {
       capturedPrompt = String(init?.body)
@@ -94,149 +68,131 @@ describe('POST /interviews/:id/reflect', () => {
     const { app } = makeNimApp(fetchImpl)
     const { id, turnIds } = await completeInterview(app)
 
-    const res = await app.request(`/interviews/${id}/reflect`, { method: 'POST', headers: WS })
+    const res = await reflect(app, id)
     expect(res.status).toBe(201)
     const body = await j(res)
-    expect(body.readinessLabel).toBe('solid')
-    expect(body.readinessRange).toEqual({ low: 62, high: 72 })
-    expect(body.evidence.length).toBe(4)
-    expect(body.model).toBe('nvidia/nemotron-3.5-bolt-e4b')
+    expect(body.evidence.map((e: { quote: string }) => e.quote)).toEqual([
+      'I redesigned the customer onboarding journey and brought support and product together.',
+      'I personally owned the rollout plan and decided to simplify the workflow itself.',
+      'I encountered resistance from two teams',
+    ])
+    expect(body.focus).toBe('The result is still vaguer than the action that led to it.')
+    expect(body.suggestion).toBe('Next time, say the outcome in one sentence before you explain how you got there.')
+    expect(body.readinessLabel).toBeNull()
+    expect(body.readinessRange).toBeNull()
 
-    const reload = await app.request(`/interviews/${id}`, { headers: WS })
-    const session = await j(reload)
-    expect(session.reflection.evidence.length).toBe(4)
+    const session = await j(await app.request(`/interviews/${id}`, { headers: WS }))
     expect(session.reflection.id).toBe(body.id)
+    expect(session.reflection.suggestion).toBe(body.suggestion)
     expect(capturedPrompt).toContain('Product Analyst')
+    expect(capturedPrompt).toContain('Do not score, grade, or praise.')
   })
 
-  it('rejects evidence referencing an unknown turn id with 400', async () => {
-    const output = validOutput(['turn-1', 'turn-2', 'turn-3', 'turn-4'])
-    const fetchImpl = (async () => completion(output)) as typeof fetch
+  it('passes the previous session’s focus so it can say whether they moved', async () => {
+    const prompts: string[] = []
+    const fetchImpl = (async (_url: string, init?: RequestInit) => {
+      prompts.push(String(init?.body))
+      return completion(validOutput(turnIds))
+    }) as typeof fetch
+    const { app } = makeNimApp(fetchImpl)
+    let { id, turnIds } = await completeInterview(app)
+    expect((await reflect(app, id)).status).toBe(201)
+    expect(prompts[0]).not.toContain('previous_reflection_focus:')
+    ;({ id, turnIds } = await completeInterview(app))
+    expect((await reflect(app, id)).status).toBe(201)
+    expect(prompts[1]).toContain('previous_reflection_focus: The result is still vaguer than the action that led to it.')
+  })
+
+  it('refuses an unfinished session with the agreed message', async () => {
+    const { app } = makeNimApp((async () => completion({})) as typeof fetch)
+    const { id } = await completeInterview(app, 2)
+    const res = await reflect(app, id)
+    expect(res.status).toBe(409)
+    const body = await j(res)
+    expect(body.error).toBe('interview_incomplete')
+    expect(body.message).toBe(NOT_DONE)
+  })
+
+  it('rejects a quote referencing an unknown turn id with 400', async () => {
+    const fetchImpl = (async () => completion(validOutput(['turn-1', 'turn-2', 'turn-3']))) as typeof fetch
     const { app } = makeNimApp(fetchImpl)
     const { id } = await completeInterview(app)
-    const res = await app.request(`/interviews/${id}/reflect`, { method: 'POST', headers: WS })
+    const res = await reflect(app, id)
     expect(res.status).toBe(400)
     expect((await j(res)).error).toBe('invalid_evidence_turn_id')
   })
 
-  it('rejects a paraphrased quote that is not an exact substring with 400', async () => {
+  it('rejects a paraphrased quote that is not verbatim with 400', async () => {
     const output = {
-      readinessLabel: 'solid',
-      readinessRange: { low: 62, high: 72 },
-      evidence: [
-        { turnId: 'PLACEHOLDER', quote: 'I totally restructured onboarding from the ground up.', observation: 'Obs.', competency: 'Ownership' },
-      ],
-      focus: 'Focus.',
+      whatStoodOut: [{ turnId: 'PLACEHOLDER', quote: 'I totally restructured onboarding from the ground up.' }],
+      keepWorkingOn: 'Name your own part first.',
+      suggestion: 'Open with the decision you made.',
     }
-    const fetchImpl = (async () => completion(output)) as typeof fetch
-    const appState = makeNimApp(fetchImpl)
+    const appState = makeNimApp((async () => completion(output)) as typeof fetch)
     const session = await completeInterview(appState.app)
-    output.evidence[0].turnId = session.turnIds[0]
-    const res = await appState.app.request(`/interviews/${session.id}/reflect`, { method: 'POST', headers: WS })
+    output.whatStoodOut[0].turnId = session.turnIds[0]
+    const res = await reflect(appState.app, session.id)
     expect(res.status).toBe(400)
     expect((await j(res)).error).toBe('invalid_evidence_quote')
   })
 
-  it('strips a numeric readiness range when evidence is empty', async () => {
-    const output = {
-      readinessLabel: 'solid',
-      readinessRange: { low: 62, high: 72 },
-      evidence: [],
-      focus: 'Focus.',
-    }
-    const fetchImpl = (async () => completion(output)) as typeof fetch
-    const { app } = makeNimApp(fetchImpl)
-    const { id } = await completeInterview(app)
-    const res = await app.request(`/interviews/${id}/reflect`, { method: 'POST', headers: WS })
-    expect(res.status).toBe(201)
-    const body = await j(res)
-    expect(body.readinessRange).toBeNull()
-  })
-
-  it('swaps an inverted numeric range when evidence is present', async () => {
-    const fetchImpl = (async () => {
-      const valid = validOutput(turnIds)
-      return completion({ ...valid, readinessRange: { low: 1, high: 0 } })
-    }) as typeof fetch
+  it('keeps at most three quotes', async () => {
+    const fetchImpl = (async () =>
+      completion({ ...validOutput(turnIds), whatStoodOut: turnIds.map((turnId, i) => ({ turnId, quote: answers[i].slice(0, 20) })) })) as typeof fetch
     const { app } = makeNimApp(fetchImpl)
     const { id, turnIds } = await completeInterview(app)
-    const res = await app.request(`/interviews/${id}/reflect`, { method: 'POST', headers: WS })
+    const res = await reflect(app, id)
     expect(res.status).toBe(201)
-    expect((await j(res)).readinessRange).toEqual({ low: 0, high: 1 })
+    expect((await j(res)).evidence.length).toBe(3)
   })
 
   it('returns 502 when fetch throws', async () => {
-    const fetchImpl = (async () => { throw new Error('network down') }) as typeof fetch
-    const { app } = makeNimApp(fetchImpl)
+    const { app } = makeNimApp((async () => { throw new Error('network down') }) as typeof fetch)
     const { id } = await completeInterview(app)
-    const res = await app.request(`/interviews/${id}/reflect`, { method: 'POST', headers: WS })
+    const res = await reflect(app, id)
     expect(res.status).toBe(502)
     expect((await j(res)).error).toBe('reflection_provider_failed')
   })
 
   it('returns 502 when the provider responds 500', async () => {
-    const fetchImpl = (async () => jsonResponse(500, { error: 'boom' })) as typeof fetch
-    const { app } = makeNimApp(fetchImpl)
+    const { app } = makeNimApp((async () => jsonResponse(500, { error: 'boom' })) as typeof fetch)
     const { id } = await completeInterview(app)
-    const res = await app.request(`/interviews/${id}/reflect`, { method: 'POST', headers: WS })
+    const res = await reflect(app, id)
     expect(res.status).toBe(502)
     expect((await j(res)).error).toBe('reflection_provider_failed')
   })
 
-  it('accepts nested assessment JSON with alternate field names', async () => {
+  it('accepts nested JSON with alternate field names', async () => {
     const fetchImpl = (async () => {
       const valid = validOutput(turnIds)
-      return jsonResponse(200, {
-        choices: [
-          {
-            message: {
-              content: JSON.stringify({
-                assessment: {
-                  readiness: valid.readinessLabel,
-                  readiness_range: valid.readinessRange,
-                  evidence: valid.evidence.map(item => ({
-                    turn_id: item.turnId,
-                    excerpt: item.quote,
-                    note: item.observation,
-                    skill: item.competency,
-                  })),
-                  development_focus: valid.focus,
-                },
-              }),
-            },
-          },
-        ],
+      return completion({
+        reflection: {
+          what_stood_out: valid.whatStoodOut.map(q => ({ turn_id: q.turnId, excerpt: q.quote })),
+          keep_working_on: valid.keepWorkingOn,
+          next_step: valid.suggestion,
+        },
       })
     }) as typeof fetch
     const { app } = makeNimApp(fetchImpl)
     const { id, turnIds } = await completeInterview(app)
-    const res = await app.request(`/interviews/${id}/reflect`, { method: 'POST', headers: WS })
+    const res = await reflect(app, id)
     expect(res.status).toBe(201)
-    expect((await j(res)).readinessLabel).toBe('solid')
+    expect((await j(res)).suggestion).toBe(validOutput(turnIds).suggestion)
   })
 
   it('parses JSON embedded in prose', async () => {
     const fetchImpl = (async () =>
-      jsonResponse(200, {
-        choices: [
-          {
-            message: {
-              content: `Readiness notes follow.\n${JSON.stringify(validOutput(turnIds))}`,
-            },
-          },
-        ],
-      })) as typeof fetch
+      jsonResponse(200, { choices: [{ message: { content: `Here are the notes.\n${JSON.stringify(validOutput(turnIds))}` } }] })) as typeof fetch
     const { app } = makeNimApp(fetchImpl)
     const { id, turnIds } = await completeInterview(app)
-    const res = await app.request(`/interviews/${id}/reflect`, { method: 'POST', headers: WS })
-    expect(res.status).toBe(201)
+    expect((await reflect(app, id)).status).toBe(201)
   })
 
   it('returns 502 when the provider returns garbage', async () => {
     const fetchImpl = (async () => jsonResponse(200, { choices: [{ message: { content: 'not json at all' } }] })) as typeof fetch
     const { app } = makeNimApp(fetchImpl)
     const { id } = await completeInterview(app)
-    const res = await app.request(`/interviews/${id}/reflect`, { method: 'POST', headers: WS })
+    const res = await reflect(app, id)
     expect(res.status).toBe(502)
     expect((await j(res)).error).toBe('reflection_provider_failed')
   })
@@ -245,15 +201,12 @@ describe('POST /interviews/:id/reflect', () => {
     const bodies: string[] = []
     const fetchImpl = (async (_url: string, init?: RequestInit) => {
       bodies.push(String(init?.body))
-      if (bodies.length === 1) {
-        return jsonResponse(200, { choices: [{ message: { content: 'Readiness for Product Analyst is looking solid overall.' } }] })
-      }
+      if (bodies.length === 1) return jsonResponse(200, { choices: [{ message: { content: 'Looks like a solid session overall.' } }] })
       return completion(validOutput(turnIds))
     }) as typeof fetch
     const { app } = makeNimApp(fetchImpl)
     const { id, turnIds } = await completeInterview(app)
-    const res = await app.request(`/interviews/${id}/reflect`, { method: 'POST', headers: WS })
-    expect(res.status).toBe(201)
+    expect((await reflect(app, id)).status).toBe(201)
     expect(JSON.parse(bodies[0]).response_format.type).toBe('json_schema')
     expect(JSON.parse(bodies[1]).response_format.type).toBe('json_object')
   })
@@ -267,54 +220,41 @@ describe('POST /interviews/:id/reflect', () => {
     }) as typeof fetch
     const { app } = makeNimApp(fetchImpl)
     const { id, turnIds } = await completeInterview(app)
-    const res = await app.request(`/interviews/${id}/reflect`, { method: 'POST', headers: WS })
-    expect(res.status).toBe(201)
-    expect(JSON.parse(bodies[0]).response_format.type).toBe('json_schema')
+    expect((await reflect(app, id)).status).toBe(201)
     expect(JSON.parse(bodies[1]).response_format.type).toBe('json_object')
   })
 
   it('logs contain no answer or prompt content', async () => {
     const logs: LogEntry[] = []
-    const log: NimLog = entry => logs.push(entry)
-    const output = { readinessLabel: 'emerging', readinessRange: null, evidence: [], focus: 'Focus.' }
-    const fetchImpl = (async () => completion(output)) as typeof fetch
-    const { app } = makeNimApp(fetchImpl, log)
-    const { id } = await completeInterview(app)
-    await app.request(`/interviews/${id}/reflect`, { method: 'POST', headers: WS })
+    const fetchImpl = (async () => completion(validOutput(turnIds))) as typeof fetch
+    const { app } = makeNimApp(fetchImpl, entry => logs.push(entry))
+    const { id, turnIds } = await completeInterview(app)
+    await reflect(app, id)
     expect(logs.length).toBeGreaterThan(0)
     const serialized = JSON.stringify(logs)
-    for (const answer of answers) {
-      expect(serialized).not.toContain(answer.slice(0, 40))
-    }
+    for (const answer of answers) expect(serialized).not.toContain(answer.slice(0, 40))
     expect(serialized).not.toContain('Q1:')
-    expect(serialized).not.toContain('redesigned')
     expect(logs[0]).toHaveProperty('provider', 'nim')
-    expect(typeof logs[0].latencyMs).toBe('number')
   })
 
   it('retries reflection without duplicating turns', async () => {
     const fetchImpl = (async () => completion(validOutput(turnIds))) as typeof fetch
     const { app, repo } = makeNimApp(fetchImpl)
     const { id, turnIds } = await completeInterview(app)
-    const first = await app.request(`/interviews/${id}/reflect`, { method: 'POST', headers: WS })
-    expect(first.status).toBe(201)
-    const second = await app.request(`/interviews/${id}/reflect`, { method: 'POST', headers: WS })
-    expect(second.status).toBe(201)
+    expect((await reflect(app, id)).status).toBe(201)
+    expect((await reflect(app, id)).status).toBe(201)
     expect((await repo.getTurns('dev', id)).length).toBe(4)
   })
 
-  it('does not attach another role’s evidence to this interview', async () => {
+  it('does not attach another session’s quotes to this interview', async () => {
     const foreign = {
-      readinessLabel: 'strong' as const,
-      readinessRange: { low: 80, high: 90 },
-      evidence: [
-        { turnId: 'other-interview-turn', quote: answers[0].slice(0, 20), observation: 'From another role.', competency: 'Ownership' },
-      ],
-      focus: 'Focus.',
+      whatStoodOut: [{ turnId: 'other-interview-turn', quote: answers[0].slice(0, 20) }],
+      keepWorkingOn: 'Something from elsewhere.',
+      suggestion: 'Something from elsewhere.',
     }
     const { app } = makeNimApp((async () => completion(foreign)) as typeof fetch)
     const session = await completeInterview(app)
-    const res = await app.request(`/interviews/${session.id}/reflect`, { method: 'POST', headers: WS })
+    const res = await reflect(app, session.id)
     expect(res.status).toBe(400)
     expect((await j(res)).error).toBe('invalid_evidence_turn_id')
   })

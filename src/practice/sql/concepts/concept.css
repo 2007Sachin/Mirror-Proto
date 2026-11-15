@@ -1,0 +1,37 @@
+/* Concept check workbench. Reuses .sqd layout from drill.css; only what differs lives here. */
+.cc-tabs { display: none; }
+.cc-left { gap: 10px; }
+.cc-own { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+.cc-own i { font-style: normal; }
+.cc-own textarea { font: inherit; font-size: 13px; color: var(--ink); background: var(--glass); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; resize: vertical; min-height: 56px; max-width: 100%; }
+.cc-opts { display: grid; gap: 8px; }
+.cc-opt { position: relative; display: grid; grid-template-columns: 24px minmax(0, 1fr); align-items: start; gap: 8px; min-height: 44px; padding: 10px 12px; font-size: 14px; line-height: 1.4; border: 1px solid var(--line); border-radius: 12px; background: var(--glass); cursor: pointer; overflow-wrap: anywhere; }
+.cc-opt:hover { border-color: var(--accent); }
+.cc-opt.is-on { border-color: var(--accent); background: var(--soft); }
+.cc-opt.is-right { border-color: var(--accent); box-shadow: inset 4px 0 0 var(--accent); }
+.cc-opt input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.cc-opt:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cc-opt kbd { font: 600 12px ui-monospace, Menlo, Consolas, monospace; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; text-align: center; padding: 1px 0; }
+.cc-right { gap: 10px; overflow: hidden; }
+.cc-verdict { font-size: 16px; font-weight: 600; min-height: 22px; }
+.cc-scroll { overflow: auto; min-height: 0; display: grid; gap: 12px; align-content: start; font-size: 14px; line-height: 1.5; }
+.cc-scroll p { margin: 0; text-wrap: pretty; }
+.cc-trap, .cc-follow { color: var(--muted); }
+.cc-say { display: grid; gap: 6px; }
+.cc-cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cc-say blockquote { margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 10px; background: var(--soft); font-size: 14px; }
+.cc-say blockquote b { display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+.cc-say .cc-mine { background: var(--glass); border-left-color: var(--line); }
+.cc-scene { border: 1px solid var(--line); border-radius: 12px; padding: 8px; overflow: hidden; min-width: 0; }
+@media (prefers-reduced-motion: reduce) { .cc * { animation: none !important; transition: none !important; } }
+@media (max-width: 760px) {
+  .cc.sqd { height: auto; min-height: 0; overflow: visible; }
+  .cc-tabs { display: flex; gap: 6px; }
+  .cc-tabs button { flex: 1; min-height: 44px; font: inherit; font-weight: 600; color: var(--ink); background: var(--glass); border: 1px solid var(--line); border-radius: 10px; }
+  .cc-tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .cc-tabs button:disabled { opacity: .45; }
+  .cc-body { grid-template-columns: minmax(0, 1fr); }
+  .cc-body[data-mob="q"] .cc-right, .cc-body[data-mob="a"] .cc-left { display: none; }
+  .cc .sqd-run, .cc .sqd-btn, .cc .sqd-link { min-height: 44px; }
+  .cc-cmp { grid-template-columns: 1fr; }
+}

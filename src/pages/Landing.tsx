@@ -1,199 +1,227 @@
-import { useEffect, useState } from 'react'
-import FluidOrb from '../components/FluidOrb'
-import HeroOrb from '../components/HeroOrb'
+import { useEffect, useState, type ReactNode } from 'react'
 import '../landing.css'
+import { LiveOrb, type OrbState } from '../components/LiveOrb'
+import { useInView, usePrefersReducedMotion } from './landing/motion'
+import Session from './landing/Session'
+import Notes from './landing/Notes'
 
-const MOMENTS = [
-  'Finished the course',
-  'Built the project',
-  'Did the internship',
-  'Solved the problems',
-] as const
-
-const EXAMPLES = [
-  'Tell me about a project you worked on.',
-  'What was your part?',
-  'What would you do differently?',
-] as const
-
-function usePrefersReducedMotion() {
-  const [reduced, setReduced] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-  )
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const apply = () => setReduced(media.matches)
-    apply()
-    media.addEventListener('change', apply)
-    return () => media.removeEventListener('change', apply)
-  }, [])
-  return reduced
+const DONE = ['Finished the course', 'Built the project', 'Did the internship', 'Solved the problems']
+const TRIP = ['Tell me about a project you worked on.', 'What was your part?', 'What would you do differently?']
+const STEPS = [
+  ['Bring one real thing', 'A project, an internship task, a decision at work. Rough is fine. One moment is enough.'],
+  ['Point it at a role', 'If you want, add the role, the job description or your resume. Helpful, not required.'],
+  ['Answer, one at a time', 'Speak or type. The next question comes only after you answer, and follows what you said.'],
+  ['Read your notes', 'Every note quotes a line you said. You leave with one thing to practise.'],
+]
+const NOT = [
+  ['A score out of ten', 'Notes on what came through'],
+  ['Model answers to copy', 'Your own story, in your own words'],
+  ['A “better” rewrite of what you said', 'Your lines, kept and marked'],
+  ['Generic strengths and weaknesses', 'Only what you actually said'],
+  ['A full profile before you begin', 'One moment is enough to start'],
+]
+const FAQ = [
+  ['Do I need a resume or job description?', 'No. Start with a single moment. Add them later if you’re aiming at a specific role.'],
+  ['Can I speak, or do I have to type?', 'Both work. Speak when you want to say it out loud. Type when you’d rather think in writing.'],
+  ['Will I get a score?', 'No. You get notes on what came through, and one thing to practise next.'],
+  ['What happens to what I say?', 'Raw audio isn’t stored. Typed answers are saved on the practice server so the next question can follow what you said.'],
+]
+const HERO_PILL: Record<OrbState, string> = {
+  idle: 'Ready when you are',
+  speaking: 'MIRROR is asking…',
+  listening: 'Listening…',
+  thinking: 'Thinking…',
 }
 
-function useHeroReveal(reduced: boolean) {
-  const [shown, setShown] = useState(() => (reduced ? Array(8).fill(true) : Array(8).fill(false)))
+function Reveal({ children, className = '' }: { children: ReactNode; className?: string }) {
+  const [ref, inView] = useInView<HTMLDivElement>(0.15)
+  return <div ref={ref} className={`ml-reveal${inView ? ' is-in' : ''} ${className}`}>{children}</div>
+}
 
+function Hero({ onTry }: { onTry: () => void }) {
+  const [active, setActive] = useState(0)
+  const [orb, setOrb] = useState<OrbState>('idle')
+  const [asked, setAsked] = useState(0)
+
+  // A question click plays a short ask → listen → rest cycle on the orb.
   useEffect(() => {
-    if (reduced) return
-    const delay = 550
-    const marks = [
-      ...[0, 1, 2, 3].map(index => ({ index, at: delay * index })),
-      { index: 4, at: delay * 4.4 },
-      ...[0, 1, 2].map(index => ({ index: 5 + index, at: delay * (5 + index) })),
+    if (!asked) return
+    const timers = [
+      window.setTimeout(() => setOrb('listening'), 1800),
+      window.setTimeout(() => setOrb('idle'), 4200),
     ]
-    const timers = marks.map(({ index, at }) => window.setTimeout(() => {
-      setShown(current => {
-        if (current[index]) return current
-        const next = [...current]
-        next[index] = true
-        return next
-      })
-    }, at))
-    return () => timers.forEach(timer => window.clearTimeout(timer))
-  }, [reduced])
+    return () => timers.forEach(window.clearTimeout)
+  }, [asked])
 
-  return shown
-}
-
-function Mark() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <circle cx="9" cy="9" r="7" stroke="#0d1220" strokeWidth="1.5" />
-      <circle cx="9" cy="9" r="3" fill="#1a73f2" />
-    </svg>
+    <section className="ml-wrap ml-hero" id="top" aria-labelledby="hero-title">
+      <div className="ml-hero-copy">
+        <p className="ml-eyebrow">For students and early-career</p>
+        <h1 id="hero-title">You know what you did. <span>Saying it is the hard part.</span></h1>
+        <p className="ml-sub">
+          Someone asks about a project or a decision. You have the details. They just don’t come out cleanly.
+          MIRROR is a calm place to say it out loud first.
+        </p>
+        <ul className="ml-chips" role="list">
+          {DONE.map(item => <li key={item} className="ml-chip">{item}</li>)}
+        </ul>
+        <div className="ml-ctas">
+          <button type="button" className="ml-btn" onClick={onTry}>Start with one moment</button>
+          <a className="ml-btn ml-btn--quiet" href="#call">See a sample session</a>
+        </div>
+      </div>
+
+      <div className="ml-stage">
+        <div className="ml-orb ml-orb--hero" data-state={orb} aria-hidden="true"><LiveOrb state={orb} /></div>
+        <p className="ml-pill" aria-hidden="true">{HERO_PILL[orb]}</p>
+        <div className="ml-glass ml-qcard">
+          <p id="trip-title">These are the questions that usually trip people up.</p>
+          <ul role="list" aria-labelledby="trip-title">
+            {TRIP.map((q, i) => (
+              <li key={q}>
+                <button
+                  type="button"
+                  className="ml-q"
+                  aria-current={i === active ? 'true' : undefined}
+                  onClick={() => { setActive(i); setOrb('speaking'); setAsked(n => n + 1) }}
+                >
+                  {q}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
   )
 }
 
 export default function Landing({ onTry }: { onTry: () => void }) {
   const reduced = usePrefersReducedMotion()
-  const shown = useHeroReveal(reduced)
-  const [orbFailed, setOrbFailed] = useState(false)
 
   return (
     <div className="mirror-landing">
-      <header className="ml-wrap ml-header">
-        <div className="ml-brand"><Mark /> MIRROR</div>
-        <button type="button" className="ml-btn" onClick={onTry}>Start with one moment</button>
+      <header className="ml-nav">
+        <div className="ml-glass ml-nav-bar">
+          <a className="ml-logo" href="#top">MIRROR</a>
+          <nav className="ml-links" aria-label="Sections">
+            <a href="#call">Sample session</a>
+            <a href="#how">How it works</a>
+            <a href="#notes">Your notes</a>
+            <a href="#different">What sets it apart</a>
+            <a href="#privacy">Privacy</a>
+          </nav>
+          <button type="button" className="ml-btn ml-btn--sm" onClick={onTry}>Start with one moment</button>
+        </div>
       </header>
 
       <main>
-        <section className="ml-hero ml-wrap" id="start" aria-labelledby="mirror-hero-title">
-          <div className="ml-hero-grid">
-            <div className="ml-hero-copy">
-              <p className="ml-eyebrow">For students and early-career</p>
-              <h1 id="mirror-hero-title">You know what you did.<br />Saying it is the hard part.</h1>
-              <p className="ml-lede">Someone asks about a project or a decision. You have the details. They just don’t come out cleanly.</p>
-              <ul className="ml-done">
-                {MOMENTS.map((item, index) => (
-                  <li key={item} className={shown[index] ? 'is-on' : undefined}>{item}</li>
-                ))}
-              </ul>
-              <p className={shown[4] ? 'ml-question is-on' : 'ml-question'}>These are the questions that usually trip people up.</p>
-              <ul className="ml-examples">
-                {EXAMPLES.map((item, index) => (
-                  <li key={item} className={shown[5 + index] ? 'is-on' : undefined}>{item}</li>
-                ))}
-              </ul>
-              <a className="ml-btn" href="#what">See how it works</a>
-            </div>
-            <div className="ml-hero-stage">
-              <HeroOrb reduced={reduced} failed={orbFailed} onFail={() => setOrbFailed(true)} />
-            </div>
-          </div>
+        <Hero onTry={onTry} />
+
+        <section className="ml-wrap ml-section" aria-labelledby="problem-title">
+          <Reveal>
+            <p className="ml-eyebrow">The problem</p>
+            <h2 id="problem-title">Knowing it and saying it are different skills.</h2>
+            <p className="ml-lead">
+              You knew the project. You knew the tools. The details were all there, but the words came out tangled when it counted.
+            </p>
+            <p className="ml-body">It’s rarely knowledge. It’s rehearsal. And another list of sample answers won’t fix it.</p>
+          </Reveal>
         </section>
 
-        <p className="ml-trust">Not another list of sample answers.</p>
-
-        <section className="ml-wrap" id="what" aria-labelledby="what-title">
-          <div className="ml-what">
-            <div className="ml-what-copy">
-              <h2 id="what-title">What this is</h2>
-              <p>You bring one real thing you did — a project, an internship task, something from work.</p>
-              <p>MIRROR asks you about it. One question at a time. Then it shows you notes that only use the words you actually said.</p>
-              <p>You leave knowing what to practise next. No score. Nothing made up.</p>
-              <ul className="ml-bring">
-                <li>A moment</li>
-                <li>The role you want</li>
-                <li>Job description</li>
-                <li>Your resume</li>
-              </ul>
-              <p className="ml-wait">Start with whatever you have. The rest can wait.</p>
-            </div>
-            <div className="ml-orb ml-orb--side">
-              <FluidOrb size={180} color="#1A73F2" aria-hidden="true" />
-            </div>
-          </div>
+        <section className="ml-wrap ml-section" id="call" aria-labelledby="call-title">
+          <Reveal>
+            <p className="ml-eyebrow">A sample session</p>
+            <h2 id="call-title">Like a video call with someone who listens.</h2>
+            <p className="ml-body">One question at a time. The next one follows what you just said. Press play to watch a short sample.</p>
+          </Reveal>
+          <Session reduced={reduced} />
         </section>
 
-        <section className="ml-wrap" aria-labelledby="looks-title">
-          <div className="ml-looks">
-          <h2 id="looks-title">What it looks like</h2>
-          <p className="ml-section-lede">Priya had a group project. She knew what she did. She just couldn’t say it cleanly.</p>
-          <div className="ml-story">
-            <p>She added the role she was applying for and pasted the job description. Then she answered one question.</p>
-            <p className="ml-line">What was your part?</p>
-            <p className="ml-line">I kept the pilot small so we could see what broke before we changed everything.</p>
-            <p className="ml-after">The note used her exact line. It didn’t add anything. She left with one thing to try next time: say what happened in one sentence.</p>
-          </div>
-          </div>
-        </section>
-
-        <section className="ml-wrap" id="how" aria-labelledby="how-title">
-          <div className="ml-how">
-          <h2 id="how-title">How it goes</h2>
-          <ol className="ml-steps">
-            <li>
-              <span>1</span>
-              <h3>Start with something you did</h3>
-              <p>A project, an internship, or a decision at work. It doesn’t have to be polished.</p>
-            </li>
-            <li>
-              <span>2</span>
-              <h3>Add more if you want</h3>
-              <p>The role, the job description, your resume. Helpful, not required.</p>
-            </li>
-            <li>
-              <span>3</span>
-              <h3>Answer the questions</h3>
-              <p>What happened, what you did, what changed. One at a time.</p>
-            </li>
-            <li>
-              <span>4</span>
-              <h3>See the notes</h3>
-              <p>They only use what you said. You leave with one thing to practise.</p>
-            </li>
+        <section className="ml-wrap ml-section" id="how" aria-labelledby="how-title">
+          <Reveal>
+            <p className="ml-eyebrow">How it works</p>
+            <h2 id="how-title">Start small. It builds from there.</h2>
+          </Reveal>
+          <ol className="ml-steps" role="list">
+            {STEPS.map(([title, text], i) => (
+              <li key={title}>
+                <Reveal className="ml-glass ml-step">
+                  <span className="ml-num" aria-hidden="true">{i + 1}</span>
+                  <h3>{title}</h3>
+                  <p>{text}</p>
+                </Reveal>
+              </li>
+            ))}
           </ol>
-          </div>
         </section>
 
-        <section className="ml-wrap ml-get" aria-labelledby="get-title">
-          <h2 id="get-title">What you get</h2>
-          <div className="ml-expect">
-            <article>
-              <h3>Something to practise</h3>
-              <p>One clear next step. Not a score.</p>
-            </article>
-            <article>
-              <h3>Only your words</h3>
-              <p>If there’s a note, your line is right there with it.</p>
-            </article>
-            <article>
-              <h3>It stays private</h3>
-              <p>Nothing is shared. Audio isn’t stored.</p>
-            </article>
-          </div>
+        <section className="ml-wrap ml-section ml-two" id="notes" aria-labelledby="notes-title">
+          <Reveal>
+            <p className="ml-eyebrow">Your notes</p>
+            <h2 id="notes-title">The notes only use what you said.</h2>
+            <p className="ml-body">
+              MIRROR doesn’t polish your story or hand you lines to memorise. It marks what you actually said, so you recognise yourself in the notes.
+            </p>
+            <p className="ml-legend">
+              <span><i className="ml-key ml-key--clear" /> came out clearly</span>
+              <span><i className="ml-key ml-key--circled" /> circled</span>
+            </p>
+          </Reveal>
+          <Notes />
         </section>
 
-        <section className="ml-close ml-wrap" aria-labelledby="close-title">
-          <div className="ml-orb ml-orb--close">
-            <FluidOrb size={110} color="#1A73F2" aria-hidden="true" />
-          </div>
-          <h2 id="close-title">Want to try it with something you did?</h2>
-          <button type="button" className="ml-btn" onClick={onTry}>Start with one moment</button>
+        <section className="ml-wrap ml-section" id="different" aria-labelledby="different-title">
+          <Reveal>
+            <p className="ml-eyebrow">What sets it apart</p>
+            <h2 id="different-title">Practice, not a performance review.</h2>
+            <p className="ml-body">Most prep tools grade you or script you. MIRROR leaves both out.</p>
+          </Reveal>
+          <table className="ml-glass ml-compare">
+            <thead>
+              <tr><th scope="col">Usual prep tools</th><th scope="col">MIRROR</th></tr>
+            </thead>
+            <tbody>
+              {NOT.map(([usual, ours]) => (
+                <tr key={usual}><td>{usual}</td><td>{ours}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+
+        <section className="ml-wrap ml-section ml-two" id="privacy" aria-labelledby="privacy-title">
+          <Reveal>
+            <p className="ml-eyebrow">Privacy</p>
+            <h2 id="privacy-title">Private by design.</h2>
+          </Reveal>
+          <Reveal className="ml-glass ml-privacy">
+            <p className="ml-strong">The session stays with you. Raw audio isn’t stored.</p>
+            <p>Typed answers are saved on the practice server so the next question can follow what you said.</p>
+          </Reveal>
+        </section>
+
+        <section className="ml-wrap ml-section ml-faq" aria-labelledby="faq-title">
+          <p className="ml-eyebrow">Questions</p>
+          <h2 id="faq-title">Good to know</h2>
+          {FAQ.map(([q, a]) => (
+            <details key={q}>
+              <summary>{q}</summary>
+              <p>{a}</p>
+            </details>
+          ))}
+        </section>
+
+        <section className="ml-wrap ml-section" aria-labelledby="close-title">
+          <Reveal className="ml-glass ml-close">
+            <div className="ml-orb ml-orb--close" aria-hidden="true"><LiveOrb compact /></div>
+            <h2 id="close-title">Want to try it with something you did?</h2>
+            <button type="button" className="ml-btn" onClick={onTry}>Start with one moment</button>
+            <p>Start with whatever you have. The rest can wait.</p>
+          </Reveal>
         </section>
       </main>
 
-      <footer className="ml-wrap ml-footer">MIRROR</footer>
+      <footer className="ml-wrap ml-footer"><b>MIRROR</b> · Interview practice studio</footer>
     </div>
   )
 }

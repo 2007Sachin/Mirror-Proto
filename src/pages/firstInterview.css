@@ -1,0 +1,49 @@
+/* The First Interview. Uses the landing page's tokens (.mirror-landing) so it reads as the same product. */
+.ml-fi-main { max-width: 680px; display: flex; flex-direction: column; align-items: stretch; gap: 16px; padding-block: 36px 80px; }
+.ml-fi-main > .ml-eyebrow { margin: 0; text-align: center; }
+.ml-fi-orb { align-self: center; width: 120px; }
+
+.ml-fi-logo { background: none; border: 0; padding: 0; font-family: inherit; cursor: pointer; }
+.ml-fi-steps { display: flex; gap: 8px; padding-right: 16px; }
+.ml-fi-steps li { width: 28px; height: 4px; border-radius: 4px; background: var(--line); transition: background-color .4s var(--ease); }
+.ml-fi-steps li.is-on { background: var(--accent); }
+
+.ml-fi-agent {
+  padding: 22px 26px;
+  font-size: clamp(19px, 2.6vw, 24px);
+  font-weight: 600;
+  letter-spacing: -.02em;
+  line-height: 1.35;
+  animation: ml-fi-in .5s var(--ease);
+}
+@keyframes ml-fi-in { from { opacity: 0; transform: translateY(8px); } }
+
+.ml-fi-drop {
+  display: grid; place-items: center; min-height: 84px; padding: 18px 24px;
+  gap: 6px; text-align: center; color: var(--muted); font-size: 15px;
+  border: 1.5px dashed var(--line); border-radius: 20px;
+  transition: border-color .2s var(--ease), background-color .2s var(--ease);
+}
+.ml-fi-drop.is-over { border-color: var(--accent); background: var(--soft); }
+.ml-fi-file { display: inline-flex; align-items: center; gap: 12px; color: var(--ink); font-weight: 600; }
+.ml-fi-file button, .ml-fi-pick { font: inherit; font-size: 14px; font-weight: 600; color: var(--accent); background: none; border: 0; cursor: pointer; min-height: 44px; padding: 0 8px; }
+
+.ml-fi-composer { padding: 14px 16px 16px; }
+.ml-fi-composer textarea {
+  display: block; width: 100%; min-height: 130px; resize: vertical;
+  padding: 8px 6px; border: 0; background: transparent; color: var(--ink);
+  font: inherit; font-size: 17px; line-height: 1.55;
+}
+.ml-fi-composer textarea:focus-visible { outline: none; }
+.ml-fi-composer textarea::placeholder { color: var(--muted); }
+.ml-fi-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ml-fi-row > .ml-btn:only-child { margin-left: auto; }
+.ml-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+.ml-btn--quiet[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+
+.ml-fi-contract { display: flex; flex-direction: column; gap: 16px; }
+.ml-fi-ask { font-size: 18px; line-height: 1.5; }
+.ml-fi-ask b { color: var(--accent); font-weight: 650; }
+.ml-fi-options { display: flex; flex-wrap: wrap; gap: 12px; }
+
+.ml-fi-note { min-height: 1.5em; text-align: center; font-size: 14px; color: var(--muted); }

@@ -1,0 +1,27 @@
+// One topic per curriculum module (the coverage denominator in stats.ts). Titles double as module titles.
+export const T = {
+  b1: 'Tables, rows and columns',
+  b2: 'SELECT, WHERE, ORDER BY, LIMIT',
+  b3: 'NULL and missing data',
+  b4: 'Aggregates and GROUP BY',
+  b5: 'INNER and LEFT JOIN',
+  b6: 'CASE, text and date functions',
+  p7: 'All joins and fan-out',
+  p8: 'Subqueries and EXISTS',
+  p9: 'CTEs',
+  p10: 'Window functions',
+  p11: 'Conditional aggregation and pivots',
+  p12: 'Set operations',
+  p13: 'Dedup and top-N per group',
+  p14: 'Overlapping ranges and hierarchies',
+  p15: 'Median, percentiles and statistics',
+  a14: 'Gaps and islands',
+  a15: 'Sessionization',
+  a16: 'Retention and cohorts',
+  a17: 'Funnels and conversion',
+  a18: 'Recursive CTEs',
+  a19: 'Advanced window patterns',
+  a20: 'Relational division: all and every',
+  a21: 'Trends and always-increasing series',
+} as const
+export const topics: string[] = Object.values(T)

@@ -54,7 +54,7 @@ function rowFor(table: Table, u: string, p: Parents, variant = 0): Row {
     case 'mirror_stories': return { ...own, title: 'RLS story', themes: [] }
     case 'mirror_resume_claims': return { ...own, claim: 'rls test claim' }
     case 'mirror_target_gap_matches': return { ...own, target_id: p.target, skill_name: 'SQL', skill_weight: ['core', 'nice'][variant % 2], match_status: ['gap', 'partial', 'covered'][variant % 3] }
-    case 'mirror_replay_schedule': return { ...own, item_kind: ['practice', 'sql', 'answer', 'item'][variant % 4], item_key: 'rls-item' }
+    case 'mirror_replay_schedule': return { ...own, item_kind: 'question', track: 'sql', item_key: 'rls-item' }
   }
 }
 
@@ -131,7 +131,7 @@ describe.skipIf(!LIVE)('live RLS: two users, twelve tables', () => {
       expect(error, t).toBeNull()
       expect(data, t).toHaveLength(1)
     }
-  })
+  }, 60_000)
 
   for (const table of TABLES) {
     describe(table, () => {

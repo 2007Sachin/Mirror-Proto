@@ -100,12 +100,12 @@ describe('new-table mappings through the repository', () => {
   })
 
   it('replay: ease and numbers arrive as strings and are coerced; an existing item is updated, not inserted', async () => {
-    const row = { id: 'r1', user_id: U, item_kind: 'practice', item_key: 'sql-1', track: null, due_at: 'd', interval_days: '6', ease: '2.50', repetitions: '2', last_recall: 'missed', last_reviewed_at: null, created_at: 't', updated_at: 'u' }
+    const row = { id: 'r1', user_id: U, item_kind: 'question', item_key: 'sql-1', track: null, due_at: 'd', interval_days: '6', ease: '2.50', repetitions: '2', last_recall: 'again', last_reviewed_at: null, created_at: 't', updated_at: 'u' }
     const { repo, calls } = repoWith(undefined, { mirror_replay_schedule: [row] })
     expect((await repo.listReplaySchedule(U))[0]).toMatchObject({ itemId: 'sql-1', intervalDays: 6, rung: 2, lastResult: false })
     const saved = await repo.upsertReplayItem(U, { itemId: 'sql-1', dueAt: 'd2', intervalDays: 3, rung: 1, lastResult: true })
     expect(calls.map(c => c.op)).toEqual(['select', 'select', 'update'])
-    expect(calls[2].payload).toMatchObject({ item_kind: 'practice', item_key: 'sql-1', repetitions: 1, last_recall: 'correct', interval_days: 3 })
+    expect(calls[2].payload).toMatchObject({ item_kind: 'question', item_key: 'sql-1', repetitions: 1, last_recall: 'good', interval_days: 3 })
     expect(eqOf(calls[2], 'id')).toBe('r1')
     expect(saved.itemId).toBe('sql-1')
   })
@@ -158,7 +158,7 @@ describe('export', () => {
       mirror_interviews: [{ id: 'iv1', workspace_id: U, user_id: U, role: 'Analyst', industry: null, status: 'completed', asked_questions: ['q?'], created_at: now }],
       mirror_turns: [{ id: 'tu1', workspace_id: U, user_id: U, interview_id: 'iv1', question_index: 0, question: 'q?', answer: 'a', transcript_source: 'text', created_at: now }],
       mirror_stories: [{ id: 's1', user_id: U, title: 'T', situation: null, task: null, action: null, result: null, themes: ['a'], source: 'x', source_interview_id: null, archived_at: null, created_at: now, updated_at: now }],
-      mirror_replay_schedule: [{ id: 'r1', user_id: U, item_kind: 'practice', item_key: 'i', track: null, due_at: now, interval_days: 1, ease: '2.5', repetitions: 0, last_recall: null, last_reviewed_at: null, created_at: now, updated_at: now }],
+      mirror_replay_schedule: [{ id: 'r1', user_id: U, item_kind: 'question', item_key: 'i', track: null, due_at: now, interval_days: 1, ease: '2.5', repetitions: 0, last_recall: null, last_reviewed_at: null, created_at: now, updated_at: now }],
     }
     const { repo, calls } = repoWith(undefined, rows)
     const out = await repo.exportAllData(U)

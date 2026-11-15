@@ -142,22 +142,22 @@ describe('replay schedule', () => {
   const input = { itemId: 'sql-1', dueAt: T, intervalDays: 3, rung: 2, lastResult: true as boolean | null }
 
   it.each([
-    [true, 'correct'],
-    [false, 'missed'],
+    [true, 'good'],
+    [false, 'again'],
     [null, null],
   ])('lastResult %s -> last_recall %s', (lastResult, recall) => {
     expect(replayInsert(U, { ...input, lastResult }, T)).toEqual({
-      user_id: U, item_kind: 'practice', item_key: 'sql-1', due_at: T, interval_days: 3, repetitions: 2, last_recall: recall, updated_at: T,
+      user_id: U, item_kind: 'question', item_key: 'sql-1', due_at: T, interval_days: 3, repetitions: 2, last_recall: recall, updated_at: T,
     })
   })
 
   const row = (over: Partial<Row<'mirror_replay_schedule'>>): Row<'mirror_replay_schedule'> => ({
-    id: 'r1', user_id: U, item_kind: 'practice', item_key: 'sql-1', track: null, due_at: T, interval_days: 3, ease: 2.5, repetitions: 2, last_recall: 'correct', last_reviewed_at: null, created_at: T, updated_at: T, ...over,
+    id: 'r1', user_id: U, item_kind: 'question', item_key: 'sql-1', track: null, due_at: T, interval_days: 3, ease: 2.5, repetitions: 2, last_recall: 'good', last_reviewed_at: null, created_at: T, updated_at: T, ...over,
   })
 
   it.each([
     [row({}), { intervalDays: 3, rung: 2, lastResult: true }],
-    [row({ ease: '2.50' as unknown as number, interval_days: '6' as unknown as number, repetitions: '1' as unknown as number, last_recall: 'missed' }), { intervalDays: 6, rung: 1, lastResult: false }],
+    [row({ ease: '2.50' as unknown as number, interval_days: '6' as unknown as number, repetitions: '1' as unknown as number, last_recall: 'again' }), { intervalDays: 6, rung: 1, lastResult: false }],
     [row({ last_recall: null }), { lastResult: null }],
     [row({ last_recall: 'unknown' }), { lastResult: null }],
     [row({ interval_days: null as unknown as number, repetitions: undefined as unknown as number }), { intervalDays: 0, rung: 0 }],

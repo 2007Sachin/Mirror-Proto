@@ -187,12 +187,12 @@ const num = (v: unknown, fallback: number) => {
 export function replayInsert(userId: string, input: ReplayItemInput, nowIso: string): Insert<'mirror_replay_schedule'> {
   return {
     user_id: userId,
-    item_kind: 'practice',
+    item_kind: 'question',
     item_key: input.itemId,
     due_at: input.dueAt,
     interval_days: input.intervalDays,
     repetitions: input.rung,
-    last_recall: input.lastResult === null ? null : input.lastResult ? 'correct' : 'missed',
+    last_recall: input.lastResult === null ? null : input.lastResult ? 'good' : 'again',
     updated_at: nowIso,
   }
 }
@@ -205,7 +205,7 @@ export function replayFromRow(userId: string, r: Row<'mirror_replay_schedule'>):
     dueAt: r.due_at,
     intervalDays: num(r.interval_days, 0),
     rung: num(r.repetitions, 0),
-    lastResult: r.last_recall === 'correct' ? true : r.last_recall === 'missed' ? false : null,
+    lastResult: r.last_recall === 'good' || r.last_recall === 'easy' ? true : r.last_recall === 'again' || r.last_recall === 'hard' ? false : null,
     updatedAt: r.updated_at,
   }
 }

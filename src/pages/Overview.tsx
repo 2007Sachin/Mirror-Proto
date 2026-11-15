@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import '../landing.css'
 import './overview.css'
-import { api, type CoachNote, type InterviewSummary, type Profile, type Skill, type TargetSummary } from '../lib/api'
+import { api, ApiError, type CoachNote, type InterviewSummary, type Profile, type Skill, type TargetSummary } from '../lib/api'
 import { LiveOrb } from '../components/LiveOrb'
+import FallbackNote from '../components/FallbackNote'
 import { findItem, tracks } from '../practice/tracks'
 import { activeDays28, coverage, dueForReview, firstTryByTopic, nextInterview, recommend, targetNeeds, weakSpots, weekCompare, weekSeconds } from '../practice/stats'
 import type { PracticeSummary } from '../practice/types'
@@ -31,19 +32,21 @@ export default function Overview({ profile, busy, onStart, onContinue, onLetGo, 
   const [now] = useState(() => new Date())
   const [sessions, setSessions] = useState<InterviewSummary[]>([])
   const [note, setNote] = useState<CoachNote | null>(null)
-  const [noteState, setNoteState] = useState<'loading' | 'ready' | 'none'>('loading')
+  const [noteState, setNoteState] = useState<'loading' | 'ready' | 'none' | 'failed'>('loading')
+  const [sessionsFailed, setSessionsFailed] = useState(false)
   const [summary, setSummary] = useState<PracticeSummary | null>(null)
   const [summaryFailed, setSummaryFailed] = useState(false)
   const [targets, setTargets] = useState<TargetSummary[] | null>(null)
   const [skills, setSkills] = useState<Record<string, Skill[]>>({})
 
-  const loadSessions = useCallback(() => api.listInterviews().then(setSessions).catch(() => undefined), [])
+  const loadSessions = useCallback(() => api.listInterviews().then(setSessions).catch(() => setSessionsFailed(true)), [])
   useEffect(() => {
     let live = true
-    api.listInterviews().then(list => live && setSessions(list)).catch(() => undefined)
+    api.listInterviews().then(list => live && setSessions(list)).catch(() => live && setSessionsFailed(true))
     api.coachNote()
       .then(n => { if (live) { setNote(n); setNoteState('ready') } })
-      .catch(() => live && setNoteState('none')) // no profile saved yet, or the server is unreachable
+      // 404 = no profile saved yet; anything else is a load problem we say so about.
+      .catch(err => live && setNoteState(err instanceof ApiError && err.status === 404 ? 'none' : 'failed'))
     api.practiceSummary().then(s => live && setSummary(s)).catch(() => live && setSummaryFailed(true))
     api.listTargets()
       .then(list => {
@@ -242,8 +245,11 @@ export default function Overview({ profile, busy, onStart, onContinue, onLetGo, 
             <>
               <h2 id="coach-title">{note.nextPractice}</h2>
               <p className="today-why">{note.observation}</p>
+              <FallbackNote source={note.source} />
             </>
           )}
+          {noteState === 'failed' && <p className="today-why" role="status">Could not load your coach’s note. Your sessions are safe. Refresh to try again.</p>}
+          {sessionsFailed && <p className="today-why" role="status">Could not load your recent sessions. Refresh to try again.</p>}
           {noteState === 'none' && (
             <>
               <h2 id="coach-title">Your first interview is ready.</h2>

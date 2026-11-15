@@ -1,6 +1,7 @@
 import { extractText, getDocumentProxy } from 'unpdf'
 import { z } from 'zod'
 import { OPENING_QUESTION } from './questions.js'
+import { gapFromAnswer } from './fallbacks.js'
 import { ProviderFailure } from '../providers/nim.js'
 import type { OnboardingRequest, ReflectionProvider } from '../providers/types.js'
 
@@ -57,7 +58,7 @@ function fallback(req: OnboardingRequest): Record<string, string> {
     case 'contract':
       return {
         summary: `Here’s what I heard: “${firstSentence(req.story)}” When I pushed, you said: “${firstSentence(req.answer)}”`,
-        gap: 'saying what you personally did, in one clear sentence',
+        gap: gapFromAnswer(req.answer),
         role: 'Interview practice',
         firstQuestion: OPENING_QUESTION,
       }
@@ -120,11 +121,11 @@ export async function runOnboardingStep(
   provider: ReflectionProvider | null,
   req: OnboardingRequest,
 ): Promise<Record<string, string>> {
-  if (!provider?.generateOnboarding) return fallback(req)
+  if (!provider?.generateOnboarding) return { ...fallback(req), source: 'fallback' }
   try {
-    return await provider.generateOnboarding(req)
+    return { ...(await provider.generateOnboarding(req)), source: 'ai' }
   } catch (err) {
-    if (err instanceof ProviderFailure) return fallback(req)
+    if (err instanceof ProviderFailure) return { ...fallback(req), source: 'fallback' }
     throw err
   }
 }

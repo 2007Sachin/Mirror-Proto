@@ -11,6 +11,8 @@ import {
   PRESETS, buildMock, clamp, clockText, customPreset, describe, makeClock, milestone, outcome, remainingMs, revisit, summarise,
   type Custom, type Kind, type MockPreset, type QResult,
 } from './mockLogic'
+import ExplainAloud from '../aloud/ExplainAloud'
+import { useSavedExplain } from '../aloud/useSavedExplain'
 import '../drill.css'
 import '../concepts/concept.css'
 import './mock.css'
@@ -35,6 +37,7 @@ export interface MockProps {
 interface Ans { draft: string; picked: number | null; sub: string | number | null; tries: number; ok: boolean; first: boolean }
 interface St {
   v: 1; presetId: string; name: string; minutes: number; startedAt: number; deadline: number
+  spoken?: boolean // optional so a snapshot saved before this option still loads
   qs: { id: string; kind: Kind }[]; ans: Record<string, Ans>; flags: string[]; seen: string[]; spent: Record<string, number>; idx: number
 }
 const KEY = 'mirror.sql.mock.v1'
@@ -81,13 +84,13 @@ export default function MockTest(props: MockProps) {
     if (preset.id === 'custom') lastCustom = custom ?? lastCustom
     const def = buildMock(preset, props.problems, props.concepts, props.solved, nowMs() % 2147483647)
     if (!def.items.length) return
-    const st: St = { v: 1, presetId: def.presetId, name: def.name, minutes: def.minutes, ...makeClock(def.minutes, nowMs()), qs: def.items, ans: {}, flags: [], seen: [def.items[0].id], spent: {}, idx: 0 }
+    const st: St = { v: 1, presetId: def.presetId, name: def.name, minutes: def.minutes, ...makeClock(def.minutes, nowMs()), ...(def.spoken ? { spoken: true } : {}), qs: def.items, ans: {}, flags: [], seen: [def.items[0].id], spent: {}, idx: 0 }
     save(st)
     setMode({ t: 'run', st })
   }
 }
 // ponytail: "Retake" on a custom test reuses the last custom settings held in module memory; it is lost on page reload (then it falls back to defaults).
-let lastCustom: Custom = { count: 4, minutes: 30, concepts: true, difficulty: 0 }
+let lastCustom: Custom = { count: 4, minutes: 30, concepts: true, difficulty: 0, spoken: false }
 
 // ---------------- preset screen ----------------
 function Picker({ problems, concepts, onStart, onResume, onBack, initialPreset }: MockProps & { onStart(p: MockPreset): void; onResume(st: St): void }) {
@@ -132,6 +135,9 @@ function Picker({ problems, concepts, onStart, onResume, onBack, initialPreset }
           </div>
           <div className="sqd-chips" role="group" aria-label="Include concept questions">
             <button type="button" className="sqd-chip" aria-pressed={c.concepts} onClick={() => set({ concepts: !c.concepts })}>Concept questions: {c.concepts ? 'yes' : 'no'}</button>
+          </div>
+          <div className="sqd-chips" role="group" aria-label="Explain out loud after each">
+            <button type="button" className="sqd-chip" aria-pressed={!!c.spoken} onClick={() => set({ spoken: !c.spoken })}>Explain out loud after each: {c.spoken ? 'yes' : 'no'}</button>
           </div>
           <div className="sqd-chips" role="group" aria-label="Difficulty">
             {([[0, 'Any'], [1, 'Beginner'], [2, 'Pro'], [3, 'Advanced']] as const).map(([v, t]) => <button key={v} type="button" className="sqd-chip" aria-pressed={c.difficulty === v} onClick={() => set({ difficulty: v })}>{t}</button>)}
@@ -400,14 +406,16 @@ function Results({ problems, concepts, moduleOf, openModule, st, usedMs, onAgain
         })}</ul>
       </div>}
       <ol className="mk-rows">
-        {results.map((r, i) => <Row key={r.id} n={i + 1} r={r} st={st} problems={problems} concepts={concepts} />)}
+        {results.map((r, i) => <Row key={r.id} n={i + 1} r={r} st={st} problems={problems} concepts={concepts} spoken={!!st.spoken} />)}
       </ol>
     </section>
   )
 }
 
-function Row({ n, r, st, problems, concepts }: { n: number; r: QResult; st: St; problems: SqlProblem[]; concepts: ConceptQuestion[] }) {
+function Row({ n, r, st, problems, concepts, spoken }: { n: number; r: QResult; st: St; problems: SqlProblem[]; concepts: ConceptQuestion[]; spoken: boolean }) {
   const [watch, setWatch] = useState(false)
+  const [aloud, setAloud] = useState(false)
+  const saved = useSavedExplain(r.id, aloud ? 1 : 0)
   const p = problems.find(x => x.id === r.id), c = concepts.find(x => x.id === r.id)
   const a = st.ans[r.id]
   return (
@@ -428,6 +436,10 @@ function Row({ n, r, st, problems, concepts }: { n: number; r: QResult; st: St; 
             <pre className="sqd-code">{p.solution}</pre>
             {p.explain && <p className="sqd-hint"><b>Why this works.</b> {p.explain}</p>}
             {p.followUp && <p className="sqd-hint"><b>The interviewer might ask next:</b> {p.followUp}</p>}
+            {spoken && typeof a?.sub === 'string' && (aloud
+              ? <ExplainAloud problem={p} sql={a.sub} onClose={() => setAloud(false)} />
+              : <button type="button" className="sqd-btn" onClick={() => setAloud(true)}>Explain it out loud</button>)}
+            {spoken && !aloud && !!saved?.length && <div className="sqd-compare">{saved.map(s => <p key={s.question}><b>{s.question}</b>{s.answer}</p>)}</div>}
             {!watch ? <button type="button" className="sqd-btn" onClick={() => setWatch(true)}>Watch it run</button>
               : <Suspense fallback={<p className="sqd-skel" role="status">Getting the picture ready…</p>}><QueryExplainer sql={p.solution} compact autoPlay={false} title="Model solution" /></Suspense>}
           </>}

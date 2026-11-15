@@ -1,0 +1,10 @@
+.al { display: grid; gap: 10px; }
+.al h3 { margin: 0; font-size: 15px; }
+.al-q { margin: 0; font-weight: 600; }
+.al-text { width: 100%; min-height: 96px; padding: 10px 12px; font: inherit; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 10px; resize: vertical; }
+.al-text:focus-visible { border-color: var(--accent); }
+.al-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.al-pair > div { padding: 10px 12px; border-radius: 10px; background: var(--soft); font-size: 13px; }
+.al-pair b { display: block; margin-bottom: 4px; color: var(--accent); }
+.al-pair p { margin: 0 0 6px; white-space: pre-wrap; }
+@media (max-width: 640px) { .al-pair { grid-template-columns: 1fr; } }

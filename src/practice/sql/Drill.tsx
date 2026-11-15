@@ -10,6 +10,8 @@ import { practiceTables } from './db'
 import { problems } from './problems'
 import { QueryExplainer, TablePeek } from './explain'
 import { compareText, diffRows, diffText, sameSql, surprised, tablesIn, type Confidence, type Expect } from './lesson/logic'
+import ExplainAloud from './aloud/ExplainAloud'
+import { useSavedExplain } from './aloud/useSavedExplain'
 import './drill.css'
 
 function ResultTable({ result }: { result: QueryResult }) {
@@ -67,6 +69,8 @@ function SqlDrill({ item, onAttempt, onClose }: DrillProps) {
   const [thought, setThought] = useState('')
   const [tab, setTab] = useState<Tab>('result')
   const [mob, setMob] = useState<'q' | 'a'>('q') // narrow screens: Question | Your query
+  const [aloud, setAloud] = useState(false) // the spoken round is open (it reports no attempt)
+  const savedAloud = useSavedExplain(item.id)
 
   useEffect(() => {
     let live = true
@@ -250,6 +254,7 @@ function SqlDrill({ item, onAttempt, onClose }: DrillProps) {
           <button className="sqd-chip" aria-pressed={!skipPredict} onClick={() => setSkipPredict(v => !v)}>Predict</button>
           <span className="sqd-note" role="status">{loadFailed ? '' : running ? 'Running…' : ready ? 'Ctrl or Cmd + Enter also runs it.' : 'Setting up your practice database…'}</span>
           {loadFailed && <span className="sqd-error" role="alert">The practice database did not load. <button className="sqd-link" onClick={() => { setLoadFailed(false); setLoadTry(n => n + 1) }}>Retry</button></span>}
+          {(solved || !!savedAloud?.length) && <button className="sqd-btn" onClick={() => { setAloud(true); setTab('notes') }}>Explain it out loud</button>}
           {solved && <button className="sqd-run sqd-next" onClick={onClose}>Next problem</button>}
         </div>
 
@@ -287,6 +292,7 @@ function SqlDrill({ item, onAttempt, onClose }: DrillProps) {
                     </Suspense>}
                 </>)}
             {tab === 'notes' && <>
+              {aloud && <ExplainAloud problem={problem} sql={ranSql || query} onClose={() => setAloud(false)} />}
               {solved && explain && <p className="sqd-hint"><b>Why this works.</b> {explain}</p>}
               <label htmlFor="sqd-think" className="sqd-lbl">Think out loud</label>
               <p className="sqd-note">Say why you wrote it that way. Private to this screen: it is not saved or sent anywhere.</p>

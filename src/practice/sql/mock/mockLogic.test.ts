@@ -79,3 +79,17 @@ desc('clock', () => {
     expect(milestone(9 * 60000, 10 * 60000)).toBeNull()
   })
 })
+
+desc('spoken option', () => {
+  it('is off by default, so old settings and snapshots behave as before', () => {
+    const c = customPreset({ count: 4, minutes: 30, concepts: true, difficulty: 0 })
+    expect(c.spoken).toBeUndefined()
+    expect(describe(c)).not.toContain('out loud')
+    expect(buildMock(c, sqlPool, conPool, new Set(), 1).spoken).toBeUndefined()
+  })
+  it('adds one sentence and carries through when on', () => {
+    const c = customPreset({ count: 4, minutes: 30, concepts: true, difficulty: 0, spoken: true })
+    expect(describe(c)).toMatch(/ You will explain each answer out loud afterwards\.$/)
+    expect(buildMock(c, sqlPool, conPool, new Set(), 1).spoken).toBe(true)
+  })
+})

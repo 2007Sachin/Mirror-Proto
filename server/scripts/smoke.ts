@@ -54,7 +54,7 @@ async function main() {
   if (completeEarly.status !== 409) throw new Error('premature complete should 409')
 
   const reflect = await app.request(`/interviews/${session.id}/reflect`, { method: 'POST', headers: WS })
-  if (reflect.status !== 503) throw new Error(`reflect without NIM should 503, got ${reflect.status}`)
+  if (reflect.status !== 201) throw new Error(`notes without NIM should fall back (201), got ${reflect.status}`)
 
   const reload = await app.request(`/interviews/${session.id}`, { headers: WS })
   const body = await reload.json() as { turns: unknown[]; status: string }
@@ -62,7 +62,7 @@ async function main() {
     throw new Error('session reload missing saved answers')
   }
 
-  console.log('SMOKE PASS (mocked/memory): health, integration-status, create, four turns, premature complete, reflect 503, reload')
+  console.log('SMOKE PASS (mocked/memory): health, integration-status, create, four turns, premature complete, notes fallback, reload')
 }
 
 main().catch(err => {

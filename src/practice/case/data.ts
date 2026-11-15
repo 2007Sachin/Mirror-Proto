@@ -75,7 +75,7 @@ export const cases: CaseDef[] = [
   {
     id: 'case-signups-drop', topic: 'Metric drop', level: 2, title: 'Signups dropped this week', minutes: 15,
     from: 'Head of Growth',
-    brief: 'Signups dropped 12% week over week. Marketing says it is seasonal and nothing to worry about. I need to know by end of day: what happened, and what do we do?',
+    brief: 'Signups dropped sharply week over week. Marketing says it is seasonal and nothing to worry about. I need to know by end of day: what happened, and what do we do?',
     tables: [{ name: 'signups', columns: ['day (2025-03-01 to 2025-03-14)', 'channel (organic, paid, referral)', 'device (web, ios, android)', 'app_version', 'visits', 'signups'] }],
     seed: signupsSeed,
     causes: [

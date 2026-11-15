@@ -2,7 +2,7 @@ import type { SttProvider, SttStream } from '../providers/types.js'
 import { VOICE_LIMITS } from '../limits.js'
 
 export interface MockSttOpts {
-  /** Deterministic final transcript; defaults to MOCK_STT_FINAL_TEXT or a fixed string. */
+  /** Deterministic final transcript (tests only). Without it the mock returns an empty transcript. */
   finalText?: string
   /** Emit a partial transcript per sendAudio call when true. */
   emitPartials?: boolean
@@ -99,12 +99,8 @@ export function createMockStt(opts: MockSttOpts = {}): SttProvider {
           if (opts.delayFinalizeMs) {
             await new Promise(resolve => setTimeout(resolve, opts.delayFinalizeMs))
           }
-          const text =
-            bytes === 0
-              ? ''
-              : (opts.finalText ??
-                process.env.MOCK_STT_FINAL_TEXT ??
-                'I owned the research and simplified onboarding after the product update.')
+          // Never invent an answer: text exists only when a test supplied it.
+          const text = bytes === 0 ? '' : (opts.finalText ?? '')
           finalCb?.(text)
           queued = 0
           bytes = 0

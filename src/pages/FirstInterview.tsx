@@ -3,6 +3,7 @@ import '../landing.css'
 import './firstInterview.css'
 import { api, ApiError, type Profile } from '../lib/api'
 import { LiveOrb, type OrbState } from '../components/LiveOrb'
+import FallbackNote from '../components/FallbackNote'
 import { AudioCapture, pcm16ToBytes } from '../voice/audioCapture'
 
 const MIN = 20 // characters; matches the interview's own minimum
@@ -87,6 +88,7 @@ export default function FirstInterview({
   const [busy, setBusy] = useState(false)
   const [over, setOver] = useState(false)
   const [note, setNote] = useState('')
+  const [fellBack, setFellBack] = useState(false)
   const inflight = useRef(false)
   const fileInput = useRef<HTMLInputElement>(null)
   const dictation = useDictation(t => setText(prev => (prev.trim() ? `${prev.trim()} ${t}` : t)))
@@ -103,7 +105,7 @@ export default function FirstInterview({
     try {
       await job()
     } catch {
-      setNote('Something went wrong. Try again.')
+      setNote('That did not go through. What you wrote is still here. Try again.')
     }
     inflight.current = false
     setBusy(false)
@@ -115,7 +117,8 @@ export default function FirstInterview({
     setReading(true)
     try {
       const { text: resumeText } = await api.resume(file)
-      const { text: line } = await api.onboardingStep({ step: 'opening', resume: resumeText })
+      const { text: line, source } = await api.onboardingStep({ step: 'opening', resume: resumeText })
+      if (source === 'fallback') setFellBack(true)
       setResume(resumeText)
       setFileName(file.name)
       setOpening(line)
@@ -140,11 +143,13 @@ export default function FirstInterview({
       const said = text.trim()
       if (step === 'story') {
         const next = await api.onboardingStep({ step: 'pressure', story: said, resume: resume || undefined })
+        if (next.source === 'fallback') setFellBack(true)
         setStory(said)
         setQuestion(next.question)
         setStep('pressure')
       } else {
         const next = await api.onboardingStep({ step: 'contract', story, question, answer: said, resume: resume || undefined })
+        if (next.source === 'fallback') setFellBack(true)
         setAnswer(said)
         setContract(next as Contract)
         setStep('contract')
@@ -283,6 +288,7 @@ export default function FirstInterview({
         <p className="ml-fi-note" role="status">
           {dictation.error || note || (text.length > 0 && !ready && step !== 'contract' ? 'A little more, so I have something real to work with.' : '')}
         </p>
+        <FallbackNote source={fellBack ? 'fallback' : null} />
       </main>
     </div>
   )

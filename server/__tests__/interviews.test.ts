@@ -179,7 +179,7 @@ describe('GET /interviews/:id', () => {
     expect((await j(res)).error).toBe('interview_abandoned')
   })
 
-  it('preserves a saved answer when follow-up generation fails', async () => {
+  it('keeps going with a catalogue question when follow-up generation fails', async () => {
     const { app, repo } = makeApp({
       provider: {
         async generateFollowUp() {
@@ -192,23 +192,23 @@ describe('GET /interviews/:id', () => {
     })
     const { id } = await createInterview(app)
     const res = await postTurn(app, id, 0, answers[0])
-    expect(res.status).toBe(503)
+    expect(res.status).toBe(201)
     const body = await j(res)
-    expect(body.error).toBe('followup_provider_unavailable')
     expect(body.saved).toBe(true)
+    expect(body.source).toBe('fallback')
+    expect(body.nextQuestion).toContain(FALLBACK_QUESTIONS[1])
     expect((await repo.getTurns('dev', id)).length).toBe(1)
 
     const retry = await app.request(`/interviews/${id}/next-question`, { method: 'POST', headers: WS })
-    expect(retry.status).toBe(503)
+    expect(retry.status).toBe(200)
+    expect((await j(retry)).nextQuestion).toBe(body.nextQuestion)
     expect((await repo.getTurns('dev', id)).length).toBe(1)
   })
 
-  it('retries follow-up generation without duplicating the saved turn', async () => {
-    let fail = true
+  it('does not duplicate the saved turn and asks the model when it answers', async () => {
     const { app, repo } = makeApp({
       provider: {
         async generateFollowUp() {
-          if (fail) throw new ProviderFailure('transient')
           return 'What decision did you personally own?'
         },
         async generateReflection() {
@@ -218,7 +218,6 @@ describe('GET /interviews/:id', () => {
     })
     const { id } = await createInterview(app)
     await postTurn(app, id, 0, answers[0])
-    fail = false
     const retry = await app.request(`/interviews/${id}/next-question`, { method: 'POST', headers: WS })
     expect(retry.status).toBe(200)
     expect((await j(retry)).nextQuestion).toBe('What decision did you personally own?')

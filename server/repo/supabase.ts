@@ -3,6 +3,7 @@ import type {
   AddTurnInput,
   CreateInterviewInput,
   EvidenceItem,
+  InterviewKind,
   InterviewRow,
   PracticeAttemptInput,
   PracticeAttemptRow,
@@ -25,6 +26,11 @@ interface InterviewRecord {
   status: InterviewRow['status']
   asked_questions: string[] | null
   created_at: string
+  kind?: InterviewKind
+  question_cap?: number | null
+  time_cap_seconds?: number | null
+  started_at?: string | null
+  target_id?: string | null
 }
 
 interface TurnRecord {
@@ -151,6 +157,11 @@ function toInterviewRow(r: InterviewRecord): InterviewRow {
     status: r.status,
     askedQuestions: r.asked_questions ?? [],
     createdAt: r.created_at,
+    kind: r.kind ?? 'practice',
+    questionCap: r.question_cap ?? null,
+    timeCapSeconds: r.time_cap_seconds ?? null,
+    startedAt: r.started_at ?? null,
+    targetId: r.target_id ?? null,
   }
 }
 
@@ -201,12 +212,24 @@ export class PersistenceError extends Error {
   }
 }
 
+/** The stores for stories, attempts, claims, matches and replay are not wired to Supabase yet. */
+const notReady = (): never => {
+  throw new PersistenceError('storage_not_ready')
+}
+
 function throwIf(error: { message: string } | null, action: string): void {
   if (error) throw new PersistenceError(`failed to ${action}: ${error.message}`)
 }
 
-export function createSupabaseRepository(url: string, secretKey: string): Repository {
+type ScreenMeta = Pick<InterviewRow, 'kind' | 'questionCap' | 'timeCapSeconds' | 'startedAt' | 'targetId'>
+
+/** `screenDbReady` is true once migration 0008 is applied (SCREEN_DB_READY=1). Until then screen metadata lives in memory and a screen is capped at 4 questions. */
+export function createSupabaseRepository(url: string, secretKey: string, opts: { screenDbReady?: boolean } = {}): Repository {
   const client: SupabaseClient = createClient(url, secretKey)
+  const ready = opts.screenDbReady === true
+  // ponytail: lost on a server restart, which only matters for a screen already running; applying 0008 removes this.
+  const meta = new Map<string, ScreenMeta>()
+  const withMeta = (r: InterviewRow): InterviewRow => (ready ? r : { ...r, ...meta.get(r.id) })
 
   return {
     async ensureWorkspace(slug: string): Promise<void> {
@@ -215,6 +238,19 @@ export function createSupabaseRepository(url: string, secretKey: string): Reposi
     },
 
     async createInterview(workspace: string, input: CreateInterviewInput): Promise<InterviewRow> {
+      const isScreen = input.kind === 'screen'
+      // Without the migration the turns check allows indexes 0..3 only, so a screen is clamped to four questions.
+      const asked = input.askedQuestions?.length ? input.askedQuestions : [input.openingQuestion]
+      const questions = isScreen && !ready ? asked.slice(0, 4) : asked
+      const questionCap = isScreen ? (input.questionCap ?? questions.length) : (input.questionCap ?? null)
+      const cap = isScreen && !ready && questionCap !== null ? Math.min(questionCap, 4) : questionCap
+      const metaRow: ScreenMeta = {
+        kind: input.kind ?? 'practice',
+        questionCap: cap,
+        timeCapSeconds: input.timeCapSeconds ?? null,
+        startedAt: input.startedAt ?? null,
+        targetId: input.targetId ?? null,
+      }
       const { data, error } = await client
         .from(PHASE1_TABLES.interviews)
         .insert({
@@ -222,12 +258,17 @@ export function createSupabaseRepository(url: string, secretKey: string): Reposi
           role: input.role,
           industry: input.industry ?? null,
           status: 'in_progress',
-          asked_questions: [input.openingQuestion],
+          asked_questions: questions,
+          ...(ready
+            ? { kind: metaRow.kind, question_cap: cap, time_cap_seconds: metaRow.timeCapSeconds, started_at: metaRow.startedAt, target_id: metaRow.targetId }
+            : {}),
         })
         .select()
         .single()
       throwIf(error, 'create interview')
-      return toInterviewRow(data as InterviewRecord)
+      const row = data as InterviewRecord
+      if (!ready && (isScreen || cap !== null)) meta.set(row.id, metaRow)
+      return withMeta(toInterviewRow(row))
     },
 
     async getInterview(workspace: string, id: string): Promise<InterviewRow | null> {
@@ -238,7 +279,7 @@ export function createSupabaseRepository(url: string, secretKey: string): Reposi
         .eq('workspace_id', workspace)
         .maybeSingle()
       if (error || !data) return null
-      return toInterviewRow(data as InterviewRecord)
+      return withMeta(toInterviewRow(data as InterviewRecord))
     },
 
     async updateInterviewStatus(workspace: string, id: string, status: InterviewRow['status']): Promise<void> {
@@ -262,7 +303,7 @@ export function createSupabaseRepository(url: string, secretKey: string): Reposi
         .select()
         .single()
       throwIf(error, 'append question')
-      return toInterviewRow(data as InterviewRecord)
+      return withMeta(toInterviewRow(data as InterviewRecord))
     },
 
     async listInterviewsByRole(workspace: string, role: string): Promise<InterviewRow[]> {
@@ -272,18 +313,19 @@ export function createSupabaseRepository(url: string, secretKey: string): Reposi
         .eq('workspace_id', workspace)
         .eq('role', role)
       throwIf(error, 'list interviews')
-      return (data as InterviewRecord[]).map(toInterviewRow)
+      return (data as InterviewRecord[]).map(r => withMeta(toInterviewRow(r)))
     },
 
-    async listInterviews(workspace: string): Promise<InterviewRow[]> {
-      const { data, error } = await client
+    async listInterviews(workspace: string, page?: { limit?: number; before?: string }): Promise<InterviewRow[]> {
+      let query = client
         .from(PHASE1_TABLES.interviews)
         .select()
         .eq('workspace_id', workspace)
         .order('created_at', { ascending: false })
-        .limit(20)
+      if (page?.before) query = query.lt('created_at', page.before)
+      const { data, error } = await query.limit(page?.limit ?? 20)
       throwIf(error, 'list interviews')
-      return (data as InterviewRecord[]).map(toInterviewRow)
+      return (data as InterviewRecord[]).map(r => withMeta(toInterviewRow(r)))
     },
 
     async addTurn(workspace: string, interviewId: string, input: AddTurnInput): Promise<TurnRow> {
@@ -333,7 +375,7 @@ export function createSupabaseRepository(url: string, secretKey: string): Reposi
         )
         .select()
         .single()
-      throwIf(error, 'save reflection')
+      throwIf(error, 'save notes')
       return toReflectionRow(data as ReflectionRecord)
     },
 
@@ -459,6 +501,62 @@ export function createSupabaseRepository(url: string, secretKey: string): Reposi
       const { data, error } = await q.order('created_at', { ascending: true }).limit(5000)
       throwIf(error, 'list practice attempts')
       return (data as PracticeAttemptRecord[]).map(toAttempt)
+    },
+
+    // New stores: typed by us, columns not wired yet (needs auth + generated types).
+    async addAnswerAttempt(): Promise<never> {
+      return notReady()
+    },
+    async listAnswerAttempts(): Promise<never> {
+      return notReady()
+    },
+    async deleteAnswerAttempts(): Promise<never> {
+      return notReady()
+    },
+    async createStory(): Promise<never> {
+      return notReady()
+    },
+    async listStories(): Promise<never> {
+      return notReady()
+    },
+    async getStory(): Promise<never> {
+      return notReady()
+    },
+    async updateStory(): Promise<never> {
+      return notReady()
+    },
+    async deleteStory(): Promise<never> {
+      return notReady()
+    },
+    async deleteAllStories(): Promise<never> {
+      return notReady()
+    },
+    async replaceResumeClaims(): Promise<never> {
+      return notReady()
+    },
+    async listResumeClaims(): Promise<never> {
+      return notReady()
+    },
+    async deleteResumeClaims(): Promise<never> {
+      return notReady()
+    },
+    async replaceGapMatches(): Promise<never> {
+      return notReady()
+    },
+    async listGapMatches(): Promise<never> {
+      return notReady()
+    },
+    async upsertReplayItem(): Promise<never> {
+      return notReady()
+    },
+    async listReplaySchedule(): Promise<never> {
+      return notReady()
+    },
+    async deleteReplayItem(): Promise<never> {
+      return notReady()
+    },
+    async deleteAllNewData(): Promise<never> {
+      return notReady()
     },
   }
 }

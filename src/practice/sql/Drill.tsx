@@ -3,13 +3,15 @@ import { modules } from './curriculum'
 import { isConceptId } from './concepts/logic'
 import { scenes } from './scenes'
 import './path.css'
-import type { Database } from 'sql.js'
-import { runQuery, sameResult, type QueryResult } from '../../pages/target/sqlEngine'
+import { sameResult, type QueryResult } from '../../pages/target/sqlEngine'
+import { cancelSql, disposeSql, isStopped, runSql, warmSql } from './worker/sqlRunner'
 import type { DrillProps } from '../types'
-import { createPracticeDb, practiceTables } from './db'
+import { practiceTables } from './db'
 import { problems } from './problems'
 import { QueryExplainer, TablePeek } from './explain'
 import { compareText, diffRows, diffText, sameSql, surprised, tablesIn, type Confidence, type Expect } from './lesson/logic'
+import ExplainAloud from './aloud/ExplainAloud'
+import { useSavedExplain } from './aloud/useSavedExplain'
 import './drill.css'
 
 function ResultTable({ result }: { result: QueryResult }) {
@@ -20,7 +22,9 @@ function ResultTable({ result }: { result: QueryResult }) {
       <table><thead><tr>{result.columns.map(c => <th key={c}>{c}</th>)}</tr></thead>
         <tbody>{result.rows.map((r, i) => <tr key={i}>{r.map((v, j) => <td key={j}>{v === null ? <i>NULL</i> : String(v)}</td>)}</tr>)}</tbody></table>
     </div>
-    {result.total > result.rows.length && <p className="sqd-note">Showing the first {result.rows.length} of {result.total} rows.</p>}
+    {result.truncated
+      ? <p className="sqd-note">Showing the first {result.rows.length} rows.</p>
+      : result.total > result.rows.length && <p className="sqd-note">Showing the first {result.rows.length} of {result.total} rows.</p>}
   </>
 }
 
@@ -39,7 +43,8 @@ const TABS: { key: Tab; label: string }[] = [{ key: 'result', label: 'Result' },
 
 function SqlDrill({ item, onAttempt, onClose }: DrillProps) {
   const problem = problems.find(p => p.id === item.id)
-  const [db, setDb] = useState<Database | null>(null)
+  const [ready, setReady] = useState(false)
+  const [running, setRunning] = useState(false)
   const [loadFailed, setLoadFailed] = useState(false)
   const [loadTry, setLoadTry] = useState(0)
   const [query, setQuery] = useState('')
@@ -64,21 +69,27 @@ function SqlDrill({ item, onAttempt, onClose }: DrillProps) {
   const [thought, setThought] = useState('')
   const [tab, setTab] = useState<Tab>('result')
   const [mob, setMob] = useState<'q' | 'a'>('q') // narrow screens: Question | Your query
+  const [aloud, setAloud] = useState(false) // the spoken round is open (it reports no attempt)
+  const savedAloud = useSavedExplain(item.id)
 
   useEffect(() => {
     let live = true
-    createPracticeDb().then(d => { if (live) setDb(d) }, () => { if (live) setLoadFailed(true) })
+    warmSql('practice').then(() => { if (live) setReady(true) }, () => { if (live) setLoadFailed(true) })
     return () => { live = false }
   }, [loadTry])
+  useEffect(() => disposeSql, []) // end the SQL worker when this screen closes
 
   if (!problem) return <div className="mirror-landing sqd sqd--gone"><p className="sqd-error" role="alert">This problem is not available.</p><button className="ml-btn" onClick={onClose}>Back</button></div>
 
-  const run = () => {
-    if (!db || busy.current) return
+  const run = async () => {
+    if (!ready || busy.current) return
     busy.current = true
+    setRunning(true)
     try {
-      const got = runQuery(db, query)
-      const expected = runQuery(db, problem.solution)
+      const got = await runSql('practice', query)
+      if (isStopped(got)) { setResult(got); return } // cancelled: not an attempt
+      const expected = await runSql('practice', problem.solution)
+      if (isStopped(expected)) return
       const ok = sameResult(got, expected, problem.ordered)
       setResult(got)
       setWant(expected)
@@ -96,6 +107,7 @@ function SqlDrill({ item, onAttempt, onClose }: DrillProps) {
       })
     } finally {
       busy.current = false
+      setRunning(false)
     }
   }
 
@@ -104,16 +116,18 @@ function SqlDrill({ item, onAttempt, onClose }: DrillProps) {
   const explain = (problem as { explain?: string }).explain
   const ownerMod = modules.find(m => m.problemIds.includes(problem.id))
   const Scene = ownerMod?.sceneId ? scenes[ownerMod.sceneId] : undefined
-  const showSolution = () => {
-    if (!db) return
-    setSolution(runQuery(db, problem.solution))
+  const showSolution = async () => {
+    if (!ready) return
+    const r = await runSql('practice', problem.solution)
+    if (isStopped(r)) return
+    setSolution(r)
     setTab('notes')
   }
   const tables = tablesIn(problem.solution, practiceTables.map(t => t.name))
   const tableNames = problem.tables?.length ? problem.tables : tables
 
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); run(); return }
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void run(); return }
     if (e.key === 'Tab' && !e.shiftKey) {
       e.preventDefault()
       const el = e.currentTarget
@@ -209,7 +223,7 @@ function SqlDrill({ item, onAttempt, onClose }: DrillProps) {
           <div className="sqd-row">
             <button className="sqd-btn" disabled={hintStage >= 1} onClick={showHint}>Nudge</button>
             <button className="sqd-btn" disabled={hintStage < 1 || hintStage >= 2} onClick={showHint}>Hint</button>
-            <button className="sqd-btn" disabled={!db || solution !== null} onClick={showSolution}>Show solution</button>
+            <button className="sqd-btn" disabled={!ready || solution !== null} onClick={() => void showSolution()}>Show solution</button>
           </div>
           {hintStage >= 1 && <p className="sqd-hint"><b>Nudge.</b> Say the answer in words first: which rows, which columns, grouped how?</p>}
           {hintStage >= 2 && <p className="sqd-hint"><b>Hint.</b> {problem.hint}</p>}
@@ -235,10 +249,12 @@ function SqlDrill({ item, onAttempt, onClose }: DrillProps) {
           placeholder="SELECT ..." onChange={e => setQuery(e.target.value)} onKeyDown={onKey} />
 
         <div className="sqd-actions">
-          <button className="sqd-run" disabled={!db} onClick={run}>Run</button>
+          <button className="sqd-run" disabled={!ready || running} onClick={() => void run()}>Run</button>
+          {running && <button className="sqd-btn" onClick={cancelSql}>Cancel</button>}
           <button className="sqd-chip" aria-pressed={!skipPredict} onClick={() => setSkipPredict(v => !v)}>Predict</button>
-          <span className="sqd-note">{loadFailed ? '' : db ? 'Ctrl or Cmd + Enter also runs it.' : 'Setting up your practice database…'}</span>
+          <span className="sqd-note" role="status">{loadFailed ? '' : running ? 'Running…' : ready ? 'Ctrl or Cmd + Enter also runs it.' : 'Setting up your practice database…'}</span>
           {loadFailed && <span className="sqd-error" role="alert">The practice database did not load. <button className="sqd-link" onClick={() => { setLoadFailed(false); setLoadTry(n => n + 1) }}>Retry</button></span>}
+          {(solved || !!savedAloud?.length) && <button className="sqd-btn" onClick={() => { setAloud(true); setTab('notes') }}>Explain it out loud</button>}
           {solved && <button className="sqd-run sqd-next" onClick={onClose}>Next problem</button>}
         </div>
 
@@ -276,6 +292,7 @@ function SqlDrill({ item, onAttempt, onClose }: DrillProps) {
                     </Suspense>}
                 </>)}
             {tab === 'notes' && <>
+              {aloud && <ExplainAloud problem={problem} sql={ranSql || query} onClose={() => setAloud(false)} />}
               {solved && explain && <p className="sqd-hint"><b>Why this works.</b> {explain}</p>}
               <label htmlFor="sqd-think" className="sqd-lbl">Think out loud</label>
               <p className="sqd-note">Say why you wrote it that way. Private to this screen: it is not saved or sent anywhere.</p>

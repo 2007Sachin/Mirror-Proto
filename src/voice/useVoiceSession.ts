@@ -10,6 +10,7 @@ import { AudioCapture, pcm16ToBytes } from './audioCapture'
 import { AudioPlayback } from './audioPlayback'
 import {
   MSG,
+  VOICE_UNAVAILABLE_NOTICE,
   voiceStateToOrbState,
   type OrbState,
   type VoiceState,
@@ -44,6 +45,8 @@ export interface VoiceSessionApi {
   continueByTyping: () => void
   /** Finalize the current spoken turn (user finished answering). */
   commitSpokenAnswer: () => void
+  /** Plain line to show when `start` returned false. */
+  failureNotice: () => string
 }
 
 export function useVoiceSession(options: {
@@ -66,7 +69,10 @@ export function useVoiceSession(options: {
   const [active, setActive] = useState(false)
 
   const optionsRef = useRef(options)
-  optionsRef.current = options
+  useEffect(() => {
+    optionsRef.current = options
+  })
+  const unavailableRef = useRef(false)
   const interviewIdRef = useRef<string | null>(null)
 
   const clientRef = useRef<VoiceClient | null>(null)
@@ -115,6 +121,7 @@ export function useVoiceSession(options: {
 
   const start = useCallback(async (interviewId: string): Promise<boolean> => {
     stoppedByUserRef.current = false
+    unavailableRef.current = false
     setError(null)
     setPartialTranscript('')
     setFinalTranscript('')
@@ -217,6 +224,15 @@ export function useVoiceSession(options: {
     client.on(MSG.STATE, payload => {
       const { state } = payload as { state: VoiceState }
       syncState(state)
+      if (state === 'completed') {
+        // The interview is over: release mic, socket and speaker before notes are written.
+        stoppedByUserRef.current = true
+        try {
+          teardown()
+        } catch {
+          /* already closed */
+        }
+      }
     })
 
     client.on(MSG.TTS_END, () => {
@@ -234,8 +250,10 @@ export function useVoiceSession(options: {
     })
 
     client.on(MSG.CLOSE_SERVER, payload => {
-      const { reason } = payload as { reason?: string }
+      const { reason, code } = payload as { reason?: string; code?: string }
       if (stoppedByUserRef.current) return
+      // The interview finished: that is a normal end, not an error.
+      if (code === 'interview_completed' || reason === 'interview_completed') return
       setError({ code: 'server_close', message: reason ?? 'Voice session closed by server.', recoverable: true })
       syncState('error')
     })
@@ -253,10 +271,21 @@ export function useVoiceSession(options: {
 
     try {
       await client.connect(interviewId)
-    } catch {
-      // Gateway unreachable: surface a recoverable error, keep text flow alive.
+    } catch (err) {
       capture.stop()
       captureRef.current = null
+      clientRef.current = null
+      playbackRef.current?.dispose()
+      playbackRef.current = null
+      if (err instanceof Error && err.message === 'voice_unavailable') {
+        // Voice is not set up on this server: calmly switch to typing, no error shown.
+        unavailableRef.current = true
+        setVoiceState('inactive')
+        setOrbState('idle')
+        setActive(false)
+        return false
+      }
+      // Gateway unreachable: surface a recoverable error, keep text flow alive.
       setError({ code: 'connection_failed', message: 'Voice service unreachable — continuing with typing.', recoverable: true })
       setVoiceState('error')
       setActive(false)
@@ -265,7 +294,7 @@ export function useVoiceSession(options: {
 
     setActive(true)
     return true
-  }, [syncState])
+  }, [syncState, teardown])
 
   const stop = useCallback(() => {
     stoppedByUserRef.current = true
@@ -297,6 +326,11 @@ export function useVoiceSession(options: {
   const continueByTyping = useCallback(() => {
     stop()
   }, [stop])
+
+  const failureNotice = useCallback(
+    () => (unavailableRef.current ? VOICE_UNAVAILABLE_NOTICE : 'Voice is unavailable. Type your answer instead.'),
+    [],
+  )
 
   const commitSpokenAnswer = useCallback(() => {
     const client = clientRef.current
@@ -335,8 +369,9 @@ export function useVoiceSession(options: {
     mute,
     continueByTyping,
     commitSpokenAnswer,
+    failureNotice,
   }), [
     voiceState, orbState, partialTranscript, finalTranscript, questionText, error,
-    inputLevel, outputLevel, isMuted, active, start, stop, retry, interrupt, mute, continueByTyping, commitSpokenAnswer,
+    inputLevel, outputLevel, isMuted, active, start, stop, retry, interrupt, mute, continueByTyping, commitSpokenAnswer, failureNotice,
   ])
 }

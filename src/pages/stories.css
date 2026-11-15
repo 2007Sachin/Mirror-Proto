@@ -1,0 +1,25 @@
+.stories-page { display: grid; gap: 16px; max-width: 860px; }
+.stories-card { display: grid; gap: 10px; padding: 16px; border: 1px solid rgba(128,128,128,.25); border-radius: 12px; min-width: 0; }
+.stories-card h2, .stories-card h3 { margin: 0; }
+.stories-card input:not([type=checkbox]), .stories-card textarea, .stories-card select { width: 100%; box-sizing: border-box; font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(128,128,128,.4); background: transparent; color: inherit; }
+.stories-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.stories-row input { flex: 1 1 220px; width: auto; }
+.story-btn { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(128,128,128,.5); background: transparent; color: inherit; cursor: pointer; }
+.story-btn--main { background: #2f6f5e; border-color: #2f6f5e; color: #fff; }
+.story-btn:disabled { opacity: .55; cursor: default; }
+.story-btn:focus-visible, .story-link:focus-visible { outline: 2px solid #5aa; outline-offset: 2px; }
+.story-link { background: none; border: 0; color: inherit; text-decoration: underline; cursor: pointer; justify-self: start; font: inherit; }
+.stories-cover, .stories-list, .stories-suggest, .stories-pick { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.stories-cover { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.stories-cover li { display: flex; justify-content: space-between; gap: 8px; }
+.stories-suggest li { display: grid; gap: 2px; }
+.stories-list li, .stories-pick li { display: grid; gap: 6px; padding-top: 10px; border-top: 1px solid rgba(128,128,128,.2); min-width: 0; }
+.stories-list p, .stories-pick p { margin: 0; overflow-wrap: anywhere; }
+.stories-answer { opacity: .85; }
+.stories-tags, .stories-source { opacity: .75; font-size: .9em; }
+.stories-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.stories-chip { display: inline-flex; gap: 6px; align-items: center; }
+.stories-quote { margin: 0; padding: 8px 12px; border-left: 3px solid #2f6f5e; overflow-wrap: anywhere; }
+.stories-quote span { display: block; font-size: .8em; opacity: .7; }
+.stories-error { color: #b4452f; }
+@media (max-width: 480px) { .stories-card { padding: 12px; } }

@@ -34,6 +34,6 @@ export const sampleState: JourneyState = {
     { id: 'staples', title: 'Staples', earned: false },
     { id: 'advanced', title: 'Advanced', earned: false },
   ],
-  quest: { text: 'Solve 3 problems today', progress: '1 of 3', done: false },
+  quest: { text: 'Solve a few problems today', progress: '1 done', done: false },
   guide: { mood: 'welcome', text: 'Nice start. Two NULL problems left, then you earn the Core badge.', cta: { label: 'Continue', nodeId: 'm:nulls' } },
 }

@@ -4,9 +4,9 @@
 export type Lv = 1 | 2 | 3
 export interface Cand { id: string; topic: string; level: Lv; pattern?: string }
 export type Kind = 'sql' | 'concept'
-export interface MockPreset { id: string; name: string; minutes: number; sql: Lv[]; concepts: Lv[] } // one entry per question slot = wanted level
+export interface MockPreset { id: string; name: string; minutes: number; sql: Lv[]; concepts: Lv[]; spoken?: boolean } // one entry per question slot = wanted level
 export interface MockItem { id: string; kind: Kind }
-export interface MockTestDef { presetId: string; name: string; minutes: number; items: MockItem[] }
+export interface MockTestDef { presetId: string; name: string; minutes: number; items: MockItem[]; spoken?: boolean }
 
 const LV = ['', 'Beginner', 'Pro', 'Advanced']
 export const PRESETS: MockPreset[] = [
@@ -16,7 +16,7 @@ export const PRESETS: MockPreset[] = [
   { id: 'concepts', name: 'Concepts round', minutes: 15, sql: [], concepts: [1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3] },
 ]
 
-export interface Custom { count: number; minutes: number; concepts: boolean; difficulty: 0 | 1 | 2 | 3 }
+export interface Custom { count: number; minutes: number; concepts: boolean; difficulty: 0 | 1 | 2 | 3; spoken?: boolean }
 export const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, Math.round(Number.isFinite(n) ? n : lo)))
 
 /** Build-your-own: count 2-8, minutes 10-90. With concepts on, a third of the questions are concept questions. */
@@ -24,7 +24,7 @@ export function customPreset(c: Custom): MockPreset {
   const count = clamp(c.count, 2, 8), minutes = clamp(c.minutes, 10, 90)
   const nc = c.concepts ? Math.floor(count / 3) : 0
   const ramp = (n: number): Lv[] => Array.from({ length: n }, (_, i) => (c.difficulty || (n < 2 ? 2 : 1 + Math.min(2, Math.floor((i * 3) / n)))) as Lv)
-  return { id: 'custom', name: 'Your own test', minutes, sql: ramp(count - nc), concepts: ramp(nc) }
+  return { id: 'custom', name: 'Your own test', minutes, sql: ramp(count - nc), concepts: ramp(nc), ...(c.spoken ? { spoken: true } : {}) }
 }
 
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`
@@ -35,7 +35,7 @@ export function describe(p: MockPreset): string {
   const parts: string[] = []
   if (p.sql.length) parts.push(`${plural(p.sql.length, 'SQL question')} (${mixWords(p.sql)})`)
   if (p.concepts.length) parts.push(plural(p.concepts.length, 'concept question'))
-  return `${parts.join(' and ')}. ${p.minutes} minutes.`
+  return `${parts.join(' and ')}. ${p.minutes} minutes.${p.spoken ? ' You will explain each answer out loud afterwards.' : ''}`
 }
 
 /** Small seeded generator (mulberry32): same seed, same numbers. */
@@ -76,7 +76,7 @@ export function buildMock(preset: MockPreset, problems: Cand[], concepts: Cand[]
   const rnd = rng(seed)
   const sql = pickSet(problems, preset.sql, solvedIds, rnd)
   const con = pickSet(concepts, preset.concepts, solvedIds, rnd)
-  return { presetId: preset.id, name: preset.name, minutes: preset.minutes, items: [...sql.map(c => ({ id: c.id, kind: 'sql' as Kind })), ...con.map(c => ({ id: c.id, kind: 'concept' as Kind }))] }
+  return { presetId: preset.id, name: preset.name, minutes: preset.minutes, items: [...sql.map(c => ({ id: c.id, kind: 'sql' as Kind })), ...con.map(c => ({ id: c.id, kind: 'concept' as Kind }))], ...(preset.spoken ? { spoken: true } : {}) }
 }
 
 // ---- results ----

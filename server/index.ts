@@ -9,7 +9,7 @@ import type { Repository } from './repo/types.js'
 
 export function createRepository(): Repository {
   return isSupabaseConfigured(env)
-    ? createSupabaseRepository(env.supabaseUrl!, env.supabaseSecretKey!)
+    ? createSupabaseRepository(env.supabaseUrl!, env.supabaseSecretKey!, { screenDbReady: env.screenDbReady })
     : createMemoryRepository()
 }
 

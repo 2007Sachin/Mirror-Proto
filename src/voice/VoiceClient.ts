@@ -112,6 +112,7 @@ export class VoiceClient {
         }
         this.connecting = false
         this.reconnectAttempts = 0
+        offUnavailable()
         this.startPing()
         resolve(this.sessionId ?? '')
       }
@@ -119,7 +120,18 @@ export class VoiceClient {
         offReady()
         onReady(payload)
       })
-      const cleanup = () => offReady()
+      // No speech-to-text on the server: reject calmly, never reconnect.
+      const offUnavailable = this.on(MSG.VOICE_UNAVAILABLE, () => {
+        this.connecting = false
+        this.closedByUser = true
+        offReady()
+        offUnavailable()
+        reject(new Error('voice_unavailable'))
+      })
+      const cleanup = () => {
+        offReady()
+        offUnavailable()
+      }
 
       ws.onopen = () => {
         this.onConnectionChange?.(true)
@@ -184,7 +196,11 @@ export class VoiceClient {
     // Stale turnId messages are dropped once a turn is active and the tag differs.
     if (this.activeTurnId && env.turnId && env.turnId !== this.activeTurnId) {
       // allow state/session-level messages through; drop turn-scoped ones
-      const allowedWhenStale = new Set<string>([MSG.STATE, MSG.SESSION_READY, MSG.ERROR, MSG.PONG, MSG.CLOSE_SERVER])
+      // The server's next question (and its speech) arrives tagged with the NEW turn id, so it must pass.
+      const allowedWhenStale = new Set<string>([
+        MSG.STATE, MSG.SESSION_READY, MSG.ERROR, MSG.PONG, MSG.CLOSE_SERVER,
+        MSG.QUESTION, MSG.TTS_START, MSG.TTS_END, MSG.VOICE_UNAVAILABLE,
+      ])
       if (!allowedWhenStale.has(env.type)) {
         return
       }
@@ -206,8 +222,12 @@ export class VoiceClient {
       }
       case MSG.INTERRUPT:
         break
-      case MSG.CLOSE_SERVER:
+      case MSG.CLOSE_SERVER: {
+        // A finished interview is a clean end: do not reconnect to a session that is over.
+        const c = env.payload as { code?: string; reason?: string } | null
+        if (c?.code === 'interview_completed' || c?.reason === 'interview_completed') this.closedByUser = true
         break
+      }
     }
     this.emit(env.type, env.payload, env)
   }

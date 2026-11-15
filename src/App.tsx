@@ -7,16 +7,23 @@ import Overview from './pages/Overview'
 import Targets from './pages/Targets'
 import Practice from './pages/Practice'
 import Interview from './pages/Interview'
+import Sessions from './pages/Sessions'
+import Stories from './pages/Stories'
+import { saveStoryFromAnswer } from './stories/saveStory'
 import { useVoiceSession } from './voice/useVoiceSession'
+import * as data from './lib/data'
+import { useScreenClock } from './features/screen/countdown'
+import { ScreenDebriefPage } from './features/screen/ScreenDebrief'
+import { createScreen } from './lib/screenApi'
 import {
-  ArrowRight, AudioLines, BarChart3, BookOpen,
+  AudioLines, BookMarked, BookOpen,
   Check, ChevronDown, Circle, Fingerprint, Home as HomeIcon,
   Menu, MessageCircle, Pause,
-  RotateCcw, Settings, Target,
+  Settings, Target,
   Trash2, Volume2, X,
 } from 'lucide-react'
 
-type View = 'home' | 'firstInterview' | 'workspace' | 'targets' | 'practice' | 'interview' | 'reports' | 'report' | 'profile' | 'settings'
+type View = 'home' | 'firstInterview' | 'workspace' | 'targets' | 'practice' | 'interview' | 'reports' | 'report' | 'stories' | 'screen' | 'profile' | 'settings'
 type Answer = { question: string; answer: string }
 type FlowState = 'not_completed' | 'idle' | 'starting' | 'saving' | 'waiting_nim' | 'generating_reflection' | 'provider_unavailable' | 'retryable_failure' | 'validation_failure'
 
@@ -78,14 +85,20 @@ export default function App() {
   const [calmMotion, setCalmMotion] = useState(false)
   const [toast, setToast] = useState('')
   const [sessionId, setSessionId] = useState<string | null>(null)
+  /** A screening call sets its own length; null means the practice default. */
+  const [questionCap, setQuestionCap] = useState<number | null>(null)
+  /** A realistic screening call in progress: its absolute start (survives a reload) and length. */
+  const [screen, setScreen] = useState<{ startedAt: number; capSeconds: number } | null>(null)
+  const screenRef = useRef(screen)
+  useEffect(() => { screenRef.current = screen }, [screen])
   const [reflection, setReflection] = useState<Reflection | null>(null)
   const [flowState, setFlowState] = useState<FlowState>('idle')
   const [currentQuestion, setCurrentQuestion] = useState('Tell me about a project or moment at work that you’re genuinely proud of.')
   const [busy, setBusy] = useState(false)
   const currentQuestionRef = useRef(currentQuestion)
-  currentQuestionRef.current = currentQuestion
+  useEffect(() => { currentQuestionRef.current = currentQuestion }, [currentQuestion])
   const sessionIdRef = useRef(sessionId)
-  sessionIdRef.current = sessionId
+  useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
   const voice = useVoiceSession({
     onQuestion: (text, index) => {
       setCurrentQuestion(text)
@@ -97,6 +110,7 @@ export default function App() {
     },
     onCompleted: () => {
       const id = sessionIdRef.current ?? sessionStorage.getItem(SESSION_STORAGE_KEY)
+      setVoiceMode(false) // the voice hook has already stopped itself on completion
       if (!id) return
       setFlowState('generating_reflection')
       void (async () => {
@@ -116,19 +130,26 @@ export default function App() {
     },
   })
   const interviewOrb = voice.active ? voice.orbState : orbState
-  const completed = answers.length === QUESTION_COUNT && assessedRole === role && Boolean(sessionId)
 
-  const go = (next: View) => { setView(next); setMobileNav(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const total = questionCap ?? QUESTION_COUNT
+  const completed = answers.length === total && assessedRole === role && Boolean(sessionId)
+
+  const [storyQuestion, setStoryQuestion] = useState<string | null>(null)
+  /** Opens the Story bank, optionally with a question to suggest a story for (Today and Interview can call this). */
+  const openStories = (question?: string) => { setStoryQuestion(question ?? null); go('stories') }
+  // A finished screening call goes to its debrief instead of the plain notes page.
+  const go = (next: View) => { setView(next === 'report' && screenRef.current ? 'screen' : next); setScreen(c => (next === 'interview' || next === 'report' ? c : null)); setMobileNav(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2600) }
   const startInterview = async (roleName = role, openingQuestion?: string, voiceOn = voiceMode) => {
     if (busy) return
     if (!roleName) return go('firstInterview')
     setBusy(true)
     setFlowState('starting')
-    setQuestionIndex(0); setAnswers([]); setAssessedRole(roleName); setAnswer(''); setOrbState('thinking'); setReflection(null); setSessionId(null)
+    setQuestionIndex(0); setAnswers([]); setAssessedRole(roleName); setAnswer(''); setOrbState('thinking'); setReflection(null); setSessionId(null); setQuestionCap(null); setScreen(null)
     try {
       const session = await api.createInterview(roleName, undefined, openingQuestion)
       setSessionId(session.id)
+      setQuestionCap(session.questionCap ?? null)
       sessionStorage.setItem(SESSION_STORAGE_KEY, session.id)
       setCurrentQuestion(session.currentQuestion ?? session.questions[0])
       setQuestionIndex(session.nextQuestionIndex ?? 0)
@@ -137,7 +158,7 @@ export default function App() {
       go('interview')
       if (voiceOn) {
         void voice.start(session.id).then(ok => {
-          if (!ok) notify('Voice is unavailable — type your answer instead.')
+          if (!ok) { setVoiceMode(false); notify(voice.failureNotice()) }
         })
       }
     } catch (err) {
@@ -156,7 +177,7 @@ export default function App() {
   const submitAnswer = async () => {
     if (busy) return
     if (!sessionId) { setFlowState('retryable_failure'); notify('Start an interview before sending an answer.'); return }
-    if (answer.trim().length < 20) { notify('Add a little more detail so MIRROR has something real to reflect on.'); return }
+    if (answer.trim().length < 20) { notify('Add a little more detail so MIRROR has something real to work with.'); return }
     const trimmed = answer.trim()
     const currentIndex = questionIndex
     setBusy(true)
@@ -222,22 +243,6 @@ export default function App() {
     }
   }
 
-  const retryReflection = async () => {
-    if (!sessionId || busy) return
-    setBusy(true)
-    setFlowState('generating_reflection')
-    try {
-      await api.complete(sessionId)
-      const report = await api.reflect(sessionId)
-      setReflection(report)
-      setFlowState('idle')
-    } catch (err) {
-      setFlowState(classifyApiError(err))
-    } finally {
-      setBusy(false)
-    }
-  }
-
   /** Never let a voice teardown problem block leaving the screen. */
   const stopVoice = () => { try { voice.stop() } catch { /* already closed */ } }
   /** Leave and come back: the session stays open on the server and in this tab. */
@@ -259,6 +264,58 @@ export default function App() {
     setSessionId(null)
     notify('Session ended.')
   }
+  /** The server builds the questions from the target and keeps the clock; here we only follow it. */
+  const startScreening = async (targetId: string, voiceOn = voiceMode) => {
+    if (busy) return
+    setBusy(true)
+    setFlowState('starting')
+    setQuestionIndex(0); setAnswers([]); setAnswer(''); setOrbState('thinking'); setReflection(null); setSessionId(null); setQuestionCap(null); setScreen(null)
+    try {
+      const session = await createScreen(role || 'Screening call', targetId)
+      setAssessedRole(session.role)
+      setSessionId(session.id)
+      setQuestionCap(session.questionCap ?? null)
+      setScreen({ startedAt: session.startedAt ? Date.parse(session.startedAt) : Date.now(), capSeconds: session.timeCapSeconds ?? 480 })
+      sessionStorage.setItem(SESSION_STORAGE_KEY, session.id)
+      setCurrentQuestion(session.currentQuestion ?? session.questions[0])
+      setQuestionIndex(session.nextQuestionIndex ?? 0)
+      setFlowState('idle')
+      setOrbState('speaking')
+      go('interview')
+      if (voiceOn) void voice.start(session.id).then(ok => { if (!ok) { setVoiceMode(false); notify(voice.failureNotice()) } })
+    } catch (err) {
+      setFlowState(classifyApiError(err))
+      notify(err instanceof ApiError && err.code === 'target_has_no_skills' ? 'This target has no skills yet, so a screening call cannot be built.' : 'Could not start the call. Try again in a moment.')
+    } finally {
+      setBusy(false)
+    }
+  }
+  const finishing = useRef(false)
+  /** The time cap or "End the call": stop voice, end early, put the notes together, then show the debrief. */
+  // ponytail: an answer typed at the very last second may be dropped; the server's 20 s grace covers one already sent.
+  const finishScreen = async () => {
+    const id = sessionIdRef.current
+    if (!id || finishing.current) return
+    finishing.current = true
+    stopVoice()
+    setVoiceMode(false); setOrbState('idle')
+    setFlowState('generating_reflection')
+    try {
+      await api.complete(id, { early: true })
+    } catch {
+      // Nothing was answered, so there is nothing to show.
+      void api.abandon(id).catch(() => undefined)
+      sessionStorage.removeItem(SESSION_STORAGE_KEY)
+      setSessionId(null); setScreen(null); setFlowState('idle'); finishing.current = false
+      go('workspace'); notify('The call ended before any answer was saved.')
+      return
+    }
+    sessionStorage.removeItem(SESSION_STORAGE_KEY)
+    try { setReflection(await api.reflect(id)) } catch { /* the debrief does not need the notes */ }
+    setFlowState('idle'); finishing.current = false
+    go('screen')
+  }
+  const screenLeft = useScreenClock(view === 'interview' && screen ? screen.startedAt : null, screen?.capSeconds ?? null, () => void finishScreen())
   const switchToType = () => {
     voice.continueByTyping(); setVoiceMode(false); setOrbState('idle')
   }
@@ -266,7 +323,7 @@ export default function App() {
     if (!sessionId) return notify('Start the interview, then speak.')
     setVoiceMode(true)
     void voice.start(sessionId).then(ok => {
-      if (!ok) { setVoiceMode(false); notify('Voice is unavailable. Type your answer instead.') }
+      if (!ok) { setVoiceMode(false); notify(voice.failureNotice()) }
     })
   }
   /** Let an unfinished interview go: close it on the server and forget it here. */
@@ -278,6 +335,7 @@ export default function App() {
     if (!window.confirm('Reset all demonstration data and return to the beginning?')) return
     sessionStorage.removeItem(SESSION_STORAGE_KEY)
     void api.deleteProfile().catch(() => undefined)
+    void data.clearAll()
     stopVoice()
     setVoiceMode(false)
     setAnswers([]); setAnswer(''); setRole(''); setProfile(null); setSessionId(null); setReflection(null); go('home'); notify('Prototype data reset.')
@@ -308,6 +366,8 @@ export default function App() {
         if (session.status !== 'in_progress') return forget()
         // Only what the server returned: the exact question, the answers so far, no guessed progress.
         setSessionId(session.id)
+        setQuestionCap(session.questionCap ?? null)
+        setScreen(session.kind === 'screen' && session.startedAt ? { startedAt: Date.parse(session.startedAt), capSeconds: session.timeCapSeconds ?? 480 } : null)
         setRole(session.role)
         setAssessedRole(session.role)
         setAnswers(session.turns.map(t => ({ question: t.question, answer: t.answer })))
@@ -316,13 +376,16 @@ export default function App() {
         setOrbState(session.pendingFollowUp ? 'thinking' : 'idle')
         setView('workspace') // the Overview's Continue panel is the way back in
       })
-      .catch(forget)
+      // Only a missing session is forgotten; a network slip keeps the breadcrumb so the open interview is not lost.
+      .catch(err => (err instanceof ApiError && err.status === 404 ? forget() : setView('workspace')))
   }, [])
 
   useEffect(() => {
     if (view !== 'interview' || !sessionId) return
     api.getInterview(sessionId)
       .then(session => {
+        setQuestionCap(session.questionCap ?? null)
+        setScreen(session.kind === 'screen' && session.startedAt ? { startedAt: Date.parse(session.startedAt), capSeconds: session.timeCapSeconds ?? 480 } : null)
         setAnswers(session.turns.map(t => ({ question: t.question, answer: t.answer })))
         if (session.nextQuestionIndex !== null) setQuestionIndex(session.nextQuestionIndex)
         if (session.currentQuestion) setCurrentQuestion(session.currentQuestion)
@@ -350,8 +413,8 @@ export default function App() {
       <Interview
         question={currentQuestion}
         questionIndex={questionIndex}
-        totalDots={QUESTION_COUNT}
-        isLast={questionIndex === QUESTION_COUNT - 1}
+        totalDots={total}
+        isLast={questionIndex === total - 1}
         focusLabel={profile?.focus}
         answers={answers}
         orb={interviewOrb}
@@ -363,12 +426,14 @@ export default function App() {
         answer={answer}
         setAnswer={setAnswer}
         sessionId={sessionId}
+        replay
         onSubmit={() => void submitAnswer()}
         onRetry={() => void retryFollowUp()}
         onContinueLater={continueLater}
         onEnd={endSession}
         onSwitchToType={switchToType}
         onSwitchToSpeak={switchToSpeak}
+        screen={screen ? { remainingSeconds: screenLeft === null ? null : Math.ceil(screenLeft / 1000), totalSeconds: screen.capSeconds, onEnd: () => void finishScreen() } : undefined}
       />
       {toast && <div className="toast">{toast}</div>}
     </>
@@ -379,16 +444,19 @@ export default function App() {
     { id: 'practice', label: 'Practice', icon: BookOpen },
     { id: 'targets', label: 'Targets', icon: Target },
     { id: 'reports', label: 'Sessions', icon: MessageCircle },
+    { id: 'stories', label: 'Stories', icon: BookMarked },
   ]
   return <div className={`app workspace-app ${calmMotion ? 'reduce-motion' : ''}`}><div className="ambient ambient--two" />
     <aside className={`sidebar ${mobileNav ? 'sidebar--open' : ''}`}><div className="sidebar-top"><Brand onClick={() => go('home')} /><button className="mobile-close" onClick={() => setMobileNav(false)}><X /></button></div><nav>{navItems.map(item => <button key={item.id} className={view === item.id || (view === 'report' && item.id === 'reports') ? 'active' : ''} onClick={() => { if (item.id === 'targets') setTargetId(null); go(item.id) }}><item.icon size={18} />{item.label}</button>)}</nav><div className="sidebar-bottom"><button onClick={() => go('settings')} className={view === 'settings' ? 'active' : ''}><Settings size={18} />Settings</button><button className="demo-profile" onClick={() => go('profile')}><span>{profileName.charAt(0)}</span><div><b>{profileName}’s workspace</b><small>View candidate profile</small></div></button></div></aside>
     {mobileNav && <button className="nav-scrim" aria-label="Close navigation" onClick={() => setMobileNav(false)} />}
     <main className="workspace-main"><header className="workspace-header"><button className="mobile-menu" onClick={() => setMobileNav(true)}><Menu size={21} /></button><div><span className="workspace-breadcrumb">MIRROR / {view === 'workspace' ? 'TODAY' : view === 'report' || view === 'reports' ? 'SESSIONS' : view.toUpperCase()}</span></div><div className="header-actions"><span className="demo-badge"><Circle size={7} fill="currentColor" /> DEMO</span><button className="avatar-button" onClick={() => go('profile')} aria-label="Open candidate profile">{profileName.charAt(0)}</button></div></header>
-      {view === 'workspace' && <Overview profile={profile} busy={busy} onStart={(question, speak) => { setVoiceMode(speak); void startInterview(role, question, speak) }} onContinue={resumeInterview} onLetGo={letGo} onOpenItem={id => { setPracticeItem(id); go('practice') }} />}
-      {view === 'targets' && <Targets openId={targetId} onOpen={setTargetId} onPractise={r => void startInterview(r)} />}
+      {view === 'workspace' && <Overview profile={profile} busy={busy} onStart={(question, speak) => { setVoiceMode(speak); void startInterview(role, question, speak) }} onContinue={resumeInterview} onLetGo={letGo} onScreen={id => void startScreening(id)} onOpenStories={openStories} onReplay={id => { setSessionId(id); go('report') }} onOpenItem={id => { setPracticeItem(id); go('practice') }} />}
+      {view === 'targets' && <Targets openId={targetId} onOpen={setTargetId} onPractise={r => void startInterview(r)} onPractiseProbe={q => void startInterview(role, q)} onScreen={id => void startScreening(id)} />}
+      {view === 'screen' && sessionId && <ScreenDebriefPage interviewId={sessionId} onDone={() => { setScreen(null); go('workspace') }} />}
       {view === 'practice' && <Practice initialItemId={practiceItem} onInitialConsumed={() => setPracticeItem(null)} />}
-      {view === 'profile' && <div className="workspace-content profile-content"><div className="page-title"><div><p className="eyebrow">YOUR CANDIDATE PROFILE</p><h1>Profile</h1><p>Shape the context MIRROR uses. Nothing here becomes an assessment by itself.</p></div><Button onClick={() => notify('Profile changes saved in this prototype.')}><Check size={15} /> Save profile</Button></div><section className="profile-identity"><div className="profile-avatar">{profileName.charAt(0)}</div><div><h2>{profileName}</h2><p>{role} · {profileLocation}</p><span><Circle size={7} fill="currentColor" /> Prototype profile · No account connected</span></div></section><div className="profile-layout"><section className="profile-form"><div className="profile-form-title"><h2>About you</h2><p>Keep this brief. Your interview answers provide the real evidence.</p></div><div className="profile-field-grid"><div><FieldLabel>Display name</FieldLabel><input value={profileName} onChange={e => setProfileName(e.target.value)} /></div><div><FieldLabel>Location</FieldLabel><input value={profileLocation} onChange={e => setProfileLocation(e.target.value)} /></div><div><FieldLabel>Experience</FieldLabel><div className="select-wrap"><select value={profileExperience} onChange={e => setProfileExperience(e.target.value)}><option>Student / recent graduate</option><option>0–2 years</option><option>2–4 years</option><option>5–8 years</option><option>8+ years</option></select><ChevronDown size={16} /></div></div><div><FieldLabel>Current direction</FieldLabel><div className="profile-role-link">{role}</div></div></div><FieldLabel>Short introduction</FieldLabel><textarea value={profileBio} onChange={e => setProfileBio(e.target.value)} /></section><aside className="profile-summary"><div className="card-label">PROFILE SNAPSHOT</div><h3>{profile?.focus ?? 'Interview practice'}</h3><dl><div><dt>Experience</dt><dd>{profileExperience}</dd></div><div><dt>Reflections</dt><dd>{completed ? 1 : 0}</dd></div></dl><div className="profile-evidence-note"><Fingerprint size={17} /><p>Profile details personalise your practice. They never generate a readiness score.</p></div></aside></div></div>}
-      {(view === 'reports' || view === 'report') && <div className="workspace-content">{!completed ? <><div className="page-title"><div><p className="eyebrow">EVIDENCE BEFORE ASSESSMENT</p><h1>Reflections</h1><p>Your feedback will appear here after a completed conversation.</p></div></div><div className="empty-state"><BarChart3 size={30} /><h2>No reflection yet.</h2><p>MIRROR won’t guess your readiness from a profile. Complete one interview to create an evidence-linked reflection.</p><Button onClick={() => void startInterview()}>Start first reflection <ArrowRight size={15} /></Button></div></> : <><div className="report-heading"><div><p className="eyebrow">LATEST REFLECTION · EXPERIENCE DEEP-DIVE</p><h1>{reflection ? 'Your notes from this session.' : 'Your answers are saved.'}</h1><p>{reflection ? 'Every quote below is something you said.' : 'The reflection has not been generated yet. Saved answers were not duplicated.'}</p></div><Button onClick={() => void startInterview()}><RotateCcw size={15} /> Practise again</Button></div>{flowLabel(flowState) && <p className="flow-banner" role="status">{flowLabel(flowState)}</p>}{!reflection && (flowState === 'provider_unavailable' || flowState === 'retryable_failure' || flowState === 'validation_failure' || flowState === 'generating_reflection') && <Button variant="secondary" onClick={() => void retryReflection()} disabled={busy}>Retry reflection</Button>}{reflection && <><section className="reflection-block"><div className="card-label"><Check size={16} /> WHAT STOOD OUT</div><ul role="list">{reflection.evidence.map((item, i) => <li key={i}><blockquote>“{item.quote}”</blockquote></li>)}</ul></section><section className="reflection-block"><div className="card-label"><Target size={16} /> KEEP WORKING ON</div><h2>{reflection.focus}</h2></section>{reflection.suggestion && <section className="next-step"><div><div className="eyebrow">SUGGESTION</div><h3>{reflection.suggestion}</h3></div><Button onClick={() => void startInterview()}>Try it in a new practice <ArrowRight size={16} /></Button></section>}</>}</>}</div>}
+      {view === 'profile' && <div className="workspace-content profile-content"><div className="page-title"><div><p className="eyebrow">YOUR CANDIDATE PROFILE</p><h1>Profile</h1><p>Shape the context MIRROR uses. Nothing here becomes an assessment by itself.</p></div><Button onClick={() => notify('Profile changes saved in this prototype.')}><Check size={15} /> Save profile</Button></div><section className="profile-identity"><div className="profile-avatar">{profileName.charAt(0)}</div><div><h2>{profileName}</h2><p>{role} · {profileLocation}</p><span><Circle size={7} fill="currentColor" /> Prototype profile · No account connected</span></div></section><div className="profile-layout"><section className="profile-form"><div className="profile-form-title"><h2>About you</h2><p>Keep this brief. Your interview answers matter more than this form.</p></div><div className="profile-field-grid"><div><FieldLabel>Display name</FieldLabel><input value={profileName} onChange={e => setProfileName(e.target.value)} /></div><div><FieldLabel>Location</FieldLabel><input value={profileLocation} onChange={e => setProfileLocation(e.target.value)} /></div><div><FieldLabel>Experience</FieldLabel><div className="select-wrap"><select value={profileExperience} onChange={e => setProfileExperience(e.target.value)}><option>Student / recent graduate</option><option>0–2 years</option><option>2–4 years</option><option>5–8 years</option><option>8+ years</option></select><ChevronDown size={16} /></div></div><div><FieldLabel>Current direction</FieldLabel><div className="profile-role-link">{role}</div></div></div><FieldLabel>Short introduction</FieldLabel><textarea value={profileBio} onChange={e => setProfileBio(e.target.value)} /></section><aside className="profile-summary"><div className="card-label">PROFILE SNAPSHOT</div><h3>{profile?.focus ?? 'Interview practice'}</h3><dl><div><dt>Experience</dt><dd>{profileExperience}</dd></div><div><dt>Sessions done</dt><dd>{completed ? 1 : 0}</dd></div></dl><div className="profile-evidence-note"><Fingerprint size={17} /><p>Profile details personalise your practice. They never generate a readiness score.</p></div></aside></div></div>}
+      {(view === 'reports' || view === 'report') && <Sessions openId={view === 'report' ? sessionId : null} refreshKey={reflection?.interviewId} onPractise={() => void startInterview()} onSaveStory={turn => void saveStoryFromAnswer({ question: turn.question, answer: turn.answer, sourceInterviewId: sessionId, sourceTurnId: turn.id }).then(() => notify('Saved to your stories.')).catch(() => notify('Could not save that story just now.'))} />}
+      {view === 'stories' && <Stories initialQuestion={storyQuestion} onInitialConsumed={() => setStoryQuestion(null)} />}
       {view === 'settings' && <div className="workspace-content settings-content"><div className="page-title"><div><p className="eyebrow">MAKE THE EXPERIENCE YOURS</p><h1>Settings</h1><p>Preferences for this interactive prototype. No account is connected.</p></div></div><section className="settings-section"><div><h3>Voice experience</h3><p>Preview the interface planned for Sarvam speech-to-text and text-to-speech.</p></div><div className="setting-row"><span><Volume2 size={18} /><b>Voice playback speed</b></span><div className="segmented">{['Slow', 'Natural', 'Fast'].map(item => <button key={item} className={voiceSpeed === item ? 'active' : ''} onClick={() => { setVoiceSpeed(item); notify(`Voice speed set to ${item.toLowerCase()} for this preview.`) }}>{item}</button>)}</div></div><div className="setting-row"><span><AudioLines size={18} /><b>Conversation language</b></span><div className="select-wrap small-select"><select value={language} onChange={e => setLanguage(e.target.value)}><option>English</option><option>हिन्दी</option><option>தமிழ்</option><option>తెలుగు</option></select><ChevronDown size={16} /></div></div></section><section className="settings-section"><div><h3>Comfort</h3><p>Reduce visual movement while preserving the live orb’s current state.</p></div><div className="setting-row"><span><Pause size={18} /><b>Calm motion</b></span><button className={`switch ${calmMotion ? 'on' : ''}`} onClick={() => setCalmMotion(!calmMotion)} role="switch" aria-checked={calmMotion}><i /></button></div></section><section className="settings-section"><div><h3>Technology plan</h3><p>The intended production integrations for the next build phase.</p></div><div className="tech-plan"><span>NVIDIA NIM<small>LLM orchestration</small></span><span>Sarvam<small>STT + TTS</small></span><span>Supabase<small>Backend</small></span></div></section><section className="settings-section danger-section"><div><h3>Reset prototype</h3><p>Clear demonstration answers, stories, and onboarding selections.</p></div><Button variant="ghost" onClick={resetDemo}><Trash2 size={15} /> Reset demo data</Button></section></div>}
     </main>{toast && <div className="toast">{toast}</div>}</div>
 }

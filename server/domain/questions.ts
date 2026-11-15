@@ -1,4 +1,9 @@
+import type { InterviewRow } from '../repo/types.js'
+
 export const TOTAL_QUESTIONS = 4 as const
+
+/** The number of questions this interview asks: a screen sets its own cap; practice is always four. */
+export const totalFor = (interview: Pick<InterviewRow, 'questionCap'>): number => interview.questionCap ?? TOTAL_QUESTIONS
 
 export const OPENING_QUESTION =
   'Tell me about a project or moment at work that you’re genuinely proud of.'

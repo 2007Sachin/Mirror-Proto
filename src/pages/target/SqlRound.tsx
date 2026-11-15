@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import type { Database } from 'sql.js'
 import { LiveOrb } from '../../components/LiveOrb'
-import { createDatabase, preview, runQuery, sameResult, type QueryResult } from './sqlEngine'
+import { preview, sameResult, type QueryResult } from './sqlEngine'
+import { cancelSql, disposeSql, isStopped, runSql, warmSql } from '../../practice/sql/worker/sqlRunner'
 import { problems, schemaTables } from './sqlProblems'
 import './sqlRound.css'
 
@@ -38,7 +38,8 @@ const fresh = (): Work => ({ query: '', result: null, solved: false, hint: false
 const solutions: Record<string, QueryResult> = {}
 
 export default function SqlRound({ target, onTurn, onFinish, onClose }: Props) {
-  const [db, setDb] = useState<Database | null>(null)
+  const [ready, setReady] = useState(false)
+  const [running, setRunning] = useState(false)
   const [loadFailed, setLoadFailed] = useState(false)
   const [attemptLoad, setAttemptLoad] = useState(0)
   const [idx, setIdx] = useState(0)
@@ -57,19 +58,28 @@ export default function SqlRound({ target, onTurn, onFinish, onClose }: Props) {
 
   useEffect(() => {
     let live = true
-    createDatabase().then(d => { if (live) setDb(d) }, () => { if (live) setLoadFailed(true) })
+    warmSql('target').then(() => { if (live) setReady(true) }, () => { if (live) setLoadFailed(true) })
     return () => { live = false }
   }, [attemptLoad])
+  useEffect(() => disposeSql, []) // end the SQL worker when this screen closes
 
   const patch = (p: Partial<Work>) => setW(prev => ({ ...prev, ...p }))
 
   const run = useCallback(async () => {
-    if (!db || busy.current) return
+    if (!ready || busy.current) return
     busy.current = true
+    setRunning(true)
     const p = problems[idx]
     try {
-      const result = runQuery(db, w.query)
-      solutions[p.id] ??= runQuery(db, p.solution)
+      const result = await runSql('target', w.query)
+      if (isStopped(result)) { patch({ result }); return } // cancelled: not an attempt
+      if (!solutions[p.id]) {
+        const sol = await runSql('target', p.solution)
+        if (isStopped(sol)) return
+        if (!('error' in sol)) solutions[p.id] = sol // a failed run is not remembered
+        else return void patch({ result: { error: 'The check could not run. Try again.' } })
+      }
+      setRunning(false)
       const passed = sameResult(result, solutions[p.id], p.ordered)
       const error = 'error' in result ? result.error : undefined
       attempts.current.set(p.id, { problemId: p.id, title: p.title, query: w.query, passed: passed || !!attempts.current.get(p.id)?.passed })
@@ -85,8 +95,9 @@ export default function SqlRound({ target, onTurn, onFinish, onClose }: Props) {
       if (mounted.current) patch({ waiting: false, followUp, offline })
     } finally {
       busy.current = false
+      setRunning(false)
     }
-  }, [db, idx, w.query, onTurn])
+  }, [ready, idx, w.query, onTurn])
 
   const finish = async () => {
     const list = [...attempts.current.values()]
@@ -134,7 +145,6 @@ export default function SqlRound({ target, onTurn, onFinish, onClose }: Props) {
   }
 
   const result = w.result
-  const ready = !!db
   return <div className="mirror-landing sql-round">
     <header className="sql-top">
       <div>
@@ -166,8 +176,9 @@ export default function SqlRound({ target, onTurn, onFinish, onClose }: Props) {
           <textarea id="sql-query" spellCheck={false} autoCapitalize="off" autoCorrect="off" value={w.query}
             placeholder="SELECT ..." onChange={e => patch({ query: e.target.value })} onKeyDown={onEditorKey} />
           <div className="sql-row">
-            <button className="ml-btn" disabled={!ready} onClick={() => void run()}>Run</button>
-            <span className="sql-note">{loadFailed ? '' : ready ? 'Ctrl or Cmd + Enter also runs it.' : 'Setting up your practice database…'}</span>
+            <button className="ml-btn" disabled={!ready || running} onClick={() => void run()}>Run</button>
+            {running && <button className="ml-btn ml-btn--quiet" onClick={cancelSql}>Cancel</button>}
+            <span className="sql-note" role="status">{loadFailed ? '' : running ? 'Running…' : ready ?'Ctrl or Cmd + Enter also runs it.' : 'Setting up your practice database…'}</span>
           </div>
           {loadFailed && <p className="sql-error" role="alert">The practice database did not load. <button className="sql-link" onClick={() => { setLoadFailed(false); setAttemptLoad(n => n + 1) }}>Retry</button></p>}
         </div>
@@ -183,7 +194,9 @@ export default function SqlRound({ target, onTurn, onFinish, onClose }: Props) {
                   <table><thead><tr>{result.columns.map(c => <th key={c}>{c}</th>)}</tr></thead>
                     <tbody>{result.rows.map((r, i) => <tr key={i}>{r.map((v, j) => <td key={j}>{v === null ? <i>NULL</i> : String(v)}</td>)}</tr>)}</tbody></table>
                 </div>
-                {result.total > result.rows.length && <p className="sql-note">Showing the first {result.rows.length} of {result.total} rows.</p>}
+                {result.truncated
+                  ? <p className="sql-note">Showing the first {result.rows.length} rows.</p>
+                  : result.total > result.rows.length && <p className="sql-note">Showing the first {result.rows.length} of {result.total} rows.</p>}
               </>)}
           {!result && <p className="sql-note">Your results show up here.</p>}
         </div>

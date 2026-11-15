@@ -1,5 +1,6 @@
 export type InterviewStatus = 'in_progress' | 'completed' | 'abandoned'
 export type TranscriptSource = 'text' | 'voice'
+export type InterviewKind = 'practice' | 'screen'
 
 export interface InterviewRow {
   id: string
@@ -9,6 +10,13 @@ export interface InterviewRow {
   status: InterviewStatus
   askedQuestions: string[]
   createdAt: string
+  /** Absent on rows written before screens existed; read as 'practice'. */
+  kind?: InterviewKind
+  /** Questions this interview asks; null/absent means the practice default (four). */
+  questionCap?: number | null
+  timeCapSeconds?: number | null
+  startedAt?: string | null
+  targetId?: string | null
 }
 
 export interface TurnRow {
@@ -68,6 +76,13 @@ export interface CreateInterviewInput {
   role: string
   industry?: string
   openingQuestion: string
+  kind?: InterviewKind
+  questionCap?: number | null
+  timeCapSeconds?: number | null
+  startedAt?: string | null
+  targetId?: string | null
+  /** Seeds ALL questions at once (a screen). Overrides openingQuestion. */
+  askedQuestions?: string[]
 }
 
 export interface AddTurnInput {
@@ -113,6 +128,8 @@ export interface AgentEvent {
   at: string
   agent: 'Scout' | 'Planner' | 'Interviewer' | 'Coach'
   text: string
+  /** Set on Planner lines: whether the model or the plain fallback wrote it. */
+  source?: 'ai' | 'fallback'
 }
 
 export interface Debrief {
@@ -161,6 +178,91 @@ export interface PracticeAttemptRow extends PracticeAttemptInput {
   createdAt: string
 }
 
+// ---- New data stores (memory now; Supabase throws storage_not_ready until auth lands). All scoped by workspace. ----
+
+export interface AnswerAttemptInput {
+  interviewId: string | null
+  questionIndex: number | null
+  question: string
+  attempt: number
+  answer: string
+  kind: 'retry' | 'explain'
+  itemId?: string | null
+  transcriptSource: TranscriptSource
+}
+export interface AnswerAttemptRow extends AnswerAttemptInput {
+  id: string
+  workspaceId: string
+  createdAt: string
+}
+export interface AnswerAttemptFilter {
+  interviewId?: string
+  itemId?: string
+  kind?: AnswerAttemptInput['kind']
+}
+
+export interface StoryInput {
+  title: string
+  themes: string[]
+  situation: string
+  task: string
+  action: string
+  result: string
+  quote: string | null
+  question: string | null
+  sourceInterviewId: string | null
+  sourceTurnId: string | null
+}
+export interface StoryRow extends StoryInput {
+  id: string
+  workspaceId: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ResumeClaimInput {
+  quote: string
+  skills: string[]
+  hasNumber: boolean
+  vague: boolean
+}
+export interface ResumeClaimRow extends ResumeClaimInput {
+  id: string
+  workspaceId: string
+  createdAt: string
+}
+
+export interface GapMatchInput {
+  targetId: string
+  skill: string
+  area: string
+  weight: 'core' | 'nice'
+  status: 'covered' | 'partial' | 'gap'
+  claimQuote: string | null
+  note: string
+  probeQuestion: string | null
+  source: 'ai' | 'fallback'
+}
+export interface GapMatchRow extends GapMatchInput {
+  id: string
+  workspaceId: string
+  createdAt: string
+}
+
+/** A typed contract only; the first scheduler is stateless. */
+export interface ReplayItemInput {
+  itemId: string
+  dueAt: string
+  intervalDays: number
+  rung: number
+  lastResult: boolean | null
+}
+export interface ReplayItemRow extends ReplayItemInput {
+  id: string
+  workspaceId: string
+  updatedAt: string
+}
+
 export interface Repository {
   ensureWorkspace(slug: string): Promise<void>
   createInterview(workspace: string, input: CreateInterviewInput): Promise<InterviewRow>
@@ -168,8 +270,8 @@ export interface Repository {
   updateInterviewStatus(workspace: string, id: string, status: InterviewStatus): Promise<void>
   appendAskedQuestion(workspace: string, id: string, question: string): Promise<InterviewRow | null>
   listInterviewsByRole(workspace: string, role: string): Promise<InterviewRow[]>
-  /** Newest first. */
-  listInterviews(workspace: string): Promise<InterviewRow[]>
+  /** Newest first. `before` is a createdAt cursor: only older rows. Without `limit`, memory returns all and Supabase 20. */
+  listInterviews(workspace: string, page?: { limit?: number; before?: string }): Promise<InterviewRow[]>
   addTurn(workspace: string, interviewId: string, input: AddTurnInput): Promise<TurnRow>
   getTurns(workspace: string, interviewId: string): Promise<TurnRow[]>
   saveReflection(workspace: string, input: SaveReflectionInput): Promise<ReflectionRow>
@@ -186,4 +288,28 @@ export interface Repository {
   addPracticeAttempt(workspace: string, input: PracticeAttemptInput): Promise<PracticeAttemptRow>
   /** Oldest first, capped at 5000 rows. */
   getPracticeAttempts(workspace: string, sinceIso?: string): Promise<PracticeAttemptRow[]>
+
+  /** Oldest first. */
+  addAnswerAttempt(workspace: string, input: AnswerAttemptInput): Promise<AnswerAttemptRow>
+  listAnswerAttempts(workspace: string, filter?: AnswerAttemptFilter): Promise<AnswerAttemptRow[]>
+  deleteAnswerAttempts(workspace: string): Promise<void>
+  createStory(workspace: string, input: StoryInput): Promise<StoryRow>
+  /** Newest first. */
+  listStories(workspace: string): Promise<StoryRow[]>
+  getStory(workspace: string, id: string): Promise<StoryRow | null>
+  updateStory(workspace: string, id: string, patch: Partial<StoryInput>): Promise<StoryRow | null>
+  deleteStory(workspace: string, id: string): Promise<void>
+  deleteAllStories(workspace: string): Promise<void>
+  replaceResumeClaims(workspace: string, claims: ResumeClaimInput[]): Promise<ResumeClaimRow[]>
+  listResumeClaims(workspace: string): Promise<ResumeClaimRow[]>
+  deleteResumeClaims(workspace: string): Promise<void>
+  replaceGapMatches(workspace: string, targetId: string, rows: Omit<GapMatchInput, 'targetId'>[]): Promise<GapMatchRow[]>
+  listGapMatches(workspace: string, targetId: string): Promise<GapMatchRow[]>
+  /** One row per itemId. */
+  upsertReplayItem(workspace: string, input: ReplayItemInput): Promise<ReplayItemRow>
+  /** Soonest due first. */
+  listReplaySchedule(workspace: string): Promise<ReplayItemRow[]>
+  deleteReplayItem(workspace: string, itemId: string): Promise<void>
+  /** Clears every store above for the workspace (reset). */
+  deleteAllNewData(workspace: string): Promise<void>
 }

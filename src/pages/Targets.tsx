@@ -1,6 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import '../landing.css'
 import './targets.css'
+import FallbackNote from '../components/FallbackNote'
+import MatchSection from '../features/match/MatchSection'
 import { api, type Skill, type SkillArea, type Target, type TargetSummary } from '../lib/api'
 
 // The SQL round (and sql.js with it) loads only when someone opens it.
@@ -34,14 +36,18 @@ function countdown(date: string | null): string | null {
 }
 const time = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
 
-export default function Targets({ openId, onOpen, onPractise }: {
+export default function Targets({ openId, onOpen, onPractise, onPractiseProbe, onScreen }: {
   openId: string | null
   onOpen: (id: string | null) => void
   onPractise: (role: string) => void
+  /** Optional: when given, each résumé probe question gets a "Practise this question" button. */
+  onPractiseProbe?: (question: string) => void
+  /** Starts a realistic screening call for this target. */
+  onScreen?: (targetId: string) => void
 }) {
   return (
     <div className="mirror-landing targets">
-      {openId ? <Mission key={openId} id={openId} onBack={() => onOpen(null)} onPractise={onPractise} /> : <List onOpen={onOpen} />}
+      {openId ? <Mission key={openId} id={openId} onBack={() => onOpen(null)} onPractise={onPractise} onPractiseProbe={onPractiseProbe} onScreen={onScreen} /> : <List onOpen={onOpen} />}
     </div>
   )
 }
@@ -152,7 +158,7 @@ function AddForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (id
   )
 }
 
-function Mission({ id, onBack, onPractise }: { id: string; onBack: () => void; onPractise: (role: string) => void }) {
+function Mission({ id, onBack, onPractise, onPractiseProbe, onScreen }: { id: string; onBack: () => void; onPractise: (role: string) => void; onPractiseProbe?: (question: string) => void; onScreen?: (targetId: string) => void }) {
   const [target, setTarget] = useState<Target | null>(null)
   const [failures, setFailures] = useState(0)
   const [sqlOpen, setSqlOpen] = useState(false)
@@ -251,6 +257,7 @@ function Mission({ id, onBack, onPractise }: { id: string; onBack: () => void; o
             <section className="ml-glass tg-card-body tg-plan">
               <p className="ml-eyebrow">The Planner&rsquo;s plan</p>
               <p className="tg-next">{target.nextStep}</p>
+              <FallbackNote source={target.nextStepSource} />
             </section>
           )}
 
@@ -275,6 +282,8 @@ function Mission({ id, onBack, onPractise }: { id: string; onBack: () => void; o
             })}
           </section>
 
+          <MatchSection targetId={id} onPractiseProbe={onPractiseProbe} />
+
           <section className="ml-glass tg-card-body" aria-labelledby="tg-rounds">
             <h2 id="tg-rounds">Rounds to practise</h2>
             <ul className="tg-rounds">
@@ -287,6 +296,13 @@ function Mission({ id, onBack, onPractise }: { id: string; onBack: () => void; o
                 </li>
               ))}
             </ul>
+            {onScreen && (
+              <div className="tg-screen">
+                <button type="button" className="ml-btn ml-btn--sm" disabled={target.skills.length === 0} aria-describedby={target.skills.length === 0 ? 'tg-screen-why' : undefined} onClick={() => onScreen(target.id)}>Practise a screening call</button>
+                <p className="tg-muted">A short call with questions from this job, no hints, and it ends by itself.</p>
+                {target.skills.length === 0 && <p id="tg-screen-why" className="tg-muted">We did not find skills in this description yet, so there is nothing to ask about.</p>}
+              </div>
+            )}
           </section>
 
           {debriefs.length > 0 && (

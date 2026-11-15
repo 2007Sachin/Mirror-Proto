@@ -114,12 +114,12 @@ export default function Practice({ initialItemId = null, onInitialConsumed, onCh
                   <button type="button" className="ml-glass pr-track" onClick={() => setTrack(t.track)}>
                     <b>{t.title}</b>
                     <span className="pr-blurb">{t.blurb}</span>
-                    <span className="pr-solved">{summary ? `Solved ${solved} of ${t.items.length}` : `${t.items.length} exercises`}</span>
+                    <span className="pr-solved">{summary ? `${solved} solved` : `${t.items.length} exercises`}</span>
                     <span className="pr-ladder">
                       {LEVELS.map(l => {
                         const at = t.items.filter(i => i.level === l)
                         if (!at.length) return null
-                        return <span key={l}>Level {l}: {summary ? at.filter(i => solvedIn(stats, i.id)).length : '–'} of {at.length}</span>
+                        return <span key={l}>Level {l}: {summary ? `${at.filter(i => solvedIn(stats, i.id)).length} solved` : `${at.length} exercises`}</span>
                       })}
                     </span>
                     {t.track === 'python' && <small>{PYTHON_NOTE}</small>}

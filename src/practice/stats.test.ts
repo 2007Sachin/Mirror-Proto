@@ -117,7 +117,7 @@ describe('recommend', () => {
     expect(recommend(s, tracks, [], now)?.itemId).toBe('sql-a')
   })
   it('then an untouched topic of a track a target needs', () => {
-    const s: PracticeSummary = { days: [], items: [stat({ itemId: 'sql-a', lastAt: ago(1), solvedAt: ago(1) })] }
+    const s: PracticeSummary = { days: [], items: [stat({ itemId: 'sql-a', lastAt: ago(0), solvedAt: ago(0) })] }
     const r = recommend(s, tracks, [target], now)
     expect(r?.itemId).toBe('st-a')
     expect(r?.reason).toContain('Northwind')
@@ -128,7 +128,31 @@ describe('recommend', () => {
     expect(r?.reason).not.toMatch(/\d\s?%/)
   })
   it('returns null when everything has been tried and nothing is due', () => {
-    const s: PracticeSummary = { days: [], items: tracks.flatMap(x => x.items).map(i => stat({ itemId: i.id, track: i.track, topic: i.topic })) }
+    const s: PracticeSummary = { days: [], items: tracks.flatMap(x => x.items).map(i => stat({ itemId: i.id, track: i.track, topic: i.topic, lastAt: ago(0), solvedAt: ago(0) })) }
     expect(recommend(s, tracks, [], now)).toBeNull()
+  })
+})
+
+describe('recommend with spaced replay', () => {
+  const day = (n: number) => new Date(2026, 10, 11 - n, 9).toISOString()
+  const one = (id: string, n: number) => stat({ itemId: id, lastAt: day(n), history: [{ at: day(n), correct: true }] })
+  it('a due replay beats untouched topics but not a weak spot', () => {
+    const due: PracticeSummary = { days: [], items: [one('sql-a', 2)] }
+    expect(recommend(due, tracks, [], now)?.reason).toContain('You tried this 2 days ago')
+    const weak: PracticeSummary = { days: [], items: [one('sql-a', 2), stat({ itemId: 'sql-b', firstTryCorrect: false, solved: false, lastAt: day(0) })] }
+    expect(recommend(weak, tracks, [], now)?.itemId).toBe('sql-b')
+  })
+  it('names the interview when gaps are compressed', () => {
+    const s: PracticeSummary = { days: [], items: [stat({ itemId: 'sql-a', lastAt: day(4), history: [{ at: day(5), correct: true }, { at: day(4), correct: true }] })] }
+    expect(recommend(s, tracks, [], now, '2026-11-14')?.reason).toContain('interview is in 3 days')
+  })
+  it('retired items do not come back', () => {
+    const hist = [1, 2, 5, 12].map(d => ({ at: new Date(2026, 9, d, 9).toISOString(), correct: true }))
+    const s: PracticeSummary = { days: [], items: [stat({ itemId: 'sql-a', lastAt: hist[3].at, history: hist })] }
+    expect(recommend(s, tracks, [], now)?.reason).not.toContain('replay')
+  })
+  it('ties break by item id', () => {
+    const s: PracticeSummary = { days: [], items: [one('sql-b', 2), one('sql-a', 2)] }
+    expect(recommend(s, tracks, [], now)?.itemId).toBe('sql-a')
   })
 })

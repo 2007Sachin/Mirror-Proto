@@ -21,7 +21,7 @@ function actionLabel(n: JourneyNode) {
 }
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`
 const nodeLabel = (n: JourneyNode) =>
-  [n.title, n.total ? `${n.solved} of ${n.total} solved` : null, plural(n.stars, 'star'), n.status === 'current' ? 'recommended next' : n.status === 'done' ? 'done' : null].filter(Boolean).join(', ')
+  [n.title, n.total ? `${n.solved} solved` : null, plural(n.stars, 'star'), n.status === 'current' ? 'recommended next' : n.status === 'done' ? 'done' : null].filter(Boolean).join(', ')
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 
 function Medal({ title, earned }: { title: string; earned: boolean }) {
@@ -108,7 +108,7 @@ export default function JourneyMap({ state, onOpenNode, onContinue }: { state: J
             <section key={w.id} className={`jm-world${w.done ? ' is-done' : ''}`} aria-labelledby={`jw-${w.id}`}>
               <div className="jm-banner" style={{ width: `min(100%, ${trackW}px)` }}>
                 <div><h2 id={`jw-${w.id}`}>{w.title}</h2><p>{w.subtitle}</p></div>
-                <div className="jm-count"><Medal title={w.badge} earned={w.done} /><span>{done} of {w.nodes.length} done</span></div>
+                <div className="jm-count"><Medal title={w.badge} earned={w.done} /><span>{done} done</span></div>
               </div>
               <ol className="jm-path" style={{ height: w.nodes.length * ROW_H, width: trackW }}>
                 <svg className="jm-line" width={trackW} height={w.nodes.length * ROW_H} aria-hidden="true">
@@ -136,7 +136,7 @@ export default function JourneyMap({ state, onOpenNode, onContinue }: { state: J
                       </div>
                       <div className={`jm-title${left ? ' is-left' : ''}`} style={left ? { right: trackW - x + size / 2 + 8 } : { left: x + size / 2 + 8 }}>
                         <b>{n.title}</b>
-                        <small>{n.total ? `${n.solved} of ${n.total} · ` : ''}{n.minutes} min{n.status === 'current' ? ' · Start here' : ''}</small>
+                        <small>{n.total ? `${n.solved} solved · ` : ''}{n.minutes} min{n.status === 'current' ? ' · Start here' : ''}</small>
                       </div>
                     </li>
                   )
@@ -153,9 +153,9 @@ export default function JourneyMap({ state, onOpenNode, onContinue }: { state: J
                           <p>{openNode.blurb}</p>
                           <dl>
                             <div><dt>Time</dt><dd>{openNode.minutes} min</dd></div>
-                            <div><dt>Stars</dt><dd>{openNode.stars} of 3</dd></div>
+                            <div><dt>Stars</dt><dd>{openNode.stars} stars</dd></div>
                             <div><dt>On offer</dt><dd>+{openNode.xp} XP</dd></div>
-                            {openNode.total > 0 && <div><dt>Progress</dt><dd>{openNode.solved} of {openNode.total}</dd></div>}
+                            {openNode.total > 0 && <div><dt>Progress</dt><dd>{openNode.solved} solved</dd></div>}
                           </dl>
                           <button type="button" className="jm-cta" autoFocus onClick={() => onOpenNode(openNode)}>{actionLabel(openNode)}</button>
                         </div>

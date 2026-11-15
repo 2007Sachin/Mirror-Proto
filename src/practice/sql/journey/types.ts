@@ -34,6 +34,6 @@ export interface JourneyState {
   xp: number
   level: { n: number; title: string; xpIntoLevel: number; xpForNext: number }
   badges: { id: string; title: string; earned: boolean }[]
-  quest: { text: string; progress: string; done: boolean }   // today's small goal, e.g. 'Solve 3 problems today' with '1 of 3'
+  quest: { text: string; progress: string; done: boolean }   // today's small goal, e.g. 'Solve a few problems today' with '1 done'
   guide: { mood: 'welcome' | 'cheer' | 'nudge'; text: string; cta: { label: string; nodeId: string } | null }
 }

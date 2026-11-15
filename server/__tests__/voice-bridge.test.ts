@@ -39,6 +39,28 @@ describe('submitVoiceTurn', () => {
     expect(reloaded?.askedQuestions).toEqual([OPENING_QUESTION, 'What was specifically yours to own?'])
   })
 
+  it('retry after a follow-up failure does not save the answer twice', async () => {
+    const repo = createMemoryRepository()
+    await repo.ensureWorkspace('dev')
+    const interview = await repo.createInterview('dev', { role: 'Product Analyst', openingQuestion: OPENING_QUESTION })
+    const { ProviderFailure } = await import('../providers/nim.js')
+    // A failing follow-up never fails the turn any more (the question falls back to the catalogue), and a
+    // retry of the same answer index must not add the answer a second time.
+    const provider = {
+      async generateFollowUp() {
+        throw new ProviderFailure('provider_unavailable')
+      },
+      async generateReflection() {
+        throw new Error('unused')
+      },
+    }
+    const first = await submitVoiceTurn(repo, 'dev', interview.id, 0, 'I led the redesign.', provider as never)
+    expect(first).toMatchObject({ ok: true, nextQuestionIndex: 1 })
+    const retry = await submitVoiceTurn(repo, 'dev', interview.id, 0, 'I led the redesign again.', provider as never)
+    expect(retry).toMatchObject({ ok: true, nextQuestionIndex: 1 })
+    expect(await repo.getTurns('dev', interview.id)).toHaveLength(1)
+  })
+
   it('rejects empty transcripts using the interview state machine', async () => {
     const repo = createMemoryRepository()
     await repo.ensureWorkspace('dev')

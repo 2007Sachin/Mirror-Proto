@@ -559,7 +559,7 @@ const rows: Row[] = [
     'All Pune rows of any age, plus Delhi rows where age is above 30',
     ['Pune or Delhi rows, only where age is above 30', 'Only rows that are in both cities', 'The query is invalid without brackets'],
     'AND binds tighter than OR, so it reads as Pune OR (Delhi AND age > 30). To mean both cities over 30 you need brackets: (city = \'Pune\' OR city = \'Delhi\') AND age > 30. Always bracket mixed logic.',
-    'AND is evaluated before OR, so I get every Pune row, plus Delhi rows over 30. If I want the age filter on both cities, I need brackets around the two cities.',
+    'AND is applied before OR, so I get every Pune row, plus Delhi rows over 30. If I want the age filter on both cities, I need brackets around the two cities.',
     'How would you write it to filter both cities by age?',
     'Conditions are read left to right.'],
 ]

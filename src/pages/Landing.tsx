@@ -133,7 +133,7 @@ export default function Landing({ onTry }: { onTry: () => void }) {
           <Reveal>
             <p className="ml-eyebrow">A sample session</p>
             <h2 id="call-title">Like a video call with someone who listens.</h2>
-            <p className="ml-body">One question at a time. The next one follows what you just said. Press play to watch a short sample.</p>
+            <p className="ml-body">One at a time. The next question follows what you just said. Press play to watch a short sample.</p>
           </Reveal>
           <Session reduced={reduced} />
         </section>

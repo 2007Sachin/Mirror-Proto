@@ -97,7 +97,7 @@ export default function Path({ mod, stats, days = [], loaded, onAttempt, renderD
     return (
       <>
         <div className="sp-strip" role="status">
-          <span className="sp-strip-t">Problem {run.idx + 1} of {run.queue.length}{left !== null && ` · ${left} min left`}</span>
+          <span className="sp-strip-t">Problem {run.idx + 1}{left !== null && ` · ${left} min left`}</span>
           <span className="sp-strip-actions">
             {res?.solved && <button type="button" className="ml-btn ml-btn--sm" onClick={next}>{last ? 'Finish' : 'Next problem'}</button>}
             {!res?.solved && !last && <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={next}>Skip for now</button>}
@@ -166,7 +166,7 @@ function Free({ mod, mods, solved, loaded, conceptItems, ended, onAgain, open, s
   const { groups, stories } = freeSections(mods, levels.map(l => l.id))
   const modRow = (x: Mod) => {
     const { done, total } = moduleProgress(x, solved)
-    return <Row key={x.id} title={x.title} done={done} total={total} loaded={loaded} meta={`${x.minutes} min · ${loaded ? `${done} of ${total}` : `${total} problems`}`} onClick={() => open(x.id)} />
+    return <Row key={x.id} title={x.title} done={done} total={total} loaded={loaded} meta={`${x.minutes} min · ${loaded ? `${done} solved` : `${total} problems`}`} onClick={() => open(x.id)} />
   }
   return (
     <div className="sp-free">
@@ -197,7 +197,7 @@ function Free({ mod, mods, solved, loaded, conceptItems, ended, onAgain, open, s
             {conceptTopics.map(t => {
               const { done, total } = topicProgress(conceptItems, t, solved)
               if (!total) return null
-              return <Row key={t} title={t} done={done} total={total} loaded={loaded} meta={loaded ? `${done} of ${total}` : `${total} questions`}
+              return <Row key={t} title={t} done={done} total={total} loaded={loaded} meta={loaded ? `${done} solved` : `${total} problems`}
                 action={<button type="button" className="ml-btn ml-btn--sm" onClick={() => startRun(topicQueue(conceptItems, t, solved).map(i => i.id))}>{loaded && done === total ? 'Again' : 'Start'}</button>} />
             })}
             <li className="sp-row sp-row--end"><button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={() => startRun(mixedQueue(conceptItems, conceptTopics, solved, 10).map(i => i.id))}>Mixed 10</button></li>
@@ -210,7 +210,7 @@ function Free({ mod, mods, solved, loaded, conceptItems, ended, onAgain, open, s
 
 function ModuleView({ m, solved, loaded, startRun }: { m: Mod; solved: Set<string>; loaded: boolean; startRun: StartRun }) {
   const Scene = m.sceneId ? scenes[m.sceneId] : undefined
-  const { done, total } = moduleProgress(m, solved)
+  const { done } = moduleProgress(m, solved)
   const todo = unsolvedIds(m, solved)
   const story = m.kind === 'situation' || m.kind === 'case'
   const items = m.problemIds.filter(id => findItem(id))
@@ -241,7 +241,7 @@ function ModuleView({ m, solved, loaded, startRun }: { m: Mod; solved: Set<strin
               {todo.length === 0 ? 'Practise again' : done === 0 ? 'Start the first one' : 'Continue'}
             </button>
           )}
-          {loaded && items.length > 0 && <p className="sp-meta">{done} of {total} solved</p>}
+          {loaded && items.length > 0 && <p className="sp-meta">{done} solved</p>}
         </section>
       </div>
     </article>

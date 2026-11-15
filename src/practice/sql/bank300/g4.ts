@@ -23,7 +23,7 @@ const X = (
 
 // Part 1: self-joins and hierarchies
 const part1: SqlProblem[] = [
-  X(3, S, 'P', 'Paid 75%+ of manager pay', 5,
+  X(3, S, 'P', 'Paid most of manager pay', 5,
     'Nobody here out-earns their manager, so HR wants to see who sits closest to the manager pay line.',
     'List each employee whose salary is at least 75% of their manager salary (employees.salary). Show employee, manager, salary and manager_salary. The boss has no manager and is left out. Order by employee name.',
     'employee, manager, salary, manager_salary; by employee', 'Self-join on manager_id', 'PS',
@@ -727,7 +727,7 @@ WHERE m.oct_units < m.nov_units AND m.nov_units < m.dec_units ORDER BY c.name`, 
 SELECT p.name, cur.month, prev.units AS prev_units, cur.units
 FROM m cur JOIN m prev ON prev.product_id = cur.product_id AND prev.month = strftime('%Y-%m', date(cur.month || '-01', '-1 month'))
 JOIN products p ON p.id = cur.product_id WHERE cur.units >= 2 * prev.units ORDER BY p.name, cur.month`, true),
-  X(196, TR, 'A', 'Spend up 20% in December', 7,
+  X(196, TR, 'A', 'Spend up a fifth in December', 7,
     'Which customers stepped up spending most sharply at the end of the year?',
     'List customers whose December 2025 spend (sales.amount) was at least 20% higher than November 2025 (as of 31 Dec 2025). They must have bought in November. Show name, nov_spend, dec_spend and pct_increase (1 decimal). Order by pct desc, name.',
     'name, nov_spend, dec_spend, pct_increase; by pct desc', 'Month-over-month growth threshold', 'ON',

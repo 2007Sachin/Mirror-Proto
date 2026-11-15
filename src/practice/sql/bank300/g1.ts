@@ -665,7 +665,7 @@ const part3: SqlProblem[] = [
     `NOT EXISTS alone also accepts orders with no lines at all, so add an EXISTS check. This is the all-lines-satisfy pattern.`,
     `SELECT o.id AS order_id, c.name FROM orders o JOIN customers c ON c.id = o.customer_id WHERE EXISTS (SELECT 1 FROM order_items i WHERE i.order_id = o.id) AND NOT EXISTS (SELECT 1 FROM order_items i WHERE i.order_id = o.id AND i.qty < 2) ORDER BY o.id`, true),
 
-  Q(248, 'A', 'P', 'Within ten percent of the team average', 6,
+  Q(248, 'A', 'P', 'Close to the team average', 6,
     `Compensation looks for people paid close to the typical pay in their department (dept text on employees).`,
     `Return employees whose salary is within 10 percent of their department's average (inclusive): name, dept, salary and dept_avg (2 decimals). Order by dept, then name.`,
     `name, dept, salary, dept_avg (by dept, name)`, `Compare each row to its group average`, 'O',

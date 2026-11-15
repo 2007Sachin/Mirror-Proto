@@ -1,11 +1,10 @@
 // WebSocket client for the MIRROR voice gateway.
-// - Sends hello{interviewId, token:'dev', resumeSessionId?} first.
+// - Sends hello{interviewId, resumeSessionId?} first.
 // - Maintains per-direction seq counters (outbound increments on every send).
 // - Reconnects with exponential backoff, resuming the same sessionId within 60 s.
 // - Drops stale messages: tts_audio received after an interrupt (until the next
 //   tts_start) and any message tagged with an old turnId.
 
-import { DEV_WORKSPACE } from '../lib/api'
 import {
   VOICE_WS_URL,
   PROTOCOL_VERSION,
@@ -26,7 +25,6 @@ type Handler = (payload: unknown, env: Envelope) => void
 
 export interface VoiceClientOptions {
   url?: string
-  token?: string
   /** Called whenever the effective connection state changes. */
   onConnectionChange?: (connected: boolean) => void
   /** Max age (ms) of a sessionId still eligible for resume. */
@@ -36,7 +34,6 @@ export interface VoiceClientOptions {
 
 export class VoiceClient {
   readonly url: string
-  readonly token: string
 
   sessionId: string | null = null
   interviewId: string | null = null
@@ -61,8 +58,7 @@ export class VoiceClient {
 
   constructor(options: VoiceClientOptions = {}) {
     this.url = options.url ?? VOICE_WS_URL
-    this.token = options.token ?? DEV_WORKSPACE
-    this.resumeWindowMs = options.resumeWindowMs ?? 60_000
+        this.resumeWindowMs = options.resumeWindowMs ?? 60_000
     this.backoff = options.backoff ?? { initialMs: 500, maxMs: 8_000 }
     this.onConnectionChange = options.onConnectionChange
   }
@@ -137,7 +133,7 @@ export class VoiceClient {
         this.onConnectionChange?.(true)
         const hello: HelloPayload = {
           interviewId,
-          token: this.token,
+          token: 'cookie', // the server ignores this: identity comes from the session cookie on the upgrade
           ...(this.sessionId && Date.now() - this.sessionStartedAt < this.resumeWindowMs
             ? { resumeSessionId: this.sessionId }
             : {}),

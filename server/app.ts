@@ -23,6 +23,8 @@ import { extractClaims, matchClaims } from './domain/resume.js'
 import type { ReflectionProvider } from './providers/types.js'
 import { ProviderFailure, createNimClient, withDeadline, type NimLog } from './providers/nim.js'
 import { requireUser } from './auth/requireUser.js'
+import { originCheck } from './auth/csrf.js'
+import type { AuthClientFactory } from './auth/supabaseAuth.js'
 import type { AuthProvider, RepoFactory } from './auth/types.js'
 import { AppError, errorHandler } from './middleware/errors.js'
 import { registerReplayRoutes } from './routes/replay.js'
@@ -40,6 +42,8 @@ export interface AppDeps {
   auth: AuthProvider
   /** Builds the per-request repository for that user. */
   repoFor: RepoFactory
+  /** Tests inject a fake Supabase client for the /auth routes. */
+  authClientFactory?: AuthClientFactory
   provider?: ReflectionProvider | null
   log?: NimLog
   /** One overall budget per AI call, in ms. Default 8 s; tests use a few ms. */
@@ -205,6 +209,7 @@ export function buildApp(deps: AppDeps): Hono {
 
   const api = new Hono()
   const guard = requireUser(auth, repoFor)
+  api.use('*', originCheck(env)) // cookie auth: refuse cross-site writes
   api.use('/interviews', guard)
   api.use('/interviews/*', guard)
   api.use('/onboarding/*', guard)
@@ -769,7 +774,7 @@ export function buildApp(deps: AppDeps): Hono {
       origin: ['http://localhost:3000', 'http://localhost:5173'],
     }),
   )
-  registerAuthRoutes(app, routeDeps) // outside the guarded groups: this is how a caller signs in
+  registerAuthRoutes(app, { env, auth, repoFor, clientFactory: deps.authClientFactory }) // outside the guarded groups: this is how a caller signs in
   app.route('/api', api)
   app.route('/', api)
   return app

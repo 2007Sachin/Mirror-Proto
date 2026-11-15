@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { api, ApiError, type Profile, type Reflection } from './lib/api'
+import { api, authApi, ApiError, type Profile, type Reflection } from './lib/api'
 import type { OrbState } from './components/LiveOrb'
 import Landing from './pages/Landing'
 import FirstInterview from './pages/FirstInterview'
@@ -12,6 +12,9 @@ import Stories from './pages/Stories'
 import { saveStoryFromAnswer } from './stories/saveStory'
 import { useVoiceSession } from './voice/useVoiceSession'
 import * as data from './lib/data'
+import { useSession } from './features/auth/useSession'
+import AuthGate from './features/auth/AuthGate'
+import AccountMenu from './features/auth/AccountMenu'
 import { useScreenClock } from './features/screen/countdown'
 import { ScreenDebriefPage } from './features/screen/ScreenDebrief'
 import { createScreen } from './lib/screenApi'
@@ -65,6 +68,15 @@ function FieldLabel({ children, optional = false }: { children: ReactNode; optio
 }
 export default function App() {
   const [view, setView] = useState<View>('home')
+  // Auth: who is signed in. The landing is public; every other view needs a session (or the local demo).
+  const session = useSession()
+  const authed = session.status === 'signedIn' || session.status === 'demo'
+  const signOut = async () => {
+    try { await authApi.signOut() } catch { /* the cookie may already be gone */ }
+    session.clear()
+    sessionStorage.removeItem(SESSION_STORAGE_KEY)
+    window.location.assign('/') // a fresh page drops every in-memory copy of this user's data
+  }
   const [targetId, setTargetId] = useState<string | null>(null)
   const [role, setRole] = useState('')
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -343,6 +355,7 @@ export default function App() {
 
   const profileFresh = useRef(false) // set when The First Interview finishes here, so a slow fetch can't overwrite it
   useEffect(() => {
+    if (!authed) return
     api.getProfile()
       .then(p => {
         if (profileFresh.current) return
@@ -350,13 +363,14 @@ export default function App() {
         setView(v => (v === 'firstInterview' ? 'workspace' : v)) // clicked Start before this arrived
       })
       .catch(() => undefined) // 404 = not onboarded yet
-  }, [])
+  }, [authed])
 
   useEffect(() => {
     document.title = 'MIRROR — You know what you did'
   }, [])
 
   useEffect(() => {
+    if (!authed) return
     const saved = sessionStorage.getItem(SESSION_STORAGE_KEY)
     if (!saved) return
     // Completed, abandoned or missing: forget it and show the normal Overview.
@@ -378,7 +392,7 @@ export default function App() {
       })
       // Only a missing session is forgotten; a network slip keeps the breadcrumb so the open interview is not lost.
       .catch(err => (err instanceof ApiError && err.status === 404 ? forget() : setView('workspace')))
-  }, [])
+  }, [authed])
 
   useEffect(() => {
     if (view !== 'interview' || !sessionId) return
@@ -395,6 +409,11 @@ export default function App() {
   }, [view, sessionId])
 
   if (view === 'home') return <Landing onTry={() => go(profile ? 'workspace' : 'firstInterview')} />
+
+  if (!authed) {
+    const failed = new URLSearchParams(window.location.search).get('auth') === 'failed'
+    return <AuthGate session={session} notice={failed ? 'That link did not work. Please ask for a new one.' : null} onBack={() => go('home')}><></></AuthGate>
+  }
 
   if (view === 'firstInterview') {
     return <FirstInterview
@@ -449,7 +468,7 @@ export default function App() {
   return <div className={`app workspace-app ${calmMotion ? 'reduce-motion' : ''}`}><div className="ambient ambient--two" />
     <aside className={`sidebar ${mobileNav ? 'sidebar--open' : ''}`}><div className="sidebar-top"><Brand onClick={() => go('home')} /><button className="mobile-close" onClick={() => setMobileNav(false)}><X /></button></div><nav>{navItems.map(item => <button key={item.id} className={view === item.id || (view === 'report' && item.id === 'reports') ? 'active' : ''} onClick={() => { if (item.id === 'targets') setTargetId(null); go(item.id) }}><item.icon size={18} />{item.label}</button>)}</nav><div className="sidebar-bottom"><button onClick={() => go('settings')} className={view === 'settings' ? 'active' : ''}><Settings size={18} />Settings</button><button className="demo-profile" onClick={() => go('profile')}><span>{profileName.charAt(0)}</span><div><b>{profileName}’s workspace</b><small>View candidate profile</small></div></button></div></aside>
     {mobileNav && <button className="nav-scrim" aria-label="Close navigation" onClick={() => setMobileNav(false)} />}
-    <main className="workspace-main"><header className="workspace-header"><button className="mobile-menu" onClick={() => setMobileNav(true)}><Menu size={21} /></button><div><span className="workspace-breadcrumb">MIRROR / {view === 'workspace' ? 'TODAY' : view === 'report' || view === 'reports' ? 'SESSIONS' : view.toUpperCase()}</span></div><div className="header-actions"><span className="demo-badge"><Circle size={7} fill="currentColor" /> DEMO</span><button className="avatar-button" onClick={() => go('profile')} aria-label="Open candidate profile">{profileName.charAt(0)}</button></div></header>
+    <main className="workspace-main"><header className="workspace-header"><button className="mobile-menu" onClick={() => setMobileNav(true)}><Menu size={21} /></button><div><span className="workspace-breadcrumb">MIRROR / {view === 'workspace' ? 'TODAY' : view === 'report' || view === 'reports' ? 'SESSIONS' : view.toUpperCase()}</span></div><div className="header-actions">{session.status === 'demo' && <span className="demo-badge"><Circle size={7} fill="currentColor" /> DEMO</span>}<AccountMenu email={session.status === 'signedIn' ? session.user.email : null} onSignOut={() => void signOut()} /></div></header>
       {view === 'workspace' && <Overview profile={profile} busy={busy} onStart={(question, speak) => { setVoiceMode(speak); void startInterview(role, question, speak) }} onContinue={resumeInterview} onLetGo={letGo} onScreen={id => void startScreening(id)} onOpenStories={openStories} onReplay={id => { setSessionId(id); go('report') }} onOpenItem={id => { setPracticeItem(id); go('practice') }} />}
       {view === 'targets' && <Targets openId={targetId} onOpen={setTargetId} onPractise={r => void startInterview(r)} onPractiseProbe={q => void startInterview(role, q)} onScreen={id => void startScreening(id)} />}
       {view === 'screen' && sessionId && <ScreenDebriefPage interviewId={sessionId} onDone={() => { setScreen(null); go('workspace') }} />}

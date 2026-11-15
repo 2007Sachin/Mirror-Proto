@@ -52,7 +52,11 @@ export const MSG = {
   ERROR: 'error',
   PONG: 'pong',
   CLOSE_SERVER: 'close',
+  /** No speech-to-text provider on this server: the learner types instead. */
+  VOICE_UNAVAILABLE: 'voice_unavailable',
 } as const
+
+export const VOICE_UNAVAILABLE_NOTICE = "Voice is not set up here, so let's type this one."
 
 // ---- Server-owned session states ----
 export type VoiceState =

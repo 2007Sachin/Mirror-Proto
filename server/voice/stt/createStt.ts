@@ -1,6 +1,7 @@
 import type { Env } from '../../config.js'
 import type { SttProvider, SttStream } from '../providers/types.js'
 import { createMockStt } from './mockStt.js'
+import { sttProviderName } from '../sttProvider.js'
 import { createSarvamStt } from './sarvamStt.js'
 import { createSarvamRealtimeStt } from './sarvamRealtimeStt.js'
 
@@ -87,7 +88,9 @@ export function withRestFallback(primary: SttProvider, rest: SttProvider): SttPr
 }
 
 export function createSttFromEnv(env: Env): SttProvider {
-  if (!env.sarvamApiKey) return createMockStt()
+  const name = sttProviderName(env)
+  if (name === 'none') throw new Error('stt_not_configured')
+  if (name === 'mock') return createMockStt()
   if (env.sarvamSttTransport === 'rest') return createRestSarvamStt(env)
   return withRestFallback(createRealtimeSarvamStt(env), createRestSarvamStt(env))
 }

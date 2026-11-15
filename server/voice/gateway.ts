@@ -7,7 +7,7 @@ import { encodeServerMessage, parseClientMessage, SeqTracker, PROTOCOL_VERSION, 
 import type { VoiceSession } from './sessionManager.js'
 import { SessionManager } from './sessionManager.js'
 import type { SttProvider, SttStream, TtsProvider } from './providers/types.js'
-import { createMockStt } from './stt/mockStt.js'
+import { sttProviderName } from './sttProvider.js'
 import { createMockTts } from './tts/mockTts.js'
 import { createSttFromEnv } from './stt/createStt.js'
 import { createSarvamTts } from './tts/sarvamTts.js'
@@ -57,7 +57,9 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
   const log = deps.log ?? noopLog
   const sessionManager = new SessionManager()
   const liveVoice = isSarvamConfigured(deps.env)
-  const stt: SttProvider = deps.stt ?? (liveVoice ? createSttFromEnv(deps.env) : createMockStt())
+  // No silent mock: without a real provider (or the explicit test flag) voice is unavailable.
+  const sttName = sttProviderName(deps.env)
+  const stt: SttProvider | null = deps.stt ?? (sttName === 'none' ? null : createSttFromEnv(deps.env))
   const tts: TtsProvider =
     deps.tts ??
     (liveVoice
@@ -68,7 +70,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
           model: deps.env.sarvamTtsModel,
         })
       : createMockTts())
-  const providerLabel = liveVoice ? `sarvam:${deps.env.sarvamSttTransport}` : 'mock'
+  const providerLabel = liveVoice ? `sarvam:${deps.env.sarvamSttTransport}` : stt ? 'mock' : 'none'
   const interviewProvider: ReflectionProvider | null =
     deps.provider !== undefined
       ? deps.provider
@@ -105,7 +107,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
 
   function ensureSttStream(ctx: ConnectionCtx, session: VoiceSession): SttStream {
     if (ctx.sttStream && !ctx.sttStream.isClosed()) return ctx.sttStream
-    const stream = stt.startStream({ language: deps.env.sarvamLanguage, sampleRate: 16000 })
+    const stream = stt!.startStream({ language: deps.env.sarvamLanguage, sampleRate: 16000 })
     stream.onPartial((text) => {
       // Partials never advance state; emit only while still capturing.
       if (ctx.session === session && session.machine.current === 'listening' && !ctx.closed) {
@@ -212,7 +214,8 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
         code: bridge.code,
         recoverable,
       })
-      session.finalizeCache.set(turnId, { accepted: false, payload: { code: bridge.code } })
+      // A recoverable failure is not cached, so speaking again retries the same turn.
+      if (!recoverable) session.finalizeCache.set(turnId, { accepted: false, payload: { code: bridge.code } })
       if (bridge.code === 'interview_already_completed') {
         session.machine.complete()
         sendJson(ctx, 'state', session.id, turnId, { state: 'completed', turnId })
@@ -254,6 +257,17 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
 
   async function handleHello(ctx: ConnectionCtx, msg: { payload?: unknown }) {
     const payload = (msg.payload ?? {}) as { interviewId?: string; token?: string; resumeSessionId?: string }
+    if (!stt) {
+      // No speech-to-text here: say so calmly, create no session, save nothing.
+      sendJson(ctx, 'voice_unavailable', null, null, { reason: 'stt_not_configured' })
+      ctx.closed = true
+      try {
+        ctx.ws.close(1000, 'voice_unavailable')
+      } catch {
+        /* already closed */
+      }
+      return
+    }
     const now = Date.now()
     const last = lastHelloAt.get(ctx.ip) ?? 0
     const isResume = Boolean((payload as { resumeSessionId?: string }).resumeSessionId)

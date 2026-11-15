@@ -218,6 +218,10 @@ describe('voice gateway', () => {
     const turns = await repo.getTurns('dev', interview.id)
     expect(turns).toHaveLength(4)
     expect(turns.every(t => t.transcriptSource === 'voice')).toBe(true)
+    // Audio never reaches storage: only these text fields exist on a saved turn or the interview.
+    const allowed = new Set(['id', 'interviewId', 'workspaceId', 'questionIndex', 'question', 'answer', 'transcriptSource', 'createdAt'])
+    for (const t of turns) expect(Object.keys(t).filter(k => !allowed.has(k))).toEqual([])
+    expect(JSON.stringify(await repo.getInterview('dev', interview.id))).not.toMatch(/audio|pcm|wav/i)
     expect(JSON.stringify(turns)).not.toMatch(/RIFF|audio\/|pcm16/)
 
     const complete = await app.request(`/interviews/${interview.id}/complete`, { method: 'POST', headers: WS })
@@ -379,7 +383,7 @@ describe('voice gateway', () => {
     const gateway = createVoiceGateway({
       env: makeEnv(),
       repo,
-      stt: createMockStt({ emitPartials: false }),
+      stt: createMockStt({ finalText: 'I led the redesign.', emitPartials: false }),
       tts: createMockTts({ chunkCount: 1 }),
       provider: {
         async generateFollowUp() {
@@ -468,7 +472,65 @@ describe('voice gateway', () => {
     stream.sendAudio(Buffer.alloc(640))
     stream.sendAudio(Buffer.alloc(640))
     expect(dropped).toBeGreaterThan(0)
-    const text = await stream.finalize()
-    expect(text.length).toBeGreaterThan(0)
+    // The mock never invents an answer: without an explicit finalText it is empty.
+    expect(await stream.finalize()).toBe('')
+  })
+
+  it('without a provider or the test flag, says voice is unavailable and creates no session or turn', async () => {
+    const repo = createMemoryRepository()
+    await repo.ensureWorkspace('dev')
+    const interview = await repo.createInterview('dev', { role: 'Product Analyst', openingQuestion: OPENING_QUESTION })
+    const http = createServer()
+    const gateway = createVoiceGateway({ env: makeEnv(), repo, provider: null })
+    gateway.attach(http)
+    await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve))
+    servers.push({ close() { gateway.close(); http.close() } })
+    const ws = new WebSocket(`ws://127.0.0.1:${(http.address() as { port: number }).port}/ws/voice`)
+    const inbox = attachInbox(ws)
+    await new Promise<void>((resolve, reject) => {
+      ws.on('open', () => resolve())
+      ws.on('error', reject)
+    })
+    ws.send(envelope('hello', 0, { interviewId: interview.id, token: 'dev' }))
+    await inbox.wait(msgs => msgs.some(m => m.type === 'voice_unavailable'))
+    expect(inbox.msgs.some(m => m.type === 'session_ready' || m.type === 'question' || m.type === 'error')).toBe(false)
+    expect(gateway.sessionManager.resume('anything')).toBeNull()
+    expect(await repo.getTurns('dev', interview.id)).toHaveLength(0)
+  })
+
+  it('the mock provider (flag only) never saves a canned sentence: empty speech is rejected', async () => {
+    const prev = process.env.VOICE_MOCK_STT
+    process.env.VOICE_MOCK_STT = '1'
+    try {
+      const repo = createMemoryRepository()
+      await repo.ensureWorkspace('dev')
+      const interview = await repo.createInterview('dev', { role: 'Product Analyst', openingQuestion: OPENING_QUESTION })
+      const http = createServer()
+      const gateway = createVoiceGateway({ env: makeEnv(), repo, tts: createMockTts({ chunkCount: 1 }), provider: null })
+      gateway.attach(http)
+      await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve))
+      servers.push({ close() { gateway.close(); http.close() } })
+      const ws = new WebSocket(`ws://127.0.0.1:${(http.address() as { port: number }).port}/ws/voice`)
+      const inbox = attachInbox(ws)
+      await new Promise<void>((resolve, reject) => {
+        ws.on('open', () => resolve())
+        ws.on('error', reject)
+      })
+      ws.send(envelope('hello', 0, { interviewId: interview.id, token: 'dev' }))
+      await inbox.wait(msgs => msgs.some(m => m.type === 'tts_end'))
+      const turnId = (inbox.msgs.find(m => m.type === 'question')?.payload as { turnId: string }).turnId
+      const sessionId = (inbox.msgs.find(m => m.type === 'session_ready')?.payload as { sessionId: string }).sessionId
+      ws.send(envelope('playback_complete', 1, { turnId }, sessionId, turnId))
+      await inbox.wait(msgs => msgs.some(m => m.type === 'state' && (m.payload as { state: string }).state === 'listening'))
+      ws.send(Buffer.alloc(640))
+      ws.send(envelope('finalize_turn', 2, { turnId }, sessionId, turnId))
+      const done = await inbox.wait(msgs => msgs.some(m => m.type === 'turn_rejected'))
+      expect((done.find(m => m.type === 'turn_rejected')?.payload as { code: string }).code).toBe('empty_transcript')
+      expect(await repo.getTurns('dev', interview.id)).toHaveLength(0)
+      ws.close()
+    } finally {
+      if (prev === undefined) delete process.env.VOICE_MOCK_STT
+      else process.env.VOICE_MOCK_STT = prev
+    }
   })
 })

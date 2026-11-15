@@ -19,7 +19,7 @@ describe('GET /integration-status', () => {
     expect(body.voice).toEqual({
       configured: false,
       live: false,
-      provider: 'mock',
+      provider: 'none',
       sttTransport: 'realtime',
       sttModel: 'saaras:v3-realtime',
       ttsModel: 'bulbul:v3',

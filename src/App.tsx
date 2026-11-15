@@ -9,6 +9,7 @@ import Practice from './pages/Practice'
 import Interview from './pages/Interview'
 import Sessions from './pages/Sessions'
 import { useVoiceSession } from './voice/useVoiceSession'
+import * as data from './lib/data'
 import {
   AudioLines, BookOpen,
   Check, ChevronDown, Circle, Fingerprint, Home as HomeIcon,
@@ -79,6 +80,8 @@ export default function App() {
   const [calmMotion, setCalmMotion] = useState(false)
   const [toast, setToast] = useState('')
   const [sessionId, setSessionId] = useState<string | null>(null)
+  /** A screening call sets its own length; null means the practice default. */
+  const [questionCap, setQuestionCap] = useState<number | null>(null)
   const [reflection, setReflection] = useState<Reflection | null>(null)
   const [flowState, setFlowState] = useState<FlowState>('idle')
   const [currentQuestion, setCurrentQuestion] = useState('Tell me about a project or moment at work that you’re genuinely proud of.')
@@ -119,7 +122,8 @@ export default function App() {
   })
   const interviewOrb = voice.active ? voice.orbState : orbState
 
-  const completed = answers.length === QUESTION_COUNT && assessedRole === role && Boolean(sessionId)
+  const total = questionCap ?? QUESTION_COUNT
+  const completed = answers.length === total && assessedRole === role && Boolean(sessionId)
 
   const go = (next: View) => { setView(next); setMobileNav(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2600) }
@@ -128,10 +132,11 @@ export default function App() {
     if (!roleName) return go('firstInterview')
     setBusy(true)
     setFlowState('starting')
-    setQuestionIndex(0); setAnswers([]); setAssessedRole(roleName); setAnswer(''); setOrbState('thinking'); setReflection(null); setSessionId(null)
+    setQuestionIndex(0); setAnswers([]); setAssessedRole(roleName); setAnswer(''); setOrbState('thinking'); setReflection(null); setSessionId(null); setQuestionCap(null)
     try {
       const session = await api.createInterview(roleName, undefined, openingQuestion)
       setSessionId(session.id)
+      setQuestionCap(session.questionCap ?? null)
       sessionStorage.setItem(SESSION_STORAGE_KEY, session.id)
       setCurrentQuestion(session.currentQuestion ?? session.questions[0])
       setQuestionIndex(session.nextQuestionIndex ?? 0)
@@ -265,6 +270,7 @@ export default function App() {
     if (!window.confirm('Reset all demonstration data and return to the beginning?')) return
     sessionStorage.removeItem(SESSION_STORAGE_KEY)
     void api.deleteProfile().catch(() => undefined)
+    void data.clearAll()
     stopVoice()
     setVoiceMode(false)
     setAnswers([]); setAnswer(''); setRole(''); setProfile(null); setSessionId(null); setReflection(null); go('home'); notify('Prototype data reset.')
@@ -295,6 +301,7 @@ export default function App() {
         if (session.status !== 'in_progress') return forget()
         // Only what the server returned: the exact question, the answers so far, no guessed progress.
         setSessionId(session.id)
+        setQuestionCap(session.questionCap ?? null)
         setRole(session.role)
         setAssessedRole(session.role)
         setAnswers(session.turns.map(t => ({ question: t.question, answer: t.answer })))
@@ -311,6 +318,7 @@ export default function App() {
     if (view !== 'interview' || !sessionId) return
     api.getInterview(sessionId)
       .then(session => {
+        setQuestionCap(session.questionCap ?? null)
         setAnswers(session.turns.map(t => ({ question: t.question, answer: t.answer })))
         if (session.nextQuestionIndex !== null) setQuestionIndex(session.nextQuestionIndex)
         if (session.currentQuestion) setCurrentQuestion(session.currentQuestion)
@@ -338,8 +346,8 @@ export default function App() {
       <Interview
         question={currentQuestion}
         questionIndex={questionIndex}
-        totalDots={QUESTION_COUNT}
-        isLast={questionIndex === QUESTION_COUNT - 1}
+        totalDots={total}
+        isLast={questionIndex === total - 1}
         focusLabel={profile?.focus}
         answers={answers}
         orb={interviewOrb}

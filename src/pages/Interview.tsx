@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import '../landing.css'
 import './interview.css'
 import { LiveOrb, type OrbState } from '../components/LiveOrb'
+import { CHANGED, DID, countWords } from '../lib/analyse'
 import type { VoiceSessionApi } from '../voice/useVoiceSession'
 import { ArrowRight, Captions, CircleHelp, Mic, MicOff, MessageSquare, Repeat, RotateCcw, Square, Volume2, VolumeX, X } from 'lucide-react'
 
@@ -19,12 +20,9 @@ const DESKTOP = '(min-width: 960px)'
 const REDUCED = '(prefers-reduced-motion: reduce)'
 const matches = (q: string) => typeof window !== 'undefined' && window.matchMedia(q).matches
 
-const countWords = (t: string) => (t.trim() ? t.trim().split(/\s+/).length : 0)
 const clock = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 
-// ponytail: plain keyword heuristics for the Tips checklist; swap for the server's read if it ever needs to be smarter.
-const DID = /\bI\s+(?:\w+\s+)?(built|led|wrote|decided|fixed|designed|launched|created|owned|ran|shipped|proposed|organi[sz]ed|worked|made|chose|developed|started|set up)\b/i
-const CHANGED = /(result|reduced|increased|saved|improved|grew|faster|fewer|\d)/i
+// The keyword rules live in lib/analyse.ts so Replay, the screen debrief and Stories read answers the same way.
 const coverage = (t: string) => ({ happened: countWords(t) > 30, did: DID.test(t), changed: CHANGED.test(t) })
 
 /** Reveals `text` word by word while `active` (about 3.2 words a second, at most 12 seconds). Returns how many words to show and a replay trigger. */

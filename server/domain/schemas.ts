@@ -5,10 +5,17 @@ export const createInterviewSchema = z.object({
   industry: z.string().trim().max(120).optional(),
   /** A practice can open on its own question (e.g. the Coach's note). */
   openingQuestion: z.string().trim().min(8).max(300).optional(),
+  /** A realistic screening call. The route that builds its questions belongs to the screen feature. */
+  kind: z.enum(['practice', 'screen']).optional(),
+  targetId: z.string().uuid().optional(),
+  timeCapMinutes: z.number().int().min(5).max(10).optional(),
+  questionCount: z.number().int().min(5).max(8).optional(),
+  /** Test-only plumbing: the screen feature replaces this with its own builder. */
+  questions: z.array(z.string().trim().min(8).max(300).endsWith('?')).min(5).max(8).optional(),
 })
 
 export const addTurnSchema = z.object({
-  questionIndex: z.number().int().min(0).max(3),
+  questionIndex: z.number().int().min(0).max(11),
   answer: z.string().max(10000),
   transcriptSource: z.enum(['text', 'voice']).default('text'),
 })

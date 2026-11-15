@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import { allowlist } from './copyAllowlist'
+import { scan, scanHtml, walkData } from './copyScan'
 import Landing from './pages/Landing'
 import FirstInterview from './pages/FirstInterview'
 import Overview from './pages/Overview'
@@ -19,43 +19,6 @@ import { levels, modules } from './practice/sql/curriculum'
 import { cases } from './practice/case/data'
 import { problems as pyProblems } from './practice/python/problems'
 import { items as statsItems } from './practice/stats/items'
-
-// What must never reach a learner.
-const BANNED: [string, RegExp][] = [
-  ['banned word', /\b(agentic|evidence|reflect\w*|evaluat\w*)\b/i],
-  ['fixed count', /\b\d+ questions?\b|\bof \d+\b|\b(one|two|three|four|five|six)[- ]question\b/i],
-  ['percentage', /\d\s?%|\bpercent(age)?\b/i],
-]
-
-function scan(where: string, text: string): string[] {
-  const hits: string[] = []
-  for (const [name, re] of BANNED) {
-    const m = re.exec(text)
-    if (m && !allowlist.some(a => a.where.test(where) && a.pattern.test(text))) hits.push(`${where} [${name}] "${m[0]}" in: ${text.slice(0, 90)}`)
-  }
-  return hits
-}
-
-// Rendered text plus the attributes a screen reader or a hover can show.
-function scanHtml(where: string, html: string): string[] {
-  const root = document.createElement('div')
-  root.innerHTML = html
-  const texts = [root.textContent ?? '']
-  root.querySelectorAll('[aria-label],[placeholder],[title],[alt]').forEach(el => {
-    for (const a of ['aria-label', 'placeholder', 'title', 'alt']) { const v = el.getAttribute(a); if (v) texts.push(v) }
-  })
-  return texts.flatMap(t => scan(where, t))
-}
-
-// Keys that hold SQL, code or test data, not learner-facing words.
-const CODE_KEYS = new Set(['solution', 'sql', 'seed', 'starter', 'code', 'call', 'expected', 'tests', 'rows', 'cols', 'schema', 'check', 'id', 'topic', 'track', 'tables'])
-function walk(where: string, v: unknown, out: string[], depth = 0): void {
-  if (depth > 8 || v == null) return
-  if (typeof v === 'string') { out.push(...scan(where, v)); return }
-  if (Array.isArray(v)) { v.forEach((x, i) => walk(`${where}[${i}]`, x, out, depth + 1)); return }
-  if (typeof v === 'object') for (const [k, x] of Object.entries(v)) if (!CODE_KEYS.has(k)) walk(`${where}.${k}`, x, out, depth + 1)
-}
-function walkData(where: string, v: unknown): string[] { const out: string[] = []; walk(where, v, out); return out }
 
 // jsdom has no matchMedia; the screens only read it.
 window.matchMedia = (q: string) => ({ matches: false, media: q, addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {}, dispatchEvent: () => false, onchange: null }) as MediaQueryList

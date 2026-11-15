@@ -21,6 +21,7 @@ export function makeEnv(overrides: Partial<Env> = {}): Env {
     sarvamTtsModel: 'bulbul:v3',
     sarvamLanguage: 'en-IN',
     sarvamSpeaker: 'shubh',
+    screenDbReady: false,
     ...overrides,
   }
 }

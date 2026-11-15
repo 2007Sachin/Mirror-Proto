@@ -4,7 +4,7 @@ import { cors } from 'hono/cors'
 import { createClient } from '@supabase/supabase-js'
 import type { Env } from './config.js'
 import { isNimConfigured, isSarvamConfigured, isSupabaseConfigured } from './config.js'
-import { FALLBACK_QUESTIONS, TOTAL_QUESTIONS } from './domain/questions.js'
+import { FALLBACK_QUESTIONS, totalFor } from './domain/questions.js'
 import { interviewContext, nextFollowUp, persistFollowUp as persistFollowUpDomain } from './domain/followUp.js'
 import { fallbackNotes } from './domain/fallbacks.js'
 import { addTurnSchema, createInterviewSchema } from './domain/schemas.js'
@@ -23,6 +23,11 @@ import type { ReflectionProvider } from './providers/types.js'
 import { ProviderFailure, createNimClient, withDeadline, type NimLog } from './providers/nim.js'
 import { workspaceMiddleware } from './middleware/workspace.js'
 import { AppError, errorHandler } from './middleware/errors.js'
+import { registerReplayRoutes } from './routes/replay.js'
+import { registerStoriesRoutes } from './routes/stories.js'
+import { registerMatchRoutes } from './routes/match.js'
+import { registerAloudRoutes } from './routes/aloud.js'
+import { registerScreenRoutes } from './routes/screen.js'
 
 export interface AppDeps {
   env: Env
@@ -41,9 +46,10 @@ const startedAt = Date.now()
 const reflectionSource = (r: ReflectionRow) => (r.model === 'fallback' ? 'fallback' : 'ai')
 
 function serializeInterview(interview: InterviewRow, turns: TurnRow[], reflection: ReflectionRow | null) {
+  const total = totalFor(interview)
   const pendingFollowUp =
     interview.status === 'in_progress' &&
-    turns.length < TOTAL_QUESTIONS &&
+    turns.length < total &&
     interview.askedQuestions.length === turns.length
   const currentQuestion =
     interview.status === 'in_progress' ? (interview.askedQuestions[turns.length] ?? null) : null
@@ -57,7 +63,7 @@ function serializeInterview(interview: InterviewRow, turns: TurnRow[], reflectio
     fallbackCatalog: FALLBACK_QUESTIONS,
     currentQuestion,
     pendingFollowUp,
-    nextQuestionIndex: interview.status === 'in_progress' && turns.length < TOTAL_QUESTIONS ? turns.length : null,
+    nextQuestionIndex: interview.status === 'in_progress' && turns.length < total ? turns.length : null,
     turns: turns.map(t => ({
       id: t.id,
       questionIndex: t.questionIndex,
@@ -68,6 +74,11 @@ function serializeInterview(interview: InterviewRow, turns: TurnRow[], reflectio
     })),
     reflection: reflection && { ...reflection, source: reflectionSource(reflection) },
     createdAt: interview.createdAt,
+    kind: interview.kind ?? 'practice',
+    questionCap: interview.questionCap ?? null,
+    timeCapSeconds: interview.timeCapSeconds ?? null,
+    startedAt: interview.startedAt ?? null,
+    targetId: interview.targetId ?? null,
   }
 }
 
@@ -190,6 +201,11 @@ export function buildApp(deps: AppDeps): Hono {
   api.use('/targets', workspaceMiddleware(repo))
   api.use('/targets/*', workspaceMiddleware(repo))
   api.use('/practice/*', workspaceMiddleware(repo))
+  api.use('/replay/*', workspaceMiddleware(repo))
+  api.use('/stories', workspaceMiddleware(repo))
+  api.use('/stories/*', workspaceMiddleware(repo))
+  api.use('/resume/*', workspaceMiddleware(repo))
+  api.use('/data', workspaceMiddleware(repo))
   // Cap request sizes before anything is buffered: 6 MB for the PDF and the audio, 64 KB for JSON.
   const limit = (maxSize: number) => bodyLimit({ maxSize, onError: c => c.json({ error: 'payload_too_large' }, 413) })
   api.use('/onboarding/resume', limit(6 * 1024 * 1024))
@@ -199,6 +215,10 @@ export function buildApp(deps: AppDeps): Hono {
   api.use('/targets', limit(64 * 1024))
   api.use('/targets/*', limit(64 * 1024))
   api.use('/practice/*', limit(64 * 1024))
+  api.use('/replay/*', limit(64 * 1024))
+  api.use('/stories', limit(64 * 1024))
+  api.use('/stories/*', limit(64 * 1024))
+  api.use('/resume/*', limit(64 * 1024))
 
   api.get('/health', c =>
     c.json({
@@ -212,6 +232,12 @@ export function buildApp(deps: AppDeps): Hono {
       },
     }),
   )
+
+  // What the client may rely on. Supabase mode keeps the new stores in the browser until they are wired.
+  api.get('/capabilities', c => {
+    const memory = !isSupabaseConfigured(env)
+    return c.json({ newData: memory ? 'server' : 'browser', screenLongCalls: memory || env.screenDbReady })
+  })
 
   api.get('/integration-status', async c =>
     c.json({
@@ -236,6 +262,22 @@ export function buildApp(deps: AppDeps): Hono {
     const workspace = c.get('workspace')
     const profile = await repo.getProfile(workspace)
     const queued = profile && profile.role === body.role && (await repo.listInterviewsByRole(workspace, body.role)).length === 0
+    if (body.kind === 'screen') {
+      // ponytail: the screen feature replaces `questions` with its own builder; this is the plumbing it builds on.
+      if (!body.questions) throw new AppError(400, 'screen_questions_required')
+      const screen = await repo.createInterview(workspace, {
+        role: body.role,
+        industry: body.industry,
+        openingQuestion: body.questions[0],
+        askedQuestions: body.questions,
+        kind: 'screen',
+        questionCap: body.questions.length,
+        timeCapSeconds: body.timeCapMinutes ? body.timeCapMinutes * 60 : null,
+        startedAt: new Date().toISOString(),
+        targetId: body.targetId ?? null,
+      })
+      return c.json(serializeInterview(screen, [], null), 201)
+    }
     const interview = await repo.createInterview(workspace, {
       role: body.role,
       industry: body.industry,
@@ -337,7 +379,7 @@ export function buildApp(deps: AppDeps): Hono {
       throw new AppError(409, interview.status === 'abandoned' ? 'interview_abandoned' : 'interview_already_completed')
     }
     const turns = await repo.getTurns(workspace, interview.id)
-    if (turns.length >= TOTAL_QUESTIONS) throw new AppError(409, 'interview_already_completed')
+    if (turns.length >= totalFor(interview)) throw new AppError(409, 'interview_already_completed')
     const { question, source } = await persistFollowUp(interview, turns)
     return c.json({
       source,
@@ -360,7 +402,9 @@ export function buildApp(deps: AppDeps): Hono {
     const workspace = c.get('workspace')
     const interview = await repo.getInterview(workspace, c.req.param('id'))
     const turns = interview ? await repo.getTurns(workspace, interview.id) : []
-    const check = canComplete(interview, turns)
+    // { early: true } ends a screen at the time cap or when the learner ends the call; practice ignores it.
+    const early = ((await c.req.json().catch(() => ({}))) as { early?: unknown } | null)?.early === true
+    const check = canComplete(interview, turns, { early })
     if (!check.ok) {
       throw new AppError(check.status, check.error, check.answers !== undefined ? { answers: check.answers } : undefined)
     }
@@ -388,7 +432,8 @@ export function buildApp(deps: AppDeps): Hono {
     const interview = await repo.getInterview(workspace, c.req.param('id'))
     if (!interview) throw new AppError(404, 'interview_not_found')
     const turns = await repo.getTurns(workspace, interview.id)
-    const check = canComplete(interview, turns)
+    // A screen that ended early is already completed, so notes work from the answers it has.
+    const check = canComplete(interview, turns, { early: interview.status === 'completed' })
     if (!check.ok) {
       throw new AppError(check.status, check.error, {
         ...(check.answers !== undefined ? { answers: check.answers } : {}),
@@ -639,6 +684,20 @@ export function buildApp(deps: AppDeps): Hono {
   api.put('/profile', async c => {
     const body = profileSchema.parse(await c.req.json().catch(() => ({})))
     return c.json(await repo.saveProfile(c.get('workspace'), body))
+  })
+
+  // Plain CRUD for the new stores; each feature adds its own logic inside its module.
+  const routeDeps = { repo, provider, env }
+  registerReplayRoutes(api, routeDeps)
+  registerStoriesRoutes(api, routeDeps)
+  registerMatchRoutes(api, routeDeps)
+  registerAloudRoutes(api, routeDeps)
+  registerScreenRoutes(api, routeDeps)
+
+  // Reset: clears every new store for the workspace.
+  api.delete('/data', async c => {
+    await repo.deleteAllNewData(c.get('workspace'))
+    return c.body(null, 204)
   })
 
   const app = new Hono()

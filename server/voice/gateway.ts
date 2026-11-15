@@ -11,7 +11,6 @@ import { sttProviderName } from './sttProvider.js'
 import { createMockTts } from './tts/mockTts.js'
 import { createSttFromEnv } from './stt/createStt.js'
 import { createSarvamTts } from './tts/sarvamTts.js'
-import { TOTAL_QUESTIONS } from '../domain/questions.js'
 import { isNimConfigured, isSarvamConfigured } from '../config.js'
 import { createNimClient } from '../providers/nim.js'
 import type { ReflectionProvider } from '../providers/types.js'
@@ -305,11 +304,11 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
       sessionManager.touch(resumed)
       resumed.machine.transition('listening', resumed.currentTurnId)
       log(`voice resumed session=${resumed.id} interview=${resumed.interviewId}`)
+      const resumedProgress = await interviewProgress(deps.repo, resumed.workspace, resumed.interviewId)
       sendJson(ctx, 'session_ready', resumed.id, resumed.currentTurnId, {
         sessionId: resumed.id,
-        interviewState: { questionIndex: resumed.questionIndex, questionCount: TOTAL_QUESTIONS },
+        interviewState: { questionIndex: resumed.questionIndex, questionCount: resumedProgress?.questionCount ?? 4 },
       })
-      const resumedProgress = await interviewProgress(deps.repo, resumed.workspace, resumed.interviewId)
       if (resumedProgress?.currentQuestion) {
         await speakQuestion(ctx, resumed, resumedProgress.currentQuestion, resumed.currentTurnId, 'opening')
       } else {
@@ -326,7 +325,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
       closeWith(ctx, null, 'interview_not_found', 'interview does not exist')
       return
     }
-    if (progress.questionIndex >= TOTAL_QUESTIONS) {
+    if (progress.questionIndex >= progress.questionCount) {
       sendError(ctx, null, 'interview_already_completed', 'interview is already complete', false)
       closeWith(ctx, null, 'interview_already_completed', 'interview is complete')
       return

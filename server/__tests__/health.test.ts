@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { j, makeApp, makeEnv, WS } from './helpers.js'
 import { PersistenceError, PHASE1_TABLES } from '../repo/supabase.js'
+import { createMemoryRepository } from '../repo/memory.js'
 
 describe('GET /health', () => {
   it('returns ok with memory mode and uptime', async () => {
@@ -63,6 +64,7 @@ describe('persistence failures', () => {
   it('maps PersistenceError to 503 persistence_unavailable', async () => {
     const { app } = makeApp({
       repo: {
+        ...createMemoryRepository(), // the new stores are not what this test is about
         async ensureWorkspace() {
           throw new PersistenceError('failed to ensure workspace: missing table')
         },

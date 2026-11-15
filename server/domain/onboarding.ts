@@ -93,6 +93,10 @@ function fallback(req: OnboardingRequest): Record<string, string> {
               : 'Walk me through how you decided what this query should return, step by step?'
       return { question: ask }
     }
+    case 'resumeProbe': {
+      const [a, b, c] = req.probes.map(p => p.question)
+      return { q1: a ?? 'What is the work on your résumé you would defend hardest?', q2: b ?? '', q3: c ?? '' }
+    }
     case 'sqlDebrief': {
       const solved = req.attempts.filter(a => a.passed).length
       const total = req.attempts.length

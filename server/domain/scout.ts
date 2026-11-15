@@ -1,7 +1,7 @@
 import type { Round, Skill, SkillArea } from '../repo/types.js'
 
 // ponytail: a keyword dictionary, not NLP. Ceiling: only skills listed here are found. Add a row to teach Scout a new one.
-const DICTIONARY: { name: string; area: SkillArea; re: RegExp }[] = [
+export const DICTIONARY: { name: string; area: SkillArea; re: RegExp }[] = [
   { name: 'SQL', area: 'sql', re: /\bSQL\b/gi },
   { name: 'Snowflake', area: 'sql', re: /\bsnowflake\b/gi },
   { name: 'BigQuery', area: 'sql', re: /\bbig\s?query\b/gi },

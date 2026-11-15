@@ -90,12 +90,13 @@ describe('targets API', () => {
     expect(created.events).toEqual([])
 
     const t = await untilReady(app, created.id)
-    expect(t.events.map(e => e.agent)).toEqual(['Scout', 'Scout', 'Scout', 'Planner'])
+    expect(t.events.map(e => e.agent)).toEqual(['Scout', 'Scout', 'Scout', 'Scout', 'Planner'])
     expect(t.events[0].text).toMatch(/^Read the job description \(\d+ words\)\.$/)
     expect(t.events[1].text).toContain('SQL')
     expect(t.skills.length).toBeGreaterThan(0)
     expect(t.rounds).toHaveLength(4)
-    expect(t.nextStep).toBe(t.events[3].text)
+    expect(t.events[2].text).toBe('No résumé on file, so I skipped the comparison.')
+    expect(t.nextStep).toBe(t.events[4].text)
     expect(t.interviewDate).toBe('2026-12-01')
 
     const list = await j<{ id: string; status: string }[]>(await app.request('/targets', { headers: WS }))

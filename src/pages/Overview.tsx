@@ -7,12 +7,24 @@ import FallbackNote from '../components/FallbackNote'
 import { findItem, tracks } from '../practice/tracks'
 import { activeDays28, coverage, dueForReview, firstTryByTopic, nextInterview, recommend, targetNeeds, weakSpots, weekCompare, weekSeconds } from '../practice/stats'
 import type { PracticeSummary } from '../practice/types'
+import * as data from '../lib/data'
+import { getMatch, type MatchProbe } from '../lib/matchApi'
+import { suggestStories } from '../stories/suggest'
+import { ScreenEntryCard } from '../features/screen/ScreenEntryCard'
+import { missingParts, pickWeakest } from '../features/screen/debriefLogic'
 
 /**
  * Today. Real counts from practice, the next rep, what the targets want, and the spoken interview lower down.
  * Light palette (.mirror-landing tokens). No scores, percentages or streaks.
  */
 const NEAREST_TARGETS = 4
+
+/** The soonest interview date that is today or later, for the replay scheduler. */
+function nearestDate(tg: { interviewDate: string | null }[], now: Date): string | null {
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const dates = tg.map(t => t.interviewDate).filter((d): d is string => !!d && d >= today).sort()
+  return dates[0] ?? null
+}
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 function span(seconds: number) {
@@ -21,13 +33,19 @@ function span(seconds: number) {
   return m < 60 ? plural(m, 'minute') : `${Math.floor(m / 60)} h ${m % 60} min`
 }
 
-export default function Overview({ profile, busy, onStart, onContinue, onLetGo, onOpenItem }: {
+export default function Overview({ profile, busy, onStart, onContinue, onLetGo, onOpenItem, onScreen, onOpenStories, onReplay }: {
   profile: Profile | null
   busy: boolean
   onStart: (openingQuestion: string | undefined, speak: boolean) => void
   onContinue: (id: string, role: string) => void
   onLetGo: (id: string) => Promise<void>
   onOpenItem: (itemId: string) => void
+  /** Starts a realistic screening call for a target. */
+  onScreen?: (targetId: string) => void
+  /** Opens the Story bank, optionally with a question to suggest a story for. */
+  onOpenStories?: (question?: string) => void
+  /** Opens a finished session so a past answer can be replayed. */
+  onReplay?: (interviewId: string) => void
 }) {
   const [now] = useState(() => new Date())
   const [sessions, setSessions] = useState<InterviewSummary[]>([])
@@ -38,16 +56,30 @@ export default function Overview({ profile, busy, onStart, onContinue, onLetGo, 
   const [summaryFailed, setSummaryFailed] = useState(false)
   const [targets, setTargets] = useState<TargetSummary[] | null>(null)
   const [skills, setSkills] = useState<Record<string, Skill[]>>({})
+  const [probe, setProbe] = useState<MatchProbe | null>(null)
+  const [stories, setStories] = useState<data.StoryRow[]>([])
+  const [weakest, setWeakest] = useState<{ interviewId: string; question: string; missing: string } | null>(null)
 
   const loadSessions = useCallback(() => api.listInterviews().then(setSessions).catch(() => setSessionsFailed(true)), [])
   useEffect(() => {
     let live = true
-    api.listInterviews().then(list => live && setSessions(list)).catch(() => live && setSessionsFailed(true))
+    api.listInterviews().then(list => {
+      if (!live) return
+      setSessions(list)
+      // The weakest answer of the latest finished session, for a quick replay.
+      const done = list.find(s => s.status === 'completed')
+      if (done) api.getInterview(done.id).then(iv => {
+        const turns = iv.turns.map(t => ({ question: t.question, answer: t.answer }))
+        const i = pickWeakest(turns)
+        if (live && i !== null) setWeakest({ interviewId: done.id, question: turns[i].question, missing: missingParts(turns[i].answer) })
+      }).catch(() => undefined)
+    }).catch(() => live && setSessionsFailed(true))
     api.coachNote()
       .then(n => { if (live) { setNote(n); setNoteState('ready') } })
       // 404 = no profile saved yet; anything else is a load problem we say so about.
       .catch(err => live && setNoteState(err instanceof ApiError && err.status === 404 ? 'none' : 'failed'))
     api.practiceSummary().then(s => live && setSummary(s)).catch(() => live && setSummaryFailed(true))
+    data.stories.list().then(list => live && setStories(list)).catch(() => undefined)
     api.listTargets()
       .then(list => {
         if (!live) return
@@ -55,6 +87,8 @@ export default function Overview({ profile, busy, onStart, onContinue, onLetGo, 
         // Skills only for the few nearest targets: the list does not carry them.
         const upcoming = [...list].sort((a, b) => (a.interviewDate ?? '9999').localeCompare(b.interviewDate ?? '9999')).slice(0, NEAREST_TARGETS)
         upcoming.forEach(t => api.getTarget(t.id).then(full => live && setSkills(p => ({ ...p, [t.id]: full.skills }))).catch(() => undefined))
+        // A question that probes the weakest claim on the nearest target's résumé match (empty without a résumé).
+        if (upcoming[0]) getMatch(upcoming[0].id).then(m => live && setProbe(m.probes[0] ?? null)).catch(() => undefined)
       })
       .catch(() => live && setTargets([]))
     return () => { live = false }
@@ -68,7 +102,7 @@ export default function Overview({ profile, busy, onStart, onContinue, onLetGo, 
     return {
       tg,
       interview: nextInterview(tg, now),
-      rec: s ? recommend(s, tracks, tg, now) : null,
+      rec: s ? recommend(s, tracks, tg, now, nearestDate(tg, now)) : null,
       compare: s && weekCompare(s, now),
       time: s && weekSeconds(s, now),
       cover: s && coverage(s, tracks),
@@ -85,6 +119,14 @@ export default function Overview({ profile, busy, onStart, onContinue, onLetGo, 
   const weakIds = insight.weak.flatMap(w => w.itemIds)
   const maxBar = Math.max(1, ...(insight.time?.perDay ?? [0]))
   const activeCount = insight.days.filter(Boolean).length
+  // The nearest target that has skills, for the screening call card.
+  const screenTarget = (() => {
+    const withSkills = (targets ?? []).filter(t => (skills[t.id]?.length ?? 0) > 0).sort((a, b) => (a.interviewDate ?? '9999').localeCompare(b.interviewDate ?? '9999'))
+    const t = withSkills[0]
+    return t ? { id: t.id, role: t.role, company: t.company, skillCount: skills[t.id].length } : null
+  })()
+  const askedQuestion = probe?.question ?? note?.practiceQuestion ?? ''
+  const fitting = askedQuestion ? suggestStories(askedQuestion, stories)[0] : undefined
 
   return (
     <div className="mirror-landing today">
@@ -273,7 +315,32 @@ export default function Overview({ profile, busy, onStart, onContinue, onLetGo, 
               <button type="button" onClick={() => void onLetGo(open.id).then(loadSessions)}>Let it go</button>
             </p>
           )}
+          {probe && (
+            <div className="today-open">
+              <p className="today-why">From your résumé and this job: {probe.question}</p>
+              <div className="today-go">
+                <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" disabled={busy} onClick={() => onStart(probe.question, true)}>Speak it</button>
+                <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" disabled={busy} onClick={() => onStart(probe.question, false)}>Type it</button>
+              </div>
+            </div>
+          )}
+          {fitting && (
+            <p className="today-open">
+              A story that fits: {fitting.story.title}. {fitting.reason}{' '}
+              {onOpenStories && <button type="button" onClick={() => onOpenStories(askedQuestion)}>Open your stories</button>}
+            </p>
+          )}
         </section>
+
+        {weakest && onReplay && (
+          <section className="ml-glass today-card" aria-labelledby="rp-title">
+            <h2 id="rp-title" className="today-h">Replay your weakest answer</h2>
+            <p className="today-sub">Your answer to “{weakest.question}”: {weakest.missing}</p>
+            <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={() => onReplay(weakest.interviewId)}>Open it and say it again</button>
+          </section>
+        )}
+
+        {onScreen && <ScreenEntryCard target={screenTarget} onStart={onScreen} busy={busy} />}
       </div>
     </div>
   )

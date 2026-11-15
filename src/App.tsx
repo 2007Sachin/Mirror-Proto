@@ -9,6 +9,8 @@ import Practice from './pages/Practice'
 import Interview from './pages/Interview'
 import Sessions from './pages/Sessions'
 import Stories from './pages/Stories'
+import SettingsPage from './pages/Settings'
+import Privacy from './pages/Privacy'
 import { saveStoryFromAnswer } from './stories/saveStory'
 import { useVoiceSession } from './voice/useVoiceSession'
 import * as data from './lib/data'
@@ -16,14 +18,14 @@ import { useScreenClock } from './features/screen/countdown'
 import { ScreenDebriefPage } from './features/screen/ScreenDebrief'
 import { createScreen } from './lib/screenApi'
 import {
-  AudioLines, BookMarked, BookOpen,
+  BookMarked, BookOpen,
   Check, ChevronDown, Circle, Fingerprint, Home as HomeIcon,
-  Menu, MessageCircle, Pause,
+  Menu, MessageCircle,
   Settings, Target,
-  Trash2, Volume2, X,
+  X,
 } from 'lucide-react'
 
-type View = 'home' | 'firstInterview' | 'workspace' | 'targets' | 'practice' | 'interview' | 'reports' | 'report' | 'stories' | 'screen' | 'profile' | 'settings'
+type View = 'home' | 'firstInterview' | 'workspace' | 'targets' | 'practice' | 'interview' | 'reports' | 'report' | 'stories' | 'screen' | 'profile' | 'settings' | 'privacy'
 type Answer = { question: string; answer: string }
 type FlowState = 'not_completed' | 'idle' | 'starting' | 'saving' | 'waiting_nim' | 'generating_reflection' | 'provider_unavailable' | 'retryable_failure' | 'validation_failure'
 
@@ -341,6 +343,13 @@ export default function App() {
     setAnswers([]); setAnswer(''); setRole(''); setProfile(null); setSessionId(null); setReflection(null); go('home'); notify('Prototype data reset.')
   }
 
+  /** After Settings > Delete all my data: the server and browser are already clear; empty the screen state and land on Today. */
+  const afterDataDeleted = () => {
+    stopVoice()
+    setVoiceMode(false)
+    setAnswers([]); setAnswer(''); setRole(''); setProfile(null); setSessionId(null); setReflection(null); go('workspace'); notify('Your data is deleted. Your sign-in account is still here.')
+  }
+
   const profileFresh = useRef(false) // set when The First Interview finishes here, so a slow fetch can't overwrite it
   useEffect(() => {
     api.getProfile()
@@ -457,6 +466,7 @@ export default function App() {
       {view === 'profile' && <div className="workspace-content profile-content"><div className="page-title"><div><p className="eyebrow">YOUR CANDIDATE PROFILE</p><h1>Profile</h1><p>Shape the context MIRROR uses. Nothing here becomes an assessment by itself.</p></div><Button onClick={() => notify('Profile changes saved in this prototype.')}><Check size={15} /> Save profile</Button></div><section className="profile-identity"><div className="profile-avatar">{profileName.charAt(0)}</div><div><h2>{profileName}</h2><p>{role} · {profileLocation}</p><span><Circle size={7} fill="currentColor" /> Prototype profile · No account connected</span></div></section><div className="profile-layout"><section className="profile-form"><div className="profile-form-title"><h2>About you</h2><p>Keep this brief. Your interview answers matter more than this form.</p></div><div className="profile-field-grid"><div><FieldLabel>Display name</FieldLabel><input value={profileName} onChange={e => setProfileName(e.target.value)} /></div><div><FieldLabel>Location</FieldLabel><input value={profileLocation} onChange={e => setProfileLocation(e.target.value)} /></div><div><FieldLabel>Experience</FieldLabel><div className="select-wrap"><select value={profileExperience} onChange={e => setProfileExperience(e.target.value)}><option>Student / recent graduate</option><option>0–2 years</option><option>2–4 years</option><option>5–8 years</option><option>8+ years</option></select><ChevronDown size={16} /></div></div><div><FieldLabel>Current direction</FieldLabel><div className="profile-role-link">{role}</div></div></div><FieldLabel>Short introduction</FieldLabel><textarea value={profileBio} onChange={e => setProfileBio(e.target.value)} /></section><aside className="profile-summary"><div className="card-label">PROFILE SNAPSHOT</div><h3>{profile?.focus ?? 'Interview practice'}</h3><dl><div><dt>Experience</dt><dd>{profileExperience}</dd></div><div><dt>Sessions done</dt><dd>{completed ? 1 : 0}</dd></div></dl><div className="profile-evidence-note"><Fingerprint size={17} /><p>Profile details personalise your practice. They never generate a readiness score.</p></div></aside></div></div>}
       {(view === 'reports' || view === 'report') && <Sessions openId={view === 'report' ? sessionId : null} refreshKey={reflection?.interviewId} onPractise={() => void startInterview()} onSaveStory={turn => void saveStoryFromAnswer({ question: turn.question, answer: turn.answer, sourceInterviewId: sessionId, sourceTurnId: turn.id }).then(() => notify('Saved to your stories.')).catch(() => notify('Could not save that story just now.'))} />}
       {view === 'stories' && <Stories initialQuestion={storyQuestion} onInitialConsumed={() => setStoryQuestion(null)} />}
-      {view === 'settings' && <div className="workspace-content settings-content"><div className="page-title"><div><p className="eyebrow">MAKE THE EXPERIENCE YOURS</p><h1>Settings</h1><p>Preferences for this interactive prototype. No account is connected.</p></div></div><section className="settings-section"><div><h3>Voice experience</h3><p>Preview the interface planned for Sarvam speech-to-text and text-to-speech.</p></div><div className="setting-row"><span><Volume2 size={18} /><b>Voice playback speed</b></span><div className="segmented">{['Slow', 'Natural', 'Fast'].map(item => <button key={item} className={voiceSpeed === item ? 'active' : ''} onClick={() => { setVoiceSpeed(item); notify(`Voice speed set to ${item.toLowerCase()} for this preview.`) }}>{item}</button>)}</div></div><div className="setting-row"><span><AudioLines size={18} /><b>Conversation language</b></span><div className="select-wrap small-select"><select value={language} onChange={e => setLanguage(e.target.value)}><option>English</option><option>हिन्दी</option><option>தமிழ்</option><option>తెలుగు</option></select><ChevronDown size={16} /></div></div></section><section className="settings-section"><div><h3>Comfort</h3><p>Reduce visual movement while preserving the live orb’s current state.</p></div><div className="setting-row"><span><Pause size={18} /><b>Calm motion</b></span><button className={`switch ${calmMotion ? 'on' : ''}`} onClick={() => setCalmMotion(!calmMotion)} role="switch" aria-checked={calmMotion}><i /></button></div></section><section className="settings-section"><div><h3>Technology plan</h3><p>The intended production integrations for the next build phase.</p></div><div className="tech-plan"><span>NVIDIA NIM<small>LLM orchestration</small></span><span>Sarvam<small>STT + TTS</small></span><span>Supabase<small>Backend</small></span></div></section><section className="settings-section danger-section"><div><h3>Reset prototype</h3><p>Clear demonstration answers, stories, and onboarding selections.</p></div><Button variant="ghost" onClick={resetDemo}><Trash2 size={15} /> Reset demo data</Button></section></div>}
+      {view === 'settings' && <SettingsPage voiceSpeed={voiceSpeed} setVoiceSpeed={setVoiceSpeed} language={language} setLanguage={setLanguage} calmMotion={calmMotion} setCalmMotion={setCalmMotion} notify={notify} onResetDemo={resetDemo} onOpenPrivacy={() => go('privacy')} onDeleted={afterDataDeleted} />}
+      {view === 'privacy' && <Privacy onBack={() => go('settings')} onOpenSettings={() => go('settings')} />}
     </main>{toast && <div className="toast">{toast}</div>}</div>
 }

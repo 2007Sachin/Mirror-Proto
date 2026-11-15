@@ -195,7 +195,7 @@ export default function Landing({ onTry }: { onTry: () => void }) {
             <h2 id="privacy-title">Private by design.</h2>
           </Reveal>
           <Reveal className="ml-glass ml-privacy">
-            <p className="ml-strong">The session stays with you. Raw audio isn’t stored.</p>
+            <p className="ml-strong">Raw audio isn’t stored by MIRROR. Your notes are visible only to you.</p>
             <p>Typed answers are saved on the practice server so the next question can follow what you said.</p>
           </Reveal>
         </section>

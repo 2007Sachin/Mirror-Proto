@@ -5,6 +5,7 @@ import { LiveOrb, type OrbState } from '../components/LiveOrb'
 import { CHANGED, DID, countWords } from '../lib/analyse'
 import ReplayPanel from '../features/replay/ReplayPanel'
 import type { VoiceSessionApi } from '../voice/useVoiceSession'
+import { screenLine, screenMilestone } from '../features/screen/countdown'
 import { ArrowRight, Captions, CircleHelp, Mic, MicOff, MessageSquare, Repeat, RotateCcw, Square, Volume2, VolumeX, X } from 'lucide-react'
 
 const MIN = 20 // characters; matches the interview's own minimum
@@ -78,12 +79,15 @@ export type InterviewProps = {
   onSwitchToSpeak: () => void
   /** Adds a Replay tab: a calm look at the latest answer and a way to say it again. */
   replay?: boolean
+  /** Realistic screening call: no hints, no tips, no counts, a calm time line, and a plain way to end. */
+  screen?: { remainingSeconds: number | null; totalSeconds: number | null; onEnd: () => void }
 }
 
 const SHORTCUTS: [string, string][] = [['M', 'Mute or unmute'], ['C', 'Captions on or off'], ['T', 'Switch between speaking and typing'], ['P', 'Show or hide the side panel'], ['R', 'Repeat the question'], ['Esc', 'Close a dialog or panel']]
 
 export default function Interview(p: InterviewProps) {
   const { voice, answer, setAnswer } = p
+  const sc = p.screen
   const [confirming, setConfirming] = useState(false)
   const [panel, setPanel] = useState(() => matches(DESKTOP))
   const [desktop, setDesktop] = useState(() => matches(DESKTOP))
@@ -194,7 +198,7 @@ export default function Interview(p: InterviewProps) {
       if (e.ctrlKey || e.metaKey || e.altKey || confirming || t?.closest('textarea, input, select, [contenteditable="true"]')) return
       const k = e.key.toLowerCase()
       if (k === 'm') h.micPress()
-      else if (k === 'c') setCaptions(c => !c)
+      else if (k === 'c' && !sc) setCaptions(c => !c)
       else if (k === 't') h.toggleMode()
       else if (k === 'p') h.openPanel(!panel)
       else if (k === 'r') h.replay()
@@ -204,7 +208,7 @@ export default function Interview(p: InterviewProps) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [confirming, help, panel, desktop])
+  }, [confirming, help, panel, desktop, sc])
 
   // Keep the chat pinned to the newest line unless you scrolled up.
   useEffect(() => {
@@ -225,7 +229,7 @@ export default function Interview(p: InterviewProps) {
     }
   }
   const onTabKey = (e: KeyboardEvent) => {
-    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+    if (sc || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return
     e.preventDefault()
     const order: ('chat' | 'tips' | 'replay')[] = p.replay ? ['chat', 'tips', 'replay'] : ['chat', 'tips']
     const next = order[(order.indexOf(tab) + (e.key === 'ArrowRight' ? 1 : order.length - 1)) % order.length]
@@ -251,12 +255,12 @@ export default function Interview(p: InterviewProps) {
   const speakSecs = speakFrom === null ? 0 : sec - speakFrom
   const wpm = speaking && speakSecs >= 6 && countWords(spoken) >= 8 ? Math.round(countWords(spoken) * 60 / speakSecs) : null
   const pace = wpm === null ? 'Pace shows up once you start speaking.' : wpm < 110 ? `Try speeding up a little (about ${wpm} words a minute).` : wpm > 170 ? `Try slowing down a little (about ${wpm} words a minute).` : `A steady pace (about ${wpm} words a minute).`
-  const showCaptions = captions && speaking && hasSpoken && !muted
+  const showCaptions = !sc && captions && speaking && hasSpoken && !muted
 
   // One Send button, shown in the call bar and, on phones, inside the open sheet (the sheet hides the bar).
   const sendButton = (
     <button type="button" className="ml-btn" onClick={send} disabled={!sendOk} aria-describedby={speaking ? undefined : 'iv-need'}>
-      {p.busy ? 'Saving…' : p.isLast ? 'Finish' : 'Send answer'}{!p.busy && <ArrowRight size={16} aria-hidden="true" />}
+      {p.busy ? 'Saving…' : p.isLast && !sc ? 'Finish' : 'Send answer'}{!p.busy && <ArrowRight size={16} aria-hidden="true" />}
     </button>
   )
   const sheetOpen = panel && !desktop
@@ -274,16 +278,26 @@ export default function Interview(p: InterviewProps) {
             <span className="iv-brand">MIRROR practice</span>
           </div>
           <div className="iv-top-r">
-            <ol className="iv-dots" aria-hidden="true">
-              {Array.from({ length: p.totalDots }, (_, i) => <li key={i} className={i <= p.questionIndex ? 'is-on' : ''} />)}
-            </ol>
-            <p className="iv-qn">Question {p.questionIndex + 1}{p.focusLabel ? ` · ${p.focusLabel}` : ''}</p>
+            {sc ? (
+              sc.remainingSeconds !== null && (
+                <p className="iv-screen-time" role="timer" aria-live="off">
+                  {screenLine(sc.remainingSeconds * 1000)}{(() => { const m = screenMilestone(sc.remainingSeconds * 1000, (sc.totalSeconds ?? 0) * 1000); return m ? <> <b>{m}</b></> : null })()}
+                </p>
+              )
+            ) : (
+              <>
+                <ol className="iv-dots" aria-hidden="true">
+                  {Array.from({ length: p.totalDots }, (_, i) => <li key={i} className={i <= p.questionIndex ? 'is-on' : ''} />)}
+                </ol>
+                <p className="iv-qn">Question {p.questionIndex + 1}{p.focusLabel ? ` · ${p.focusLabel}` : ''}</p>
+              </>
+            )}
             <div className="iv-help">
               <button type="button" className="iv-ico" aria-label="Keyboard shortcuts" aria-expanded={help} aria-controls="iv-keys" onClick={() => setHelp(v => !v)}><CircleHelp size={20} aria-hidden="true" /></button>
               {help && (
                 <div id="iv-keys" className="ml-glass iv-pop">
                   <p className="iv-pop-t">Keyboard shortcuts</p>
-                  <dl>{SHORTCUTS.map(([k, d]) => <div key={k}><dt><kbd>{k}</kbd></dt><dd>{d}</dd></div>)}</dl>
+                  <dl>{SHORTCUTS.filter(([k]) => !(sc && k === 'C')).map(([k, d]) => <div key={k}><dt><kbd>{k}</kbd></dt><dd>{d}</dd></div>)}</dl>
                 </div>
               )}
             </div>
@@ -292,10 +306,10 @@ export default function Interview(p: InterviewProps) {
 
         {confirming && (
           <section className="ml-glass iv-confirm" role="alertdialog" aria-labelledby="iv-confirm-t" aria-describedby="iv-confirm-d">
-            <h2 id="iv-confirm-t">End this practice?</h2>
-            <p id="iv-confirm-d">Your answers so far stay in Sessions, but you will not get notes for this one.</p>
+            <h2 id="iv-confirm-t">{sc ? 'End the call?' : 'End this practice?'}</h2>
+            <p id="iv-confirm-d">{sc ? 'Your answers so far are kept, and you will see your debrief.' : 'Your answers so far stay in Sessions, but you will not get notes for this one.'}</p>
             <div className="iv-row">
-              <button type="button" className="ml-btn ml-btn--sm" onClick={p.onEnd}>End session</button>
+              <button type="button" className="ml-btn ml-btn--sm" onClick={sc ? sc.onEnd : p.onEnd}>{sc ? 'End the call' : 'End session'}</button>
               <button ref={keepBtn} type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={closeConfirm}>Keep going</button>
             </div>
           </section>
@@ -311,7 +325,7 @@ export default function Interview(p: InterviewProps) {
           <h1 className="iv-question" aria-label={p.question}>
             <span aria-hidden="true">{qWords.map((w, i) => <span key={i} className={i < shown ? 'is-in' : ''}>{w} </span>)}</span>
           </h1>
-          <p className="iv-hint">{hint}</p>
+          {!sc && <p className="iv-hint">{hint}</p>}
 
           {micBlocked && (
             <div className="ml-glass iv-card" role="alert">
@@ -338,12 +352,14 @@ export default function Interview(p: InterviewProps) {
               </button>
               <span>{mic ? (muted ? 'Unmute' : 'Mute') : 'Speak'}</span>
             </div>
+            {!sc && (
+              <div className="iv-cbw">
+                <button type="button" className="iv-cb" onClick={() => setCaptions(c => !c)} aria-pressed={captions} aria-label="Captions" title="Captions (C)"><Captions size={22} aria-hidden="true" /></button>
+                <span>Captions</span>
+              </div>
+            )}
             <div className="iv-cbw">
-              <button type="button" className="iv-cb" onClick={() => setCaptions(c => !c)} aria-pressed={captions} aria-label="Captions" title="Captions (C)"><Captions size={22} aria-hidden="true" /></button>
-              <span>Captions</span>
-            </div>
-            <div className="iv-cbw">
-              <button type="button" className="iv-cb" onClick={() => openPanel(!panel)} aria-pressed={panel} aria-label="Chat and tips" title="Chat panel (P)"><MessageSquare size={22} aria-hidden="true" /></button>
+              <button type="button" className="iv-cb" onClick={() => openPanel(!panel)} aria-pressed={panel} aria-label={sc ? 'Chat' : 'Chat and tips'} title="Chat panel (P)"><MessageSquare size={22} aria-hidden="true" /></button>
               <span>Chat</span>
             </div>
             <div className="iv-cbw">
@@ -365,18 +381,18 @@ export default function Interview(p: InterviewProps) {
           </div>
           <div className="iv-bar-g iv-bar-g--end">
             {sendButton}
-            <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={p.onContinueLater}>Continue later <ArrowRight size={16} aria-hidden="true" /></button>
-            <button ref={endBtn} type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={openConfirm} aria-expanded={confirming}><Square size={14} aria-hidden="true" />End session</button>
+            {!sc && <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={p.onContinueLater}>Continue later <ArrowRight size={16} aria-hidden="true" /></button>}
+            <button ref={endBtn} type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={openConfirm} aria-expanded={confirming}><Square size={14} aria-hidden="true" />{sc ? 'End the call' : 'End session'}</button>
           </div>
         </div>
       </div>
 
       {panel && !desktop && <div className="iv-backdrop" onClick={() => setPanel(false)} aria-hidden="true" />}
       {panel && (
-        <aside ref={panelRef} className="ml-glass iv-panel" aria-label="Chat and tips" onKeyDown={onPanelKey}>
+        <aside ref={panelRef} className="ml-glass iv-panel" aria-label={sc ? 'Chat' : 'Chat and tips'} onKeyDown={onPanelKey}>
           <div className="iv-panel-h">
             <div role="tablist" aria-label="Side panel" className="iv-tabs" onKeyDown={onTabKey}>
-              {(p.replay ? (['chat', 'tips', 'replay'] as const) : (['chat', 'tips'] as const)).map((t, i) => (
+              {(sc ? (['chat'] as const) : p.replay ? (['chat', 'tips', 'replay'] as const) : (['chat', 'tips'] as const)).map((t, i) => (
                 <button key={t} ref={el => { tabs.current[i] = el }} type="button" role="tab" id={`iv-tab-${t}`} aria-selected={tab === t} aria-controls={`iv-tp-${t}`} tabIndex={tab === t ? 0 : -1} onClick={() => setTab(t)}>{t === 'chat' ? 'Chat' : t === 'tips' ? 'Tips' : 'Replay'}</button>
               ))}
             </div>
@@ -399,7 +415,7 @@ export default function Interview(p: InterviewProps) {
             </div>
           </div>
 
-          <div id="iv-tp-tips" role="tabpanel" aria-labelledby="iv-tab-tips" hidden={tabPanelHidden('tips')} className="iv-tp iv-tips">
+          {!sc && <div id="iv-tp-tips" role="tabpanel" aria-labelledby="iv-tab-tips" hidden={tabPanelHidden('tips')} className="iv-tp iv-tips">
             <p className="iv-note">Gentle guidance for this answer. It is not a score.</p>
             <ul className="iv-check">
               {([['happened', 'What happened'], ['did', 'What you did'], ['changed', 'What changed']] as const).map(([k, label]) => (
@@ -408,7 +424,7 @@ export default function Interview(p: InterviewProps) {
             </ul>
             <p className="iv-pace" aria-live="off">{pace}</p>
             <p className="iv-pace">Time on this answer: <span className="iv-num">{clock(sec - answerFrom.at)}</span></p>
-          </div>
+          </div>}
 
           {p.replay && (
             <div id="iv-tp-replay" role="tabpanel" aria-labelledby="iv-tab-replay" hidden={tabPanelHidden('replay')} className="iv-tp">
@@ -436,14 +452,14 @@ export default function Interview(p: InterviewProps) {
                   placeholder="Write what happened, in your own words."
                   disabled={p.busy || p.waiting}
                 />
-                <p className="iv-count">{words} {words === 1 ? 'word' : 'words'} · about 80–150 words works well</p>
+                <p className="iv-count">{words} {words === 1 ? 'word' : 'words'}{sc ? '' : ' · about 80–150 words works well'}</p>
                 <p id="iv-need" className="iv-count">{ready ? 'Ctrl or Cmd + Enter sends.' : `Send unlocks at ${MIN} characters — a little more detail first.`}</p>
               </>
             )}
             <div className="iv-actions">
               {sendButton}
-              <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={p.onContinueLater}>Continue later</button>
-              <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={endFromSheet}><Square size={14} aria-hidden="true" />End session</button>
+              {!sc && <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={p.onContinueLater}>Continue later</button>}
+              <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={endFromSheet}><Square size={14} aria-hidden="true" />{sc ? 'End the call' : 'End session'}</button>
             </div>
           </div>
           <p className="iv-foot"><Volume2 size={14} aria-hidden="true" />Saved as you go. Audio is not stored.</p>

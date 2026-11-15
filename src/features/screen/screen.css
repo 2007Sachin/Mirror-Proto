@@ -1,0 +1,11 @@
+.sc-wrap { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; display: grid; gap: 16px; }
+.sc-card { padding: 20px; display: grid; gap: 10px; }
+.sc-card h2 { margin: 0; font-size: 18px; }
+.sc-muted { color: var(--muted); font-size: 15px; margin: 0; }
+.sc-note { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+.sc-q { font-weight: 600; margin: 0; }
+.sc-list, .sc-quotes { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.sc-quotes { gap: 6px; margin-top: 4px; }
+.sc-quotes q { font-style: italic; }
+.sc-actions { display: flex; gap: 8px; }
+.iv-screen-time { font-size: 15px; color: var(--muted); }

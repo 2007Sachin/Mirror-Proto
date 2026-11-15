@@ -28,6 +28,7 @@ import { registerStoriesRoutes } from './routes/stories.js'
 import { registerMatchRoutes } from './routes/match.js'
 import { registerAloudRoutes } from './routes/aloud.js'
 import { registerScreenRoutes } from './routes/screen.js'
+import { buildScreeningQuestions, screenTimeUp } from './domain/screening.js'
 
 export interface AppDeps {
   env: Env
@@ -38,6 +39,8 @@ export interface AppDeps {
   aiDeadlineMs?: number
   /** Speech-to-text for onboarding dictation. Defaults to Sarvam REST, or a mock without keys. */
   stt?: SttProvider
+  /** Clock for a screen's time cap; tests move it. Defaults to Date.now. */
+  now?: () => number
 }
 
 const startedAt = Date.now()
@@ -114,6 +117,7 @@ export function buildApp(deps: AppDeps): Hono {
   }
 
   const idempotency = new Map<string, unknown>()
+  const now = deps.now ?? Date.now
 
   async function supabaseLive(): Promise<boolean> {
     if (!isSupabaseConfigured(env)) return false
@@ -263,17 +267,25 @@ export function buildApp(deps: AppDeps): Hono {
     const profile = await repo.getProfile(workspace)
     const queued = profile && profile.role === body.role && (await repo.listInterviewsByRole(workspace, body.role)).length === 0
     if (body.kind === 'screen') {
-      // ponytail: the screen feature replaces `questions` with its own builder; this is the plumbing it builds on.
-      if (!body.questions) throw new AppError(400, 'screen_questions_required')
+      let questions = body.questions
+      let role = body.role
+      if (body.targetId) {
+        const target = await loadTarget(workspace, body.targetId)
+        if (target.skills.length === 0) throw new AppError(400, 'target_has_no_skills')
+        const probes = (await repo.listGapMatches(workspace, target.id).catch(() => [])).flatMap(m => (m.probeQuestion ? [m.probeQuestion] : []))
+        questions = buildScreeningQuestions({ id: target.id, role: target.role, company: target.company, skills: target.skills, probes }, body.questionCount ?? 6)
+        role = target.role
+      }
+      if (!questions) throw new AppError(400, 'screen_questions_required')
       const screen = await repo.createInterview(workspace, {
-        role: body.role,
+        role,
         industry: body.industry,
-        openingQuestion: body.questions[0],
-        askedQuestions: body.questions,
+        openingQuestion: questions[0],
+        askedQuestions: questions,
         kind: 'screen',
-        questionCap: body.questions.length,
-        timeCapSeconds: body.timeCapMinutes ? body.timeCapMinutes * 60 : null,
-        startedAt: new Date().toISOString(),
+        questionCap: questions.length,
+        timeCapSeconds: (body.timeCapMinutes ?? 8) * 60,
+        startedAt: new Date(now()).toISOString(),
         targetId: body.targetId ?? null,
       })
       return c.json(serializeInterview(screen, [], null), 201)
@@ -322,6 +334,11 @@ export function buildApp(deps: AppDeps): Hono {
     const interview = await repo.getInterview(workspace, interviewId)
     if (!interview) throw new AppError(404, 'interview_not_found')
     const turns = await repo.getTurns(workspace, interviewId)
+    // A screen past its time cap (plus a short grace for an answer already in flight) ends here, with what it has.
+    if (interview.status === 'in_progress' && screenTimeUp(interview, now())) {
+      if (turns.length >= 1) await repo.updateInterviewStatus(workspace, interviewId, 'completed')
+      throw new AppError(409, 'screen_time_up')
+    }
     const result = addTurn(interview, turns, {
       questionIndex: body.questionIndex,
       question: interview.askedQuestions[body.questionIndex] ?? '',

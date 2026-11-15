@@ -35,14 +35,16 @@ function countdown(date: string | null): string | null {
 }
 const time = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
 
-export default function Targets({ openId, onOpen, onPractise }: {
+export default function Targets({ openId, onOpen, onPractise, onScreen }: {
   openId: string | null
   onOpen: (id: string | null) => void
   onPractise: (role: string) => void
+  /** Starts a realistic screening call for this target. */
+  onScreen?: (targetId: string) => void
 }) {
   return (
     <div className="mirror-landing targets">
-      {openId ? <Mission key={openId} id={openId} onBack={() => onOpen(null)} onPractise={onPractise} /> : <List onOpen={onOpen} />}
+      {openId ? <Mission key={openId} id={openId} onBack={() => onOpen(null)} onPractise={onPractise} onScreen={onScreen} /> : <List onOpen={onOpen} />}
     </div>
   )
 }
@@ -153,7 +155,7 @@ function AddForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (id
   )
 }
 
-function Mission({ id, onBack, onPractise }: { id: string; onBack: () => void; onPractise: (role: string) => void }) {
+function Mission({ id, onBack, onPractise, onScreen }: { id: string; onBack: () => void; onPractise: (role: string) => void; onScreen?: (targetId: string) => void }) {
   const [target, setTarget] = useState<Target | null>(null)
   const [failures, setFailures] = useState(0)
   const [sqlOpen, setSqlOpen] = useState(false)
@@ -289,6 +291,13 @@ function Mission({ id, onBack, onPractise }: { id: string; onBack: () => void; o
                 </li>
               ))}
             </ul>
+            {onScreen && (
+              <div className="tg-screen">
+                <button type="button" className="ml-btn ml-btn--sm" disabled={target.skills.length === 0} aria-describedby={target.skills.length === 0 ? 'tg-screen-why' : undefined} onClick={() => onScreen(target.id)}>Practise a screening call</button>
+                <p className="tg-muted">A short call with questions from this job, no hints, and it ends by itself.</p>
+                {target.skills.length === 0 && <p id="tg-screen-why" className="tg-muted">We did not find skills in this description yet, so there is nothing to ask about.</p>}
+              </div>
+            )}
           </section>
 
           {debriefs.length > 0 && (

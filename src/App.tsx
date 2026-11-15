@@ -10,6 +10,9 @@ import Interview from './pages/Interview'
 import Sessions from './pages/Sessions'
 import { useVoiceSession } from './voice/useVoiceSession'
 import * as data from './lib/data'
+import { useScreenClock } from './features/screen/countdown'
+import { ScreenDebriefPage } from './features/screen/ScreenDebrief'
+import { createScreen } from './lib/screenApi'
 import {
   AudioLines, BookOpen,
   Check, ChevronDown, Circle, Fingerprint, Home as HomeIcon,
@@ -18,7 +21,7 @@ import {
   Trash2, Volume2, X,
 } from 'lucide-react'
 
-type View = 'home' | 'firstInterview' | 'workspace' | 'targets' | 'practice' | 'interview' | 'reports' | 'report' | 'profile' | 'settings'
+type View = 'home' | 'firstInterview' | 'workspace' | 'targets' | 'practice' | 'interview' | 'reports' | 'report' | 'screen' | 'profile' | 'settings'
 type Answer = { question: string; answer: string }
 type FlowState = 'not_completed' | 'idle' | 'starting' | 'saving' | 'waiting_nim' | 'generating_reflection' | 'provider_unavailable' | 'retryable_failure' | 'validation_failure'
 
@@ -82,6 +85,10 @@ export default function App() {
   const [sessionId, setSessionId] = useState<string | null>(null)
   /** A screening call sets its own length; null means the practice default. */
   const [questionCap, setQuestionCap] = useState<number | null>(null)
+  /** A realistic screening call in progress: its absolute start (survives a reload) and length. */
+  const [screen, setScreen] = useState<{ startedAt: number; capSeconds: number } | null>(null)
+  const screenRef = useRef(screen)
+  useEffect(() => { screenRef.current = screen }, [screen])
   const [reflection, setReflection] = useState<Reflection | null>(null)
   const [flowState, setFlowState] = useState<FlowState>('idle')
   const [currentQuestion, setCurrentQuestion] = useState('Tell me about a project or moment at work that you’re genuinely proud of.')
@@ -125,14 +132,15 @@ export default function App() {
   const total = questionCap ?? QUESTION_COUNT
   const completed = answers.length === total && assessedRole === role && Boolean(sessionId)
 
-  const go = (next: View) => { setView(next); setMobileNav(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  // A finished screening call goes to its debrief instead of the plain notes page.
+  const go = (next: View) => { setView(next === 'report' && screenRef.current ? 'screen' : next); setScreen(c => (next === 'interview' || next === 'report' ? c : null)); setMobileNav(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2600) }
   const startInterview = async (roleName = role, openingQuestion?: string, voiceOn = voiceMode) => {
     if (busy) return
     if (!roleName) return go('firstInterview')
     setBusy(true)
     setFlowState('starting')
-    setQuestionIndex(0); setAnswers([]); setAssessedRole(roleName); setAnswer(''); setOrbState('thinking'); setReflection(null); setSessionId(null); setQuestionCap(null)
+    setQuestionIndex(0); setAnswers([]); setAssessedRole(roleName); setAnswer(''); setOrbState('thinking'); setReflection(null); setSessionId(null); setQuestionCap(null); setScreen(null)
     try {
       const session = await api.createInterview(roleName, undefined, openingQuestion)
       setSessionId(session.id)
@@ -251,6 +259,58 @@ export default function App() {
     setSessionId(null)
     notify('Session ended.')
   }
+  /** The server builds the questions from the target and keeps the clock; here we only follow it. */
+  const startScreening = async (targetId: string, voiceOn = voiceMode) => {
+    if (busy) return
+    setBusy(true)
+    setFlowState('starting')
+    setQuestionIndex(0); setAnswers([]); setAnswer(''); setOrbState('thinking'); setReflection(null); setSessionId(null); setQuestionCap(null); setScreen(null)
+    try {
+      const session = await createScreen(role || 'Screening call', targetId)
+      setAssessedRole(session.role)
+      setSessionId(session.id)
+      setQuestionCap(session.questionCap ?? null)
+      setScreen({ startedAt: session.startedAt ? Date.parse(session.startedAt) : Date.now(), capSeconds: session.timeCapSeconds ?? 480 })
+      sessionStorage.setItem(SESSION_STORAGE_KEY, session.id)
+      setCurrentQuestion(session.currentQuestion ?? session.questions[0])
+      setQuestionIndex(session.nextQuestionIndex ?? 0)
+      setFlowState('idle')
+      setOrbState('speaking')
+      go('interview')
+      if (voiceOn) void voice.start(session.id).then(ok => { if (!ok) { setVoiceMode(false); notify(voice.failureNotice()) } })
+    } catch (err) {
+      setFlowState(classifyApiError(err))
+      notify(err instanceof ApiError && err.code === 'target_has_no_skills' ? 'This target has no skills yet, so a screening call cannot be built.' : 'Could not start the call. Try again in a moment.')
+    } finally {
+      setBusy(false)
+    }
+  }
+  const finishing = useRef(false)
+  /** The time cap or "End the call": stop voice, end early, put the notes together, then show the debrief. */
+  // ponytail: an answer typed at the very last second may be dropped; the server's 20 s grace covers one already sent.
+  const finishScreen = async () => {
+    const id = sessionIdRef.current
+    if (!id || finishing.current) return
+    finishing.current = true
+    stopVoice()
+    setVoiceMode(false); setOrbState('idle')
+    setFlowState('generating_reflection')
+    try {
+      await api.complete(id, { early: true })
+    } catch {
+      // Nothing was answered, so there is nothing to show.
+      void api.abandon(id).catch(() => undefined)
+      sessionStorage.removeItem(SESSION_STORAGE_KEY)
+      setSessionId(null); setScreen(null); setFlowState('idle'); finishing.current = false
+      go('workspace'); notify('The call ended before any answer was saved.')
+      return
+    }
+    sessionStorage.removeItem(SESSION_STORAGE_KEY)
+    try { setReflection(await api.reflect(id)) } catch { /* the debrief does not need the notes */ }
+    setFlowState('idle'); finishing.current = false
+    go('screen')
+  }
+  const screenLeft = useScreenClock(view === 'interview' && screen ? screen.startedAt : null, screen?.capSeconds ?? null, () => void finishScreen())
   const switchToType = () => {
     voice.continueByTyping(); setVoiceMode(false); setOrbState('idle')
   }
@@ -302,6 +362,7 @@ export default function App() {
         // Only what the server returned: the exact question, the answers so far, no guessed progress.
         setSessionId(session.id)
         setQuestionCap(session.questionCap ?? null)
+        setScreen(session.kind === 'screen' && session.startedAt ? { startedAt: Date.parse(session.startedAt), capSeconds: session.timeCapSeconds ?? 480 } : null)
         setRole(session.role)
         setAssessedRole(session.role)
         setAnswers(session.turns.map(t => ({ question: t.question, answer: t.answer })))
@@ -319,6 +380,7 @@ export default function App() {
     api.getInterview(sessionId)
       .then(session => {
         setQuestionCap(session.questionCap ?? null)
+        setScreen(session.kind === 'screen' && session.startedAt ? { startedAt: Date.parse(session.startedAt), capSeconds: session.timeCapSeconds ?? 480 } : null)
         setAnswers(session.turns.map(t => ({ question: t.question, answer: t.answer })))
         if (session.nextQuestionIndex !== null) setQuestionIndex(session.nextQuestionIndex)
         if (session.currentQuestion) setCurrentQuestion(session.currentQuestion)
@@ -365,6 +427,7 @@ export default function App() {
         onEnd={endSession}
         onSwitchToType={switchToType}
         onSwitchToSpeak={switchToSpeak}
+        screen={screen ? { remainingSeconds: screenLeft === null ? null : Math.ceil(screenLeft / 1000), totalSeconds: screen.capSeconds, onEnd: () => void finishScreen() } : undefined}
       />
       {toast && <div className="toast">{toast}</div>}
     </>
@@ -381,7 +444,8 @@ export default function App() {
     {mobileNav && <button className="nav-scrim" aria-label="Close navigation" onClick={() => setMobileNav(false)} />}
     <main className="workspace-main"><header className="workspace-header"><button className="mobile-menu" onClick={() => setMobileNav(true)}><Menu size={21} /></button><div><span className="workspace-breadcrumb">MIRROR / {view === 'workspace' ? 'TODAY' : view === 'report' || view === 'reports' ? 'SESSIONS' : view.toUpperCase()}</span></div><div className="header-actions"><span className="demo-badge"><Circle size={7} fill="currentColor" /> DEMO</span><button className="avatar-button" onClick={() => go('profile')} aria-label="Open candidate profile">{profileName.charAt(0)}</button></div></header>
       {view === 'workspace' && <Overview profile={profile} busy={busy} onStart={(question, speak) => { setVoiceMode(speak); void startInterview(role, question, speak) }} onContinue={resumeInterview} onLetGo={letGo} onOpenItem={id => { setPracticeItem(id); go('practice') }} />}
-      {view === 'targets' && <Targets openId={targetId} onOpen={setTargetId} onPractise={r => void startInterview(r)} />}
+      {view === 'targets' && <Targets openId={targetId} onOpen={setTargetId} onPractise={r => void startInterview(r)} onScreen={id => void startScreening(id)} />}
+      {view === 'screen' && sessionId && <ScreenDebriefPage interviewId={sessionId} onDone={() => { setScreen(null); go('workspace') }} />}
       {view === 'practice' && <Practice initialItemId={practiceItem} onInitialConsumed={() => setPracticeItem(null)} />}
       {view === 'profile' && <div className="workspace-content profile-content"><div className="page-title"><div><p className="eyebrow">YOUR CANDIDATE PROFILE</p><h1>Profile</h1><p>Shape the context MIRROR uses. Nothing here becomes an assessment by itself.</p></div><Button onClick={() => notify('Profile changes saved in this prototype.')}><Check size={15} /> Save profile</Button></div><section className="profile-identity"><div className="profile-avatar">{profileName.charAt(0)}</div><div><h2>{profileName}</h2><p>{role} · {profileLocation}</p><span><Circle size={7} fill="currentColor" /> Prototype profile · No account connected</span></div></section><div className="profile-layout"><section className="profile-form"><div className="profile-form-title"><h2>About you</h2><p>Keep this brief. Your interview answers matter more than this form.</p></div><div className="profile-field-grid"><div><FieldLabel>Display name</FieldLabel><input value={profileName} onChange={e => setProfileName(e.target.value)} /></div><div><FieldLabel>Location</FieldLabel><input value={profileLocation} onChange={e => setProfileLocation(e.target.value)} /></div><div><FieldLabel>Experience</FieldLabel><div className="select-wrap"><select value={profileExperience} onChange={e => setProfileExperience(e.target.value)}><option>Student / recent graduate</option><option>0–2 years</option><option>2–4 years</option><option>5–8 years</option><option>8+ years</option></select><ChevronDown size={16} /></div></div><div><FieldLabel>Current direction</FieldLabel><div className="profile-role-link">{role}</div></div></div><FieldLabel>Short introduction</FieldLabel><textarea value={profileBio} onChange={e => setProfileBio(e.target.value)} /></section><aside className="profile-summary"><div className="card-label">PROFILE SNAPSHOT</div><h3>{profile?.focus ?? 'Interview practice'}</h3><dl><div><dt>Experience</dt><dd>{profileExperience}</dd></div><div><dt>Sessions done</dt><dd>{completed ? 1 : 0}</dd></div></dl><div className="profile-evidence-note"><Fingerprint size={17} /><p>Profile details personalise your practice. They never generate a readiness score.</p></div></aside></div></div>}
       {(view === 'reports' || view === 'report') && <Sessions openId={view === 'report' ? sessionId : null} refreshKey={reflection?.interviewId} onPractise={() => void startInterview()} />}

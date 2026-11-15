@@ -346,7 +346,7 @@ export default function App() {
     if (sessionStorage.getItem(SESSION_STORAGE_KEY) === id) { sessionStorage.removeItem(SESSION_STORAGE_KEY); setSessionId(null) }
   }
   const resetDemo = () => {
-    if (!window.confirm('Reset all demonstration data and return to the beginning?')) return
+    if (!window.confirm('Clear what MIRROR has saved in this browser and start again? Your saved account data is removed from Settings, under Your data.')) return
     sessionStorage.removeItem(SESSION_STORAGE_KEY)
     void api.deleteProfile().catch(() => undefined)
     void data.clearAll()

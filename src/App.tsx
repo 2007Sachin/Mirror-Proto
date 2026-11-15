@@ -359,6 +359,7 @@ export default function App() {
         answer={answer}
         setAnswer={setAnswer}
         sessionId={sessionId}
+        replay
         onSubmit={() => void submitAnswer()}
         onRetry={() => void retryFollowUp()}
         onContinueLater={continueLater}

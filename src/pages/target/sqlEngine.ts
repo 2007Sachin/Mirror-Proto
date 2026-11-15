@@ -1,8 +1,10 @@
 import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js'
 import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url'
 import { seedSql } from './sqlProblems'
+import { checkSql } from '../../practice/sql/worker/sqlGuard'
 
-export type QueryResult = { columns: string[]; rows: unknown[][]; total: number } | { error: string }
+// `truncated`: the query kept producing rows and was cut off, so `total` means "this many or more". `stopped`: the learner cancelled.
+export type QueryResult = { columns: string[]; rows: unknown[][]; total: number; truncated?: boolean } | { error: string; stopped?: boolean }
 type Ok = Exclude<QueryResult, { error: string }>
 
 const MAX_ROWS = 50
@@ -24,15 +26,11 @@ export async function createDatabase(locate?: () => string): Promise<Database> {
   return db
 }
 
-// ponytail: keyword blocklist + "no semicolon inside" guards a throwaway in-memory DB, it is not a SQL parser.
-// A string literal containing a semicolon, or a column named like a keyword, is rejected; fine for these problems.
-const FORBIDDEN = /\b(insert|update|delete|drop|alter|create|replace|pragma|attach|detach|vacuum|reindex)\b/i
-
+// Synchronous path (node tests, code that holds its own Database). Learner screens use runSql in worker/sqlRunner.ts.
 export function runQuery(db: Database, sql: string): QueryResult {
-  const clean = sql.replace(/--.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '').trim().replace(/;+\s*$/, '').trim()
-  if (!clean) return { error: 'Write a query first.' }
-  if (clean.includes(';')) return { error: 'Run one statement at a time.' }
-  if (!/^(select|with)\b/i.test(clean) || FORBIDDEN.test(clean)) return { error: 'Only SELECT queries can run here.' }
+  const checked = checkSql(sql)
+  if ('error' in checked) return checked
+  const clean = checked.sql
   try {
     const res = db.exec(clean)[0]
     if (!res) return { columns: [], rows: [], total: 0 }
@@ -47,7 +45,7 @@ const cell = (v: unknown) => (v === null || v === undefined ? 'null' : typeof v 
 // Same rows, ignoring column names; row order only matters when `ordered`.
 // ponytail: compares the capped rows (50); every solution returns far fewer, so a longer wrong result still fails on `total`.
 export function sameResult(a: QueryResult, b: QueryResult, ordered: boolean): boolean {
-  if ('error' in a || 'error' in b) return false
+  if ('error' in a || 'error' in b || a.truncated || b.truncated) return false
   if (a.total !== b.total || a.columns.length !== b.columns.length) return false
   const keys = (r: Ok) => r.rows.map(row => row.map(cell).join('\u0001'))
   const ka = keys(a), kb = keys(b)

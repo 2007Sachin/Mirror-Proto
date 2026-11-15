@@ -15,7 +15,7 @@
  * used for creating and deleting those two users and nothing else.
  */
 import { randomBytes, randomUUID } from 'node:crypto'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 const LIVE = process.env.LIVE_RLS === '1'
@@ -61,6 +61,7 @@ function rowFor(table: Table, u: string, p: Parents, variant = 0): Row {
 const keyOf = (table: Table, row: Row) => row[KEY[table]] as string
 
 describe.skipIf(!LIVE)('live RLS: two users, twelve tables', () => {
+  vi.setConfig({ testTimeout: 60_000 }) // every check is a real network round trip
   const url = process.env.SUPABASE_URL ?? ''
   const anon = process.env.SUPABASE_ANON_KEY ?? ''
   const service = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''

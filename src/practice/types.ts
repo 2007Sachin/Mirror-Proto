@@ -56,6 +56,8 @@ export interface ItemStat {
   seconds: number          // total time across attempts
   lastAt: string           // ISO
   solvedAt: string | null  // ISO of the first correct attempt
+  lastCorrect?: boolean    // was the latest attempt correct
+  history?: { at: string; correct: boolean }[] // last 12 attempts, oldest first
 }
 
 export interface DayStat { date: string; attempts: number; seconds: number } // date = YYYY-MM-DD (UTC)

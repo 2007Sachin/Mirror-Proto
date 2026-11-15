@@ -1,4 +1,5 @@
 // Pure insight functions for Today. Input: PracticeSummary + track catalog + targets. No percentages anywhere.
+import { dueReps } from './replay'
 import type { ItemStat, PracticeItem, PracticeSummary, Track } from './types'
 
 const DAY = 86_400_000
@@ -114,14 +115,17 @@ export function targetNeeds(skills: { area: NeedArea }[], tracks: TrackLike[], s
 
 export interface Recommendation { itemId: string; reason: string }
 
-/** Transparent order: weak spot, due review, uncovered topic of a track a target needs, least-practised track. */
-export function recommend(s: PracticeSummary, tracks: TrackLike[], targets: TargetLike[], now: Date): Recommendation | null {
+/** Transparent order: weak spot, spaced replay (1/3/7 days, shorter before interviewDate), old due review, uncovered topic of a track a target needs, least-practised track. */
+export function recommend(s: PracticeSummary, tracks: TrackLike[], targets: TargetLike[], now: Date, interviewDate?: string | null): Recommendation | null {
   const catalog = itemsOf(tracks)
   const byId = new Map(catalog.map(i => [i.id, i]))
   const title = (id: string) => byId.get(id)?.title ?? id
 
   const weak = weakSpots(s, tracks).find(w => byId.has(w.itemIds[0]))
   if (weak) return { itemId: weak.itemIds[0], reason: `You missed “${title(weak.itemIds[0])}” on the first try and have not solved it yet. Try it again.` }
+
+  const rep = dueReps(s.items, now, interviewDate).find(r => byId.has(r.itemId))
+  if (rep) return { itemId: rep.itemId, reason: rep.reason }
 
   const due = dueForReview(s, now).find(d => byId.has(d.itemId))
   if (due) return { itemId: due.itemId, reason: `You solved “${title(due.itemId)}” ${due.daysAgo} days ago. A second look now helps it stick.` }

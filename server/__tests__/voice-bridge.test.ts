@@ -44,21 +44,20 @@ describe('submitVoiceTurn', () => {
     await repo.ensureWorkspace('dev')
     const interview = await repo.createInterview('dev', { role: 'Product Analyst', openingQuestion: OPENING_QUESTION })
     const { ProviderFailure } = await import('../providers/nim.js')
-    let calls = 0
+    // A failing follow-up never fails the turn any more (the question falls back to the catalogue), and a
+    // retry of the same answer index must not add the answer a second time.
     const provider = {
       async generateFollowUp() {
-        calls += 1
-        if (calls === 1) throw new ProviderFailure('provider_unavailable')
-        return 'What changed afterwards?'
+        throw new ProviderFailure('provider_unavailable')
       },
       async generateReflection() {
         throw new Error('unused')
       },
     }
     const first = await submitVoiceTurn(repo, 'dev', interview.id, 0, 'I led the redesign.', provider as never)
-    expect(first).toMatchObject({ ok: false, code: 'followup_provider_unavailable' })
+    expect(first).toMatchObject({ ok: true, nextQuestionIndex: 1 })
     const retry = await submitVoiceTurn(repo, 'dev', interview.id, 0, 'I led the redesign again.', provider as never)
-    expect(retry).toMatchObject({ ok: true, nextQuestionIndex: 1, nextQuestion: 'What changed afterwards?' })
+    expect(retry).toMatchObject({ ok: true, nextQuestionIndex: 1 })
     expect(await repo.getTurns('dev', interview.id)).toHaveLength(1)
   })
 

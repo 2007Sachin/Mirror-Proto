@@ -52,7 +52,7 @@ export default function Diagnostic({ titles, order, onOpen, onClose, onDone }: {
 
   return (
     <section className="ml-glass dg" aria-labelledby="dg-q">
-      <p className="dg-step">Question {n + 1} of {DIAG.length}. Work it out in your head. Nothing runs.</p>
+      <p className="dg-step">Question {n + 1}. Work it out in your head. Nothing runs.</p>
       <div className="dg-tables">{q.tables.map(t => <Rows key={t.name} t={t} />)}</div>
       <pre className="dg-sql" tabIndex={0} aria-label="Query">{q.sql}</pre>
       <h2 id="dg-q">{q.ask}</h2>

@@ -5,12 +5,13 @@ import { trackModule } from './index'
 import { problems } from './problems'
 import { buildHarness, type RunResult } from './runner'
 
-const hasPython = spawnSync('python', ['--version']).status === 0
+const PY = ['python3', 'python'].find(c => spawnSync(c, ['--version']).status === 0)
+const hasPython = !!PY
 
 // Runs the harness text with the system python and reads back the JSON the harness leaves behind.
 function runWithPython(code: string, tests: Parameters<typeof buildHarness>[1]): Omit<RunResult, 'ok'> {
   const script = buildHarness(code, tests) + '\nprint(__mirror_result)\n'
-  const out = spawnSync('python', ['-I', '-'], { input: script, encoding: 'utf8', timeout: 20000 })
+  const out = spawnSync(PY!, ['-I', '-'], { input: script, encoding: 'utf8', timeout: 20000 })
   expect(out.status, out.stderr).toBe(0)
   return JSON.parse(out.stdout.trim().split('\n').pop() as string)
 }

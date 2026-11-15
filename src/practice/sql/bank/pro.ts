@@ -147,7 +147,7 @@ export const enrich: Record<string, Partial<SqlProblem>> = {
   'sql-revenue-share': e(
     'Finance wants to see how much each customer contributes to completed revenue.',
     'For each customer with completed orders, return their share of total completed revenue as a percent, rounded to 1 decimal. Order by pct descending, then customer_id.',
-    'customer_id, pct (1 decimal); pct desc, customer_id', 'Percent of total', 'Onsite',
+    'customer_id, pct (1 decimal); pct desc, customer_id', 'Share of total', 'Onsite',
     'Do the percentages add up to exactly 100? Why or why not?',
     ['Use 100.0 to avoid integer division', 'Rounded values may not sum to exactly 100'],
     ['orders'], 'Per-customer totals in a CTE, divided by the sum over that same CTE.',
@@ -213,7 +213,7 @@ export const enrich: Record<string, Partial<SqlProblem>> = {
   'sql-share-of-customer': e(
     'Account managers want to see which single order dominates each customer\'s spend.',
     'For each completed order return its share of that customer\'s completed total, as a percent rounded to 1 decimal. Return id, customer_id, pct. Order by customer_id, id.',
-    'id, customer_id, pct (1 decimal); customer_id, id', 'Percent of group total', 'Onsite',
+    'id, customer_id, pct (1 decimal); customer_id, id', 'Share of group total', 'Onsite',
     'How would you do it without a window function?',
     ['Use 100.0 to avoid integer division', 'Each customer\'s shares sum to about 100'],
     ['orders'], 'SUM(amount) OVER (PARTITION BY customer_id) is the per-customer total beside every row.',
@@ -305,7 +305,7 @@ export const enrich: Record<string, Partial<SqlProblem>> = {
     ['products'], 'Number products by price descending inside each category, keep number 1.',
     'ROW_NUMBER with a partition returns one winner per category. The trap is MAX(price) with a bare name column, which does not guarantee the matching name in every database.'),
   'sit-p-duplicate-customers': e(
-    'Support suspects duplicate contact records and needs evidence of how many.',
+    'Support suspects duplicate contact records and needs a count of how many.',
     'Return each clean email (lower case, trimmed) that appears more than once, with its number of copies. Order by copies descending, then email.',
     'email, copies; copies desc, email', 'Duplicate detection', 'Phone screen',
     'How would you list the actual duplicate rows?',
@@ -315,32 +315,32 @@ export const enrich: Record<string, Partial<SqlProblem>> = {
 
   // case-shop
   'case-shop-1': e(
-    'Step 1 of 4: a small shop wants a health check. Start with where the money comes from.',
-    'Step 1 of 4. Return item revenue per product category (price times qty, from order_items and products, all order statuses). Order by revenue descending, then category.',
+    'Part 1: a small shop wants a health check. Start with where the money comes from.',
+    'Part 1. Return item revenue per product category (price times qty, from order_items and products, all order statuses). Order by revenue descending, then category.',
     'category, revenue; revenue desc, category', 'Join + aggregate', 'Take-home',
     'Which category is the biggest, and is it the same in step 4?',
     ['Revenue is price times qty, not price', 'Every item row counts'],
     ['order_items', 'products'], 'Join the items to products and sum qty * price per category.',
     'The price lives on products and the quantity on order_items, so both are needed before summing. The trap is SUM(price), which ignores quantity.'),
   'case-shop-2': e(
-    'Step 2 of 4: the recorded order amount should match what the items add up to.',
-    'Step 2 of 4. Return orders whose item total (sum of qty times price) differs from amount by more than 20, in either direction. Orders without items are skipped. Order by id.',
+    'Part 2: the recorded order amount should match what the items add up to.',
+    'Part 2. Return orders whose item total (sum of qty times price) differs from amount by more than 20, in either direction. Orders without items are skipped. Order by id.',
     'id, amount, item_total; id', 'Pre-aggregate then join', 'Take-home',
     'What might explain a mismatch: discounts, shipping or bad data?',
     ['Boundary: more than 20, so exactly 20 is fine', 'Total the items before joining to orders'],
     ['orders', 'order_items', 'products'], 'Sum items per order in a CTE first, then join to orders and compare with ABS.',
     'Totalling first keeps one row per order so nothing is counted twice. The trap is joining items to orders and comparing per item row.'),
   'case-shop-3': e(
-    'Step 3 of 4: which products does the shop carry but never complete a sale of?',
-    'Step 3 of 4. Return the name of each product that is in no completed order (including products never ordered). Order by name.',
+    'Part 3: which products does the shop carry but never complete a sale of?',
+    'Part 3. Return the name of each product that is in no completed order (including products never ordered). Order by name.',
     'name; ascending', 'Anti-join / NOT IN', 'Take-home',
     'Why is NOT EXISTS safer than NOT IN?',
     ['Products with no orders at all count', 'Refunded and pending do not count as sold'],
     ['products', 'order_items', 'orders'], 'Find product ids that appear in completed orders, then take the products not in that set.',
     'The inner query lists products that did sell, so the outer one keeps the rest. The trap is NOT IN over a column that holds NULL, which returns nothing.'),
   'case-shop-4': e(
-    'Step 4 of 4: pull the story together by market.',
-    'Step 4 of 4. For each customer country return the product category with the highest item revenue (price times qty). One row per country, ties go to the first category alphabetically. Then write one line for the owner.',
+    'Part 4: pull the story together by market.',
+    'Part 4. For each customer country return the product category with the highest item revenue (price times qty). One row per country, ties go to the first category alphabetically. Then write one line for the owner.',
     'country, category, revenue; country. Plus a one-line takeaway', 'Top-N per group', 'Take-home',
     'What would you tell the owner to stock more of?',
     ['Ties between categories', 'A country may have only one category'],
@@ -475,7 +475,7 @@ export const added: SqlProblem[] = [
     'SELECT c.name FROM customers c WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id) ORDER BY c.name', true),
   N('sql-p-category-pct-total', T.p9, 'Category share of item revenue', 7, {
     scenario: 'The buyer asks what percent of item revenue each category brings.',
-    output: 'category, revenue, pct (1 decimal); revenue desc, category', pattern: 'Percent of total', asked: 'Onsite',
+    output: 'category, revenue, pct (1 decimal); revenue desc, category', pattern: 'Share of total', asked: 'Onsite',
     followUp: 'Compute the same with a subquery instead of a window.',
     edgeCases: ['Use 100.0 to avoid integer division', 'All order statuses count'],
     tables: ['order_items', 'products'],

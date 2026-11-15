@@ -263,7 +263,7 @@ export default function Overview({ profile, busy, onStart, onContinue, onLetGo, 
             <button type="button" className="ml-btn ml-btn--quiet" disabled={busy} onClick={() => onStart(note?.practiceQuestion, false)}>
               Type instead
             </button>
-            <span className="today-meta">4 questions{profile ? ` · stays on ${profile.focus}` : ''}</span>
+            <span className="today-meta">Short session{profile ? ` · stays on ${profile.focus}` : ''}</span>
           </div>
           {open && (
             <p className="today-open">

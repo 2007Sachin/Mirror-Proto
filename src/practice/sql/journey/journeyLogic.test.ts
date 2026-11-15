@@ -111,10 +111,10 @@ describe('buildJourney (fake data)', () => {
   it('tracks the daily quest', () => {
     const today = '2026-01-02T08:00:00Z'
     const q = (n: number) => buildJourney({ ...base, placementDone: true, items: ['p1', 'p2', 'p3'].slice(0, n).map(id => stat(id, { solvedAt: today })) }).quest
-    expect(q(1)).toEqual({ text: 'Solve 3 problems today', progress: '1 of 3', done: false })
-    expect(q(3)).toMatchObject({ progress: '3 of 3', done: true })
+    expect(q(1)).toEqual({ text: 'Solve a few problems today', progress: '1 done', done: false })
+    expect(q(3)).toMatchObject({ progress: '3 done', done: true })
     const fallback = buildJourney({ ...base, days: [{ date: '2026-01-02', attempts: 2, seconds: 9 }] })
-    expect(fallback.quest.progress).toBe('2 of 3')
+    expect(fallback.quest.progress).toBe('2 done')
   })
 
   it('awards badges', () => {

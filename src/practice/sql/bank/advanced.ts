@@ -304,7 +304,7 @@ export const enrich: Record<string, Partial<SqlProblem>> = {
     explain: 'Conditional SUM over group 1 divided by the total gives the share. NTILE groups by position, so with 10 customers each group has 2.',
   },
   'case-subs-1': {
-    scenario: 'Step 1 of 4: a subscription product with plans, logins and activity. You are sizing the active base before looking at behaviour.',
+    scenario: 'Part 1: a subscription product with plans, logins and activity. You are sizing the active base before looking at behaviour.',
     prompt: 'How many subscribers are active right now on each plan? Active means the subscription has no end date. Order by plan name.',
     output: 'plan, active (by plan)',
     pattern: 'Current-state count', asked: 'Take-home',
@@ -316,7 +316,7 @@ export const enrich: Record<string, Partial<SqlProblem>> = {
     ...ord('case-subs-1', 'ORDER BY plan'),
   },
   'case-subs-2': {
-    scenario: 'Step 2 of 4: you now look at habit. Login days show who comes back on consecutive days.',
+    scenario: 'Part 2: you now look at habit. Login days show who comes back on consecutive days.',
     prompt: 'For users who have a subscription and appear in logins, return their longest streak of consecutive login days. One row per user. Order by user_id.',
     output: 'user_id, longest (days) (by user_id)',
     pattern: 'Gaps and islands', asked: 'Take-home',
@@ -328,7 +328,7 @@ export const enrich: Record<string, Partial<SqlProblem>> = {
     ...ord('case-subs-2', 'ORDER BY user_id'),
   },
   'case-subs-3': {
-    scenario: 'Step 3 of 4: next you measure visits. The activity table has one timestamp per action.',
+    scenario: 'Part 3: next you measure visits. The activity table has one timestamp per action.',
     prompt: 'How many sessions has each user in activity had? A session ends after more than 30 minutes of inactivity; a gap of exactly 30 minutes stays in the session. Order by user_id.',
     output: 'user_id, sessions (by user_id)',
     pattern: 'Sessionization', asked: 'Take-home',
@@ -340,7 +340,7 @@ export const enrich: Record<string, Partial<SqlProblem>> = {
     solution: `SELECT user_id, SUM(ns) AS sessions FROM (SELECT user_id, ${NS} AS ns FROM activity) GROUP BY user_id ORDER BY user_id`, ordered: true,
   },
   'case-subs-4': {
-    scenario: 'Step 4 of 4: you now connect billing to behaviour. Paying subscribers who never log in are the quiet risk.',
+    scenario: 'Part 4: you now connect billing to behaviour. Paying subscribers who never log in are the quiet risk.',
     prompt: 'List active subscribers (no end date) who have no row in logins. Return the user and plan, ordered by user_id. Then write one line for the product lead: what to do first about them.',
     output: 'user_id, plan (by user_id), then one takeaway line',
     pattern: 'Anti-join, then takeaway', asked: 'Take-home',

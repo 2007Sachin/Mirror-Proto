@@ -251,10 +251,19 @@ export default function Interview(p: InterviewProps) {
   const pace = wpm === null ? 'Pace shows up once you start speaking.' : wpm < 110 ? `Try speeding up a little (about ${wpm} words a minute).` : wpm > 170 ? `Try slowing down a little (about ${wpm} words a minute).` : `A steady pace (about ${wpm} words a minute).`
   const showCaptions = captions && speaking && hasSpoken && !muted
 
+  // One Send button, shown in the call bar and, on phones, inside the open sheet (the sheet hides the bar).
+  const sendButton = (
+    <button type="button" className="ml-btn" onClick={send} disabled={!sendOk} aria-describedby={speaking ? undefined : 'iv-need'}>
+      {p.busy ? 'Saving…' : p.isLast ? 'Finish' : 'Send answer'}{!p.busy && <ArrowRight size={16} aria-hidden="true" />}
+    </button>
+  )
+  const sheetOpen = panel && !desktop
+  const endFromSheet = () => { setPanel(false); setConfirming(true) }
+
   const tabPanelHidden = (t: 'chat' | 'tips') => tab !== t
 
   return (
-    <div className={`mirror-landing iv ${panel ? 'has-panel' : ''}`}>
+    <div className={`mirror-landing iv ${panel ? 'has-panel' : ''} ${sheetOpen ? 'has-sheet' : ''}`}>
       <div className="iv-stage" style={{ ['--level' as string]: level }}>
         <header className="iv-top">
           <div className="iv-top-l">
@@ -353,9 +362,7 @@ export default function Interview(p: InterviewProps) {
             )}
           </div>
           <div className="iv-bar-g iv-bar-g--end">
-            <button type="button" className="ml-btn" onClick={send} disabled={!sendOk} aria-describedby={speaking ? undefined : 'iv-need'}>
-              {p.busy ? 'Saving…' : p.isLast ? 'Finish' : 'Send answer'}{!p.busy && <ArrowRight size={16} aria-hidden="true" />}
-            </button>
+            {sendButton}
             <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={p.onContinueLater}>Continue later <ArrowRight size={16} aria-hidden="true" /></button>
             <button ref={endBtn} type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={openConfirm} aria-expanded={confirming}><Square size={14} aria-hidden="true" />End session</button>
           </div>
@@ -425,6 +432,11 @@ export default function Interview(p: InterviewProps) {
                 <p id="iv-need" className="iv-count">{ready ? 'Ctrl or Cmd + Enter sends.' : `Send unlocks at ${MIN} characters — a little more detail first.`}</p>
               </>
             )}
+            <div className="iv-actions">
+              {sendButton}
+              <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={p.onContinueLater}>Continue later</button>
+              <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={endFromSheet}><Square size={14} aria-hidden="true" />End session</button>
+            </div>
           </div>
           <p className="iv-foot"><Volume2 size={14} aria-hidden="true" />Saved as you go. Audio is not stored.</p>
         </aside>

@@ -121,6 +121,8 @@
 .iv-foot { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 14px 12px; font-size: 13px; color: var(--muted); }
 
 .iv-backdrop { display: none; }
+/* Send, Continue later and End session inside the sheet; the call bar already has them on wide screens. */
+.iv-actions { display: none; }
 
 @media (min-width: 960px) {
   .mirror-landing.iv { height: 100dvh; min-height: 0; overflow: hidden; }
@@ -139,6 +141,20 @@
   .iv-backdrop { display: block; position: fixed; z-index: 50; inset: 0; background: color-mix(in srgb, var(--ink) 35%, transparent); }
   .iv-panel { position: fixed; z-index: 60; left: 0; right: 0; bottom: 0; height: 80dvh; max-height: 80dvh; border-radius: 24px 24px 0 0; animation: iv-sheet .3s var(--ease); }
   .iv-ring { display: none; }
+  /* The open sheet covers the bar, so it carries its own actions and the bar steps aside. */
+  .has-sheet .iv-bar { display: none; }
+  .iv-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .iv-actions .ml-btn { gap: 8px; }
+  .iv-actions .ml-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .iv-panel { max-height: min(80dvh, calc(100dvh - 16px)); }
+  .iv-comp { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+}
+/* Short viewport (on-screen keyboard open): keep the tabs and close button visible above the composer. */
+@media (max-width: 959.98px) and (max-height: 560px) {
+  .iv-panel { height: auto; max-height: calc(100dvh - 8px); }
+  .iv-comp .iv-count, .iv-foot { display: none; }
+  .iv-comp textarea { min-height: 2.6em; max-height: 20dvh; }
+  .iv-chat { min-height: 3.5em; }
 }
 @keyframes iv-sheet { from { transform: translateY(24px); opacity: 0; } }
 

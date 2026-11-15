@@ -22,7 +22,7 @@ const WORLD_DEFS = [
   { id: 'advanced', title: 'World 4 · Senior patterns', subtitle: 'Runs, sessions, cohorts, funnels, recursion and trends.', badge: 'Interview Ready', boss: 'senior' as const },
 ]
 const BOSS = {
-  phone: { title: 'Phone screen', blurb: 'A 30-minute mock phone screen: 3 questions, no hints.', minutes: 30 },
+  phone: { title: 'Phone screen', blurb: 'A 30-minute mock phone screen with no hints.', minutes: 30 },
   onsite: { title: 'Onsite round', blurb: 'A 45-minute mock onsite: SQL and concept questions mixed.', minutes: 45 },
   concepts: { title: 'Concepts round', blurb: 'A quick 15-minute round of interview concept questions.', minutes: 15 },
   senior: { title: 'Senior loop', blurb: 'A 60-minute mock senior loop: harder SQL and concepts.', minutes: 60 },
@@ -102,7 +102,7 @@ export function buildJourney(input: JourneyInput): JourneyState {
     const b = BOSS[d.boss]
     const boss: JourneyNode = { id: `boss:${d.boss}`, kind: 'boss', title: b.title, blurb: b.blurb, minutes: b.minutes, mockPreset: d.boss, solved: 0, total: 0, stars: 0, status: 'open', xp: 50 }
     const place: JourneyNode[] = i === 0 ? [{
-      id: 'place', kind: 'placement', title: 'Find your level', blurb: 'Eight quick questions place you on the route', minutes: 8,
+      id: 'place', kind: 'placement', title: 'Find your level', blurb: 'A few quick questions place you on the route', minutes: 8,
       solved: 0, total: 0, stars: 0, status: input.placementDone ? 'done' : 'open', xp: input.placementDone ? 0 : PLACEMENT_XP,
     }] : []
     return { id: d.id, title: d.title, subtitle: d.subtitle, badge: d.badge, nodes: [...place, ...nodes, boss], done }
@@ -132,14 +132,14 @@ export function buildJourney(input: JourneyInput): JourneyState {
   // Quest: solved today by solvedAt; ponytail: if that is empty, fall back to today's attempts from DayStat (they include wrong tries).
   const solvedToday = input.items.filter(i => i.solvedAt?.slice(0, 10) === input.todayISO).length
   const n = solvedToday || (input.days.find(d => d.date === input.todayISO)?.attempts ?? 0)
-  const quest = { text: `Solve ${QUEST_GOAL} problems today`, progress: `${Math.min(n, QUEST_GOAL)} of ${QUEST_GOAL}`, done: n >= QUEST_GOAL }
+  const quest = { text: 'Solve a few problems today', progress: n === 0 ? 'Not started' : `${n} done`, done: n >= QUEST_GOAL }
 
   return { worlds, current, xp: earned, level, badges, quest, guide: coach(input, worlds, current, quest.done, solvedItems) }
 }
 
 function coach(input: JourneyInput, worlds: JourneyWorld[], current: JourneyNode | null, questDone: boolean, solvedItems: ItemStat[]): JourneyState['guide'] {
   if (!input.placementDone && input.items.length === 0) {
-    return { mood: 'welcome', text: 'Welcome. Eight quick questions will place you on the route, so we start in the right spot.', cta: { label: 'Find my level', nodeId: 'place' } }
+    return { mood: 'welcome', text: 'Welcome. A few quick questions will place you on the route, so we start in the right spot.', cta: { label: 'Find my level', nodeId: 'place' } }
   }
   if (!current) {
     return { mood: 'cheer', text: 'You have walked the whole route. Nice work. A full mock test is the best way to check it all holds together.', cta: null }

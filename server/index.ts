@@ -1,30 +1,25 @@
 import { serve } from '@hono/node-server'
 import { env } from './config.js'
 import { buildApp } from './app.js'
-import { createMemoryRepository } from './repo/memory.js'
-import { createSupabaseRepository } from './repo/supabase.js'
+import { createAuthProvider } from './auth/compose.js'
+import { createRepoFactory } from './repo/factory.js'
 import { isSupabaseConfigured } from './config.js'
 import { attachVoiceGateway } from './voice/index.js'
-import type { Repository } from './repo/types.js'
-
-export function createRepository(): Repository {
-  return isSupabaseConfigured(env)
-    ? createSupabaseRepository(env.supabaseUrl!, env.supabaseSecretKey!, { screenDbReady: env.screenDbReady })
-    : createMemoryRepository()
-}
 
 export function buildServer() {
-  const repo = createRepository()
-  const app = buildApp({ env, repo })
-  return { app, repo }
+  const auth = createAuthProvider(env)
+  const repoFor = createRepoFactory(env)
+  const app = buildApp({ env, auth, repoFor })
+  return { app, auth, repoFor }
 }
 
 export function startServer(port = env.port) {
-  const { app, repo } = buildServer()
+  const { app, auth, repoFor } = buildServer()
   const server = serve({ fetch: app.fetch, port })
   attachVoiceGateway(server as unknown as import('node:http').Server, {
     env,
-    repo,
+    auth,
+    repoFor,
     log: msg => console.log(`[voice] ${msg}`),
   })
   return server

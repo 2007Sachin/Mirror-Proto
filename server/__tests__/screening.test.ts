@@ -1,3 +1,4 @@
+import { testAuth } from '../auth/testAuth.js'
 import { describe, expect, it } from 'vitest'
 import { buildApp } from '../app.js'
 import { createMemoryRepository } from '../repo/memory.js'
@@ -81,10 +82,10 @@ describe('POST /interviews for a screening call', () => {
   const setup = async () => {
     let clock = Date.parse('2026-01-01T00:00:00.000Z')
     const repo = createMemoryRepository()
-    const app = buildApp({ env: makeEnv(), repo, now: () => clock })
+    const app = buildApp({ env: makeEnv(), auth: testAuth(), repoFor: () => repo, now: () => clock })
     const t = await repo.createTarget('dev', { company: 'Acme', role: 'Data Analyst', interviewDate: null, jd: JD })
     await repo.updateTarget('dev', t.id, { status: 'ready', skills: skills.map(s => ({ ...s, area: 'tools' as const, quote: s.quote ?? s.name })) })
-    const H = { 'X-Dev-Workspace': 'dev', 'Content-Type': 'application/json' }
+    const H = { 'X-Test-User': 'dev', 'Content-Type': 'application/json' }
     const post = (path: string, body: unknown) => app.request(path, { method: 'POST', headers: H, body: JSON.stringify(body) })
     return { app, repo, t, post, advance: (ms: number) => { clock += ms } }
   }

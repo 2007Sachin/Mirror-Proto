@@ -5,6 +5,7 @@ import { createServer } from 'node:http'
 import { WebSocket } from 'ws'
 import { OPENING_QUESTION } from '../domain/questions.js'
 import { createMemoryRepository } from '../repo/memory.js'
+import { testAuth } from '../auth/testAuth.js'
 import { createVoiceGateway } from '../voice/gateway.js'
 import { createMockStt } from '../voice/stt/mockStt.js'
 import { createMockTts } from '../voice/tts/mockTts.js'
@@ -26,7 +27,8 @@ async function main() {
   const http = createServer()
   const gateway = createVoiceGateway({
     env: makeEnv(),
-    repo,
+    auth: testAuth(),
+    repoFor: () => repo,
     stt: createMockStt({ finalText: 'I owned the research and simplified onboarding after the product update.', emitPartials: false }),
     tts: createMockTts({ chunkCount: 1 }),
     provider: {
@@ -42,7 +44,7 @@ async function main() {
   await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve))
   const addr = http.address()
   const port = typeof addr === 'object' && addr ? addr.port : 0
-  const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`)
+  const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
   const msgs: { type: string; payload?: { turnId?: string; questionIndex?: number; state?: string } }[] = []
   await new Promise<void>((resolve, reject) => {
     ws.on('open', () => resolve())

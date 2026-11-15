@@ -89,7 +89,7 @@ describe('practice routes', () => {
     expect(sum.items).toHaveLength(1)
     expect(sum.items[0]).toMatchObject({ itemId: 'sql-join-1', attempts: 1, firstTryCorrect: true, solved: true, seconds: 42 })
     expect(sum.days).toHaveLength(1)
-    const other = await j(await app.request('/practice/summary', { headers: { 'X-Dev-Workspace': 'someone-else' } }))
+    const other = await j(await app.request('/practice/summary', { headers: { 'X-Test-User': 'someone-else' } }))
     expect(other).toEqual({ items: [], days: [] })
   })
 })

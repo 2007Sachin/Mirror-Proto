@@ -28,22 +28,22 @@ describe('GET /health', () => {
     expect((await j(res)).status).toBe('ok')
   })
 
-  it('interviews still require the workspace header', async () => {
+  it('interviews require a signed-in user', async () => {
     const { app } = makeApp()
     const res = await app.request('/interviews', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ role: 'Product Analyst' }),
     })
-    expect(res.status).toBe(400)
-    expect((await j(res)).error).toBe('workspace_header_required')
+    expect(res.status).toBe(401)
+    expect((await j(res)).error).toBe('unauthenticated')
   })
 
-  it('reports supabase mode when url and secret are set', async () => {
+  it('reports supabase mode when url and anon key are set', async () => {
     const { app } = makeApp({
       env: makeEnv({
         supabaseUrl: 'https://example.supabase.co',
-        supabaseSecretKey: 'secret-role',
+        supabaseAnonKey: 'anon-key',
       }),
     })
     const res = await app.request('/health')

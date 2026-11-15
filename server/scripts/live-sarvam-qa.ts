@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js'
 import { WebSocket } from 'ws'
 import { env, isSarvamConfigured, isNimConfigured, isSupabaseConfigured } from '../config.js'
 import { buildApp } from '../app.js'
+import { testAuth } from '../auth/testAuth.js'
 import { createSupabaseRepository } from '../repo/supabase.js'
 import { PHASE1_TABLES } from '../repo/supabase.js'
 import { createVoiceGateway } from '../voice/gateway.js'
@@ -167,12 +168,15 @@ async function main() {
     : (() => {
         throw new Error('Supabase is required for live Phase 2 persistence QA')
       })()
-  const app = buildApp({ env, repo })
+  // TODO: not run since auth landed. In-process it signs in with the test auth header (service-key repo, QA only).
+  // Against a real server, start it with DEMO_MODE=1 (user 'dev') or use a real Supabase session instead.
+  const app = buildApp({ env, auth: testAuth(), repoFor: () => repo })
   const http = createServer()
   const logs: string[] = []
   const gateway = createVoiceGateway({
     env,
-    repo,
+    auth: testAuth(),
+    repoFor: () => repo,
     log: msg => {
       assertNoSecret('voice-log', msg)
       if (ANSWERS.some(a => msg.includes(a))) throw new Error('voice log contained a complete transcript')
@@ -208,7 +212,7 @@ async function main() {
   await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve))
   const port = (http.address() as { port: number }).port
   const base = `http://127.0.0.1:${port}`
-  const wsHeaders = { 'X-Dev-Workspace': WORKSPACE, 'Content-Type': 'application/json' }
+  const wsHeaders = { 'X-Test-User': WORKSPACE, 'Content-Type': 'application/json' }
 
   const health = await (await fetch(`${base}/health`)).json() as Record<string, unknown>
   const status = await (await fetch(`${base}/integration-status`)).json() as Record<string, unknown>
@@ -347,7 +351,7 @@ async function main() {
   for (const text of ANSWERS) answerPcm.push(await collectTtsPcm(text))
   await new Promise(r => setTimeout(r, 6000))
   const session = await createInterview()
-  const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`)
+  const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': WORKSPACE } })
   const seqRef = { n: 0 }
   const inbox = attachInbox(ws, seqRef)
   await new Promise<void>((resolve, reject) => {
@@ -457,7 +461,7 @@ async function main() {
 
   ws.close()
   await new Promise(r => setTimeout(r, 80))
-  const resumeWs = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`)
+  const resumeWs = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': WORKSPACE } })
   const resumeInbox = attachInbox(resumeWs, { n: 0 })
   await new Promise<void>((resolve, reject) => {
     resumeWs.on('open', () => resolve())

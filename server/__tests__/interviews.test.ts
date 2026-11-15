@@ -228,7 +228,7 @@ describe('GET /interviews/:id', () => {
   it('returns 404 across the workspace boundary', async () => {
     const { app } = makeApp()
     const { id } = await createInterview(app)
-    const res = await app.request(`/interviews/${id}`, { headers: { 'X-Dev-Workspace': 'other' } })
+    const res = await app.request(`/interviews/${id}`, { headers: { 'X-Test-User': 'other' } })
     expect(res.status).toBe(404)
   })
 })

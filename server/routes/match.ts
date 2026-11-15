@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { AppError } from '../middleware/errors.js'
 import { acceptProbe, cleanResume, extractClaims, matchClaims } from '../domain/resume.js'
 import { runOnboardingStep } from '../domain/onboarding.js'
+import type { Repository } from '../repo/types.js'
 import type { Api, RouteDeps } from './deps.js'
 
 const claimsSchema = z.object({
@@ -45,11 +46,11 @@ function rankProbes(matches: { skill: string; weight: string; status: string; cl
 }
 
 /** Résumé claims, per-target matches and probe questions. Plain CRUD stays; extraction and matching sit on top. */
-export function registerMatchRoutes(api: Api, { repo, provider }: RouteDeps): void {
+export function registerMatchRoutes(api: Api, { provider }: RouteDeps): void {
   // ponytail: in-process cache of the AI rewrite per set of draft questions; a restart simply asks again.
   const rewrites = new Map<string, { questions: string[] | null }>()
 
-  async function build(workspace: string, id: string, refresh: boolean) {
+  async function build(repo: Repository, workspace: string, id: string, refresh: boolean) {
     const target = await repo.getTarget(workspace, id)
     if (!target) throw new AppError(404, 'target_not_found')
     const profile = await repo.getProfile(workspace)
@@ -92,30 +93,30 @@ export function registerMatchRoutes(api: Api, { repo, provider }: RouteDeps): vo
     return { matches: shown, claims, probes, source, aiAttempted, hasResume: true }
   }
 
-  api.get('/resume/claims', async c => c.json(await repo.listResumeClaims(c.get('workspace'))))
+  api.get('/resume/claims', async c => c.json(await c.get('repo').listResumeClaims(c.get('workspace'))))
 
   api.put('/resume/claims', async c => {
     const { claims } = claimsSchema.parse(await c.req.json().catch(() => ({})))
-    return c.json(await repo.replaceResumeClaims(c.get('workspace'), claims))
+    return c.json(await c.get('repo').replaceResumeClaims(c.get('workspace'), claims))
   })
 
   api.delete('/resume/claims', async c => {
-    await repo.deleteResumeClaims(c.get('workspace'))
+    await c.get('repo').deleteResumeClaims(c.get('workspace'))
     return c.body(null, 204)
   })
 
   api.get('/targets/:id/match', async c => {
-    return c.json(await build(c.get('workspace'), c.req.param('id'), false))
+    return c.json(await build(c.get('repo'), c.get('workspace'), c.req.param('id'), false))
   })
 
   // Re-run the comparison from the saved résumé (after the learner pastes a new one).
-  api.post('/targets/:id/match', async c => c.json(await build(c.get('workspace'), c.req.param('id'), true)))
+  api.post('/targets/:id/match', async c => c.json(await build(c.get('repo'), c.get('workspace'), c.req.param('id'), true)))
 
   api.put('/targets/:id/match', async c => {
     const workspace = c.get('workspace')
     const id = c.req.param('id')
-    if (!(await repo.getTarget(workspace, id))) throw new AppError(404, 'target_not_found')
+    if (!(await c.get('repo').getTarget(workspace, id))) throw new AppError(404, 'target_not_found')
     const { matches } = matchesSchema.parse(await c.req.json().catch(() => ({})))
-    return c.json({ matches: await repo.replaceGapMatches(workspace, id, matches) })
+    return c.json({ matches: await c.get('repo').replaceGapMatches(workspace, id, matches) })
   })
 }

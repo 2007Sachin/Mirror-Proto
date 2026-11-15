@@ -5,10 +5,10 @@
 import { createServer } from 'node:http'
 import { createClient } from '@supabase/supabase-js'
 import { WebSocket } from 'ws'
-import { env, isSarvamConfigured, isNimConfigured, isSupabaseConfigured } from '../config.js'
+import { env, isSarvamConfigured, isNimConfigured } from '../config.js'
 import { buildApp } from '../app.js'
 import { testAuth } from '../auth/testAuth.js'
-import { createSupabaseRepository } from '../repo/supabase.js'
+import type { Repository } from '../repo/types.js'
 import { PHASE1_TABLES } from '../repo/supabase.js'
 import { createVoiceGateway } from '../voice/gateway.js'
 import { createSarvamStt } from '../voice/stt/sarvamStt.js'
@@ -163,11 +163,11 @@ async function main() {
   const report: Record<string, unknown> = {}
   if (!isSarvamConfigured(env)) throw new Error('SARVAM_API_KEY missing; mock adapters would be selected')
 
-  const repo = isSupabaseConfigured(env)
-    ? createSupabaseRepository(env.supabaseUrl!, env.supabaseSecretKey!)
-    : (() => {
-        throw new Error('Supabase is required for live Phase 2 persistence QA')
-      })()
+  // The service-key repository is gone: every query now runs as a signed-in user (RLS), so this QA needs a user session first.
+  const noRepo = (): Repository => {
+    throw new Error('live QA needs a per-user Supabase session; the service-key repository was removed')
+  }
+  const repo = noRepo()
   // TODO: not run since auth landed. In-process it signs in with the test auth header (service-key repo, QA only).
   // Against a real server, start it with DEMO_MODE=1 (user 'dev') or use a real Supabase session instead.
   const app = buildApp({ env, auth: testAuth(), repoFor: () => repo })

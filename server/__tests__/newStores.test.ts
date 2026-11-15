@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { createMemoryRepository } from '../repo/memory.js'
-import { createSupabaseRepository } from '../repo/supabase.js'
 import type { StoryInput } from '../repo/types.js'
 
 const story = (title: string): StoryInput => ({
@@ -118,32 +117,5 @@ describe('memory repository: new stores', () => {
     expect(row.askedQuestions).toEqual(qs)
     const practice = await repo.createInterview('w1', { role: 'Analyst', openingQuestion: 'Opening question here?' })
     expect(practice).toMatchObject({ kind: 'practice', questionCap: null })
-  })
-})
-
-describe('supabase repository: new stores are not ready', () => {
-  it('every new method throws storage_not_ready', async () => {
-    const repo = createSupabaseRepository('https://example.supabase.co', 'key')
-    const calls: Promise<unknown>[] = [
-      repo.addAnswerAttempt('w', {} as never),
-      repo.listAnswerAttempts('w'),
-      repo.deleteAnswerAttempts('w'),
-      repo.createStory('w', {} as never),
-      repo.listStories('w'),
-      repo.getStory('w', 'x'),
-      repo.updateStory('w', 'x', {}),
-      repo.deleteStory('w', 'x'),
-      repo.deleteAllStories('w'),
-      repo.replaceResumeClaims('w', []),
-      repo.listResumeClaims('w'),
-      repo.deleteResumeClaims('w'),
-      repo.replaceGapMatches('w', 't', []),
-      repo.listGapMatches('w', 't'),
-      repo.upsertReplayItem('w', {} as never),
-      repo.listReplaySchedule('w'),
-      repo.deleteReplayItem('w', 'x'),
-      repo.deleteAllNewData('w'),
-    ]
-    for (const c of calls) await expect(c).rejects.toThrow('storage_not_ready')
   })
 })

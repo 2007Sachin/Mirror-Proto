@@ -251,10 +251,10 @@ export function buildApp(deps: AppDeps): Hono {
     }),
   )
 
-  // What the client may rely on. Supabase mode keeps the new stores in the browser until they are wired.
+  // What the client may rely on. The new stores live on the server in both modes.
   api.get('/capabilities', c => {
     const memory = !isSupabaseConfigured(env) || env.demoMode
-    return c.json({ newData: memory ? 'server' : 'browser', screenLongCalls: memory || env.screenDbReady })
+    return c.json({ newData: 'server', screenLongCalls: memory || env.screenDbReady })
   })
 
   api.get('/integration-status', async c =>

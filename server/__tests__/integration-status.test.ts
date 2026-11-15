@@ -60,7 +60,7 @@ describe('GET /integration-status', () => {
     const { app } = makeApp({
       env: makeEnv({
         supabaseUrl: 'https://example.invalid.supabase.co',
-        supabaseSecretKey: 'secret-role',
+        supabaseAnonKey: 'anon-key',
       }),
     })
     const res = await app.request('/integration-status', { headers: WS })

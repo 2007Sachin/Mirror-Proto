@@ -11,6 +11,10 @@ const envSchema = z
   .object({
     PORT: z.coerce.number().int().positive().default(8787),
     SUPABASE_URL: z.string().optional(),
+    SUPABASE_ANON_KEY: z.string().optional(),
+    SITE_URL: z.string().optional(),
+    DEMO_MODE: z.string().optional(),
+    AUTH_GOOGLE: z.string().optional(),
     SUPABASE_SECRET_KEY: z.string().optional(),
     SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
     NVIDIA_NIM_BASE_URL: z.string().optional(),
@@ -55,7 +59,13 @@ const envSchema = z
     return {
       port: env.PORT,
       supabaseUrl: present(env.SUPABASE_URL),
+      supabaseAnonKey: present(env.SUPABASE_ANON_KEY),
+      /** Service key: tests/admin only. The running app never uses it. */
       supabaseSecretKey: supabaseSecret,
+      siteUrl: (present(env.SITE_URL) ?? 'http://localhost:3000').replace(/\/$/, ''),
+      /** DEMO_MODE=1: one fixed 'dev' user and no sign-in. Never for production. */
+      demoMode: present(env.DEMO_MODE) === '1',
+      authGoogle: present(env.AUTH_GOOGLE) === '1',
       nimBaseUrl: nimBaseUrl.toString().replace(/\/$/, ''),
       nimApiKey,
       nimModel,
@@ -96,7 +106,7 @@ export type Env = typeof parsed.data
 export const env: Env = parsed.data
 
 export function isSupabaseConfigured(e: Env): boolean {
-  return Boolean(e.supabaseUrl && e.supabaseSecretKey)
+  return Boolean(e.supabaseUrl && e.supabaseAnonKey)
 }
 
 export function isNimConfigured(e: Env): boolean {

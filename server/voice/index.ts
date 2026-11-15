@@ -1,13 +1,14 @@
 import type { Server as HttpServer } from 'node:http'
 import type { Env } from '../config.js'
-import type { Repository } from '../repo/types.js'
+import type { AuthProvider, RepoFactory } from '../auth/types.js'
 import { createVoiceGateway, type VoiceGateway, type VoiceGatewayDeps } from './gateway.js'
 import type { SttProvider } from './providers/types.js'
 import type { TtsProvider } from './providers/types.js'
 
 export interface VoiceRouteDeps {
   env: Env
-  repo: Repository
+  auth: AuthProvider
+  repoFor: RepoFactory
   /** Test hooks: inject mock providers and capture logs. */
   stt?: SttProvider
   tts?: TtsProvider

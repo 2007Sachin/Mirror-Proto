@@ -19,34 +19,35 @@ const storySchema = z.object({
 })
 
 /** Plain CRUD for the story bank. Theme logic and suggestions belong to the stories feature. */
-export function registerStoriesRoutes(api: Api, { repo }: RouteDeps): void {
-  api.get('/stories', async c => c.json(await repo.listStories(c.get('workspace'))))
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function registerStoriesRoutes(api: Api, _deps: RouteDeps): void {
+  api.get('/stories', async c => c.json(await c.get('repo').listStories(c.get('workspace'))))
 
   api.post('/stories', async c => {
     const body = storySchema.parse(await c.req.json().catch(() => ({})))
-    return c.json(await repo.createStory(c.get('workspace'), body), 201)
+    return c.json(await c.get('repo').createStory(c.get('workspace'), body), 201)
   })
 
   api.delete('/stories', async c => {
-    await repo.deleteAllStories(c.get('workspace'))
+    await c.get('repo').deleteAllStories(c.get('workspace'))
     return c.body(null, 204)
   })
 
   api.get('/stories/:id', async c => {
-    const story = await repo.getStory(c.get('workspace'), c.req.param('id'))
+    const story = await c.get('repo').getStory(c.get('workspace'), c.req.param('id'))
     if (!story) throw new AppError(404, 'story_not_found')
     return c.json(story)
   })
 
   api.patch('/stories/:id', async c => {
     const patch = storySchema.partial().parse(await c.req.json().catch(() => ({})))
-    const story = await repo.updateStory(c.get('workspace'), c.req.param('id'), patch)
+    const story = await c.get('repo').updateStory(c.get('workspace'), c.req.param('id'), patch)
     if (!story) throw new AppError(404, 'story_not_found')
     return c.json(story)
   })
 
   api.delete('/stories/:id', async c => {
-    await repo.deleteStory(c.get('workspace'), c.req.param('id'))
+    await c.get('repo').deleteStory(c.get('workspace'), c.req.param('id'))
     return c.body(null, 204)
   })
 }

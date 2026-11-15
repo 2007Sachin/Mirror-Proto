@@ -18,6 +18,7 @@ import type {
   ProfileInput,
   ProfileRow,
   ReflectionRow,
+  RepoExport,
   Repository,
   SaveReflectionInput,
   Target,
@@ -298,6 +299,35 @@ export function createMemoryRepository(): Repository {
     },
     async deleteAllNewData(workspace: string) {
       clearNew(workspace)
+    },
+
+    async exportAllData(workspace: string): Promise<RepoExport> {
+      const b = workspaces.get(workspace)
+      return structuredClone({
+        exportedAt: now(),
+        workspace,
+        profile: profiles.get(workspace) ?? null,
+        interviews: [...(b?.interviews.values() ?? [])],
+        turns: [...(b?.turns.values() ?? [])].flat(),
+        reflections: [...(b?.reflections.values() ?? [])],
+        targets: targets.get(workspace) ?? [],
+        practiceAttempts: attempts.get(workspace) ?? [],
+        answerAttempts: answerAttempts.get(workspace) ?? [],
+        stories: stories.get(workspace) ?? [],
+        resumeClaims: claims.get(workspace) ?? [],
+        gapMatches: gapMatches.get(workspace) ?? [],
+        replaySchedule: replay.get(workspace) ?? [],
+      })
+    },
+
+    async deleteAllData(workspace: string) {
+      const b = workspaces.get(workspace)
+      if (b) {
+        b.interviews.clear()
+        b.turns.clear()
+        b.reflections.clear()
+      }
+      for (const m of [profiles, targets, attempts, answerAttempts, stories, claims, gapMatches, replay] as Map<string, unknown>[]) m.delete(workspace)
     },
   }
 }

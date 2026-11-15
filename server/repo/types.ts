@@ -263,6 +263,23 @@ export interface ReplayItemRow extends ReplayItemInput {
   updatedAt: string
 }
 
+/** Everything stored for one user; what the export returns. */
+export interface RepoExport {
+  exportedAt: string
+  workspace: string
+  profile: ProfileRow | null
+  interviews: InterviewRow[]
+  turns: TurnRow[]
+  reflections: ReflectionRow[]
+  targets: Target[]
+  practiceAttempts: PracticeAttemptRow[]
+  answerAttempts: AnswerAttemptRow[]
+  stories: StoryRow[]
+  resumeClaims: ResumeClaimRow[]
+  gapMatches: GapMatchRow[]
+  replaySchedule: ReplayItemRow[]
+}
+
 export interface Repository {
   ensureWorkspace(slug: string): Promise<void>
   createInterview(workspace: string, input: CreateInterviewInput): Promise<InterviewRow>
@@ -312,4 +329,8 @@ export interface Repository {
   deleteReplayItem(workspace: string, itemId: string): Promise<void>
   /** Clears every store above for the workspace (reset). */
   deleteAllNewData(workspace: string): Promise<void>
+  /** Every row of this workspace, for the user's data export. */
+  exportAllData(workspace: string): Promise<RepoExport>
+  /** Removes everything of this workspace except the workspace row itself. */
+  deleteAllData(workspace: string): Promise<void>
 }

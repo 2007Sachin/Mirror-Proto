@@ -6,6 +6,7 @@ import { createMemoryRepository } from '../repo/memory.js'
 import { createMockStt } from '../voice/stt/mockStt.js'
 import { TURN_TOO_LONG_MESSAGE, VOICE_LIMITS } from '../voice/limits.js'
 import { createMockTts } from '../voice/tts/mockTts.js'
+import { testAuth } from '../auth/testAuth.js'
 import { createVoiceGateway } from '../voice/gateway.js'
 import { makeApp, makeEnv, WS, j } from './helpers.js'
 import { PROTOCOL_VERSION } from '../voice/protocol.js'
@@ -66,7 +67,8 @@ describe('voice gateway', () => {
     const http = createServer()
     const gateway = createVoiceGateway({
       env: makeEnv(),
-      repo,
+      auth: testAuth(),
+      repoFor: () => repo,
       stt: createMockStt({ finalText: sttText, emitPartials: false }),
       tts: createMockTts({ chunkCount: 1 }),
       provider: {
@@ -94,7 +96,7 @@ describe('voice gateway', () => {
 
   it('speaks the opening question, accepts a spoken turn, and does not store audio', async () => {
     const { repo, interview, port, logs } = await start()
-    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`)
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
     const inbox = attachInbox(ws)
     await new Promise<void>((resolve, reject) => {
       ws.on('open', () => resolve())
@@ -127,7 +129,7 @@ describe('voice gateway', () => {
 
   it('resumes a tombstoned session immediately without creating a new interview turn', async () => {
     const { repo, interview, port } = await start()
-    const first = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`)
+    const first = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
     const inbox = attachInbox(first)
     await new Promise<void>((resolve, reject) => {
       first.on('open', () => resolve())
@@ -139,7 +141,7 @@ describe('voice gateway', () => {
     first.close()
     await new Promise(resolve => setTimeout(resolve, 50))
 
-    const second = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`)
+    const second = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
     const inbox2 = attachInbox(second)
     await new Promise<void>((resolve, reject) => {
       second.on('open', () => resolve())
@@ -158,7 +160,7 @@ describe('voice gateway', () => {
 
   it('drops stale sequence numbers without applying the command', async () => {
     const { interview, port } = await start()
-    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`)
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
     const inbox = attachInbox(ws)
     await new Promise<void>((resolve, reject) => {
       ws.on('open', () => resolve())
@@ -192,7 +194,7 @@ describe('voice gateway', () => {
         },
       },
     })
-    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`)
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
     const inbox = attachInbox(ws)
     await new Promise<void>((resolve, reject) => {
       ws.on('open', () => resolve())
@@ -245,7 +247,8 @@ describe('voice gateway', () => {
     const http = createServer()
     const gateway = createVoiceGateway({
       env: makeEnv(),
-      repo,
+      auth: testAuth(),
+      repoFor: () => repo,
       stt: createMockStt({ emitPartials: false }),
       tts: createMockTts({ fail: true }),
       provider: null,
@@ -260,7 +263,7 @@ describe('voice gateway', () => {
     })
     const addr = http.address()
     const port = typeof addr === 'object' && addr ? addr.port : 0
-    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`)
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
     const inbox = attachInbox(ws)
     await new Promise<void>((resolve, reject) => {
       ws.on('open', () => resolve())
@@ -278,7 +281,8 @@ describe('voice gateway', () => {
     const http = createServer()
     const gateway = createVoiceGateway({
       env: makeEnv(),
-      repo,
+      auth: testAuth(),
+      repoFor: () => repo,
       stt: createMockStt({
         finalText: 'I owned the research and simplified onboarding after the product update.',
         emitPartials: true,
@@ -297,7 +301,7 @@ describe('voice gateway', () => {
     await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve))
     const port2 = (http.address() as { port: number }).port
     servers.push({ close() { gateway.close(); http.close() } })
-    const ws = new WebSocket(`ws://127.0.0.1:${port2}/ws/voice`)
+    const ws = new WebSocket(`ws://127.0.0.1:${port2}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
     const inbox = attachInbox(ws)
     await new Promise<void>((resolve, reject) => {
       ws.on('open', () => resolve())
@@ -322,7 +326,7 @@ describe('voice gateway', () => {
 
   it('accepts a simulated 90-second answer under the application safety cap', async () => {
     const { repo, interview, port } = await start()
-    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`)
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
     const inbox = attachInbox(ws)
     await new Promise<void>((resolve, reject) => {
       ws.on('open', () => resolve())
@@ -347,7 +351,7 @@ describe('voice gateway', () => {
 
   it('enforces the 180-second application safety limit with a controlled message', async () => {
     const { interview, port } = await start()
-    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`)
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
     const inbox = attachInbox(ws)
     await new Promise<void>((resolve, reject) => {
       ws.on('open', () => resolve())
@@ -382,7 +386,8 @@ describe('voice gateway', () => {
     const http = createServer()
     const gateway = createVoiceGateway({
       env: makeEnv(),
-      repo,
+      auth: testAuth(),
+      repoFor: () => repo,
       stt: createMockStt({ finalText: 'I led the redesign.', emitPartials: false }),
       tts: createMockTts({ chunkCount: 1 }),
       provider: {
@@ -397,7 +402,7 @@ describe('voice gateway', () => {
     gateway.attach(http)
     await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve))
     servers.push({ close() { gateway.close(); http.close() } })
-    const ws = new WebSocket(`ws://127.0.0.1:${(http.address() as { port: number }).port}/ws/voice`)
+    const ws = new WebSocket(`ws://127.0.0.1:${(http.address() as { port: number }).port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
     const inbox = attachInbox(ws)
     await new Promise<void>((resolve, reject) => {
       ws.on('open', () => resolve())
@@ -430,7 +435,8 @@ describe('voice gateway', () => {
     const http = createServer()
     const gateway = createVoiceGateway({
       env: makeEnv(),
-      repo,
+      auth: testAuth(),
+      repoFor: () => repo,
       stt: createMockStt({ hangOnFinalize: true, emitPartials: false }),
       tts: createMockTts({ chunkCount: 1 }),
       provider: null,
@@ -438,7 +444,7 @@ describe('voice gateway', () => {
     gateway.attach(http)
     await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve))
     servers.push({ close() { gateway.close(); http.close() } })
-    const ws = new WebSocket(`ws://127.0.0.1:${(http.address() as { port: number }).port}/ws/voice`)
+    const ws = new WebSocket(`ws://127.0.0.1:${(http.address() as { port: number }).port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
     const inbox = attachInbox(ws)
     await new Promise<void>((resolve, reject) => {
       ws.on('open', () => resolve())
@@ -481,11 +487,11 @@ describe('voice gateway', () => {
     await repo.ensureWorkspace('dev')
     const interview = await repo.createInterview('dev', { role: 'Product Analyst', openingQuestion: OPENING_QUESTION })
     const http = createServer()
-    const gateway = createVoiceGateway({ env: makeEnv(), repo, provider: null })
+    const gateway = createVoiceGateway({ env: makeEnv(), auth: testAuth(), repoFor: () => repo, provider: null })
     gateway.attach(http)
     await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve))
     servers.push({ close() { gateway.close(); http.close() } })
-    const ws = new WebSocket(`ws://127.0.0.1:${(http.address() as { port: number }).port}/ws/voice`)
+    const ws = new WebSocket(`ws://127.0.0.1:${(http.address() as { port: number }).port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
     const inbox = attachInbox(ws)
     await new Promise<void>((resolve, reject) => {
       ws.on('open', () => resolve())
@@ -506,11 +512,11 @@ describe('voice gateway', () => {
       await repo.ensureWorkspace('dev')
       const interview = await repo.createInterview('dev', { role: 'Product Analyst', openingQuestion: OPENING_QUESTION })
       const http = createServer()
-      const gateway = createVoiceGateway({ env: makeEnv(), repo, tts: createMockTts({ chunkCount: 1 }), provider: null })
+      const gateway = createVoiceGateway({ env: makeEnv(), auth: testAuth(), repoFor: () => repo, tts: createMockTts({ chunkCount: 1 }), provider: null })
       gateway.attach(http)
       await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve))
       servers.push({ close() { gateway.close(); http.close() } })
-      const ws = new WebSocket(`ws://127.0.0.1:${(http.address() as { port: number }).port}/ws/voice`)
+      const ws = new WebSocket(`ws://127.0.0.1:${(http.address() as { port: number }).port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
       const inbox = attachInbox(ws)
       await new Promise<void>((resolve, reject) => {
         ws.on('open', () => resolve())

@@ -558,5 +558,12 @@ export function createSupabaseRepository(url: string, secretKey: string, opts: {
     async deleteAllNewData(): Promise<never> {
       return notReady()
     },
+    // Placeholders; agent B rewrites this repository.
+    async exportAllData(): Promise<never> {
+      return notReady()
+    },
+    async deleteAllData(): Promise<never> {
+      return notReady()
+    },
   }
 }

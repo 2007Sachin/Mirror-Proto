@@ -2,6 +2,7 @@
  * API smoke tests against the in-process Hono app (memory repository, no live keys).
  * Exit 0 on success. Never prints env values.
  */
+import { testAuth } from '../auth/testAuth.js'
 import { buildApp } from '../app.js'
 import { createMemoryRepository } from '../repo/memory.js'
 import { makeEnv } from '../__tests__/helpers.js'
@@ -14,10 +15,11 @@ const answers = [
   'Completion improved and new customers needed fewer manual walkthroughs afterwards.',
 ]
 
-const WS = { 'X-Dev-Workspace': 'dev', 'Content-Type': 'application/json' }
+const WS = { 'X-Test-User': 'dev', 'Content-Type': 'application/json' }
 
 async function main() {
-  const app = buildApp({ env: makeEnv(), repo: createMemoryRepository() })
+  const repo = createMemoryRepository()
+  const app = buildApp({ env: makeEnv(), auth: testAuth(), repoFor: () => repo })
   const health = await app.request('/health')
   if (health.status !== 200) throw new Error(`health ${health.status}`)
   const status = await app.request('/integration-status')

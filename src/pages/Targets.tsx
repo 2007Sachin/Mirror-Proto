@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState, type FormEven
 import '../landing.css'
 import './targets.css'
 import FallbackNote from '../components/FallbackNote'
+import MatchSection from '../features/match/MatchSection'
 import { api, type Skill, type SkillArea, type Target, type TargetSummary } from '../lib/api'
 
 // The SQL round (and sql.js with it) loads only when someone opens it.
@@ -35,14 +36,16 @@ function countdown(date: string | null): string | null {
 }
 const time = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
 
-export default function Targets({ openId, onOpen, onPractise }: {
+export default function Targets({ openId, onOpen, onPractise, onPractiseProbe }: {
   openId: string | null
   onOpen: (id: string | null) => void
   onPractise: (role: string) => void
+  /** Optional: when given, each résumé probe question gets a "Practise this question" button. */
+  onPractiseProbe?: (question: string) => void
 }) {
   return (
     <div className="mirror-landing targets">
-      {openId ? <Mission key={openId} id={openId} onBack={() => onOpen(null)} onPractise={onPractise} /> : <List onOpen={onOpen} />}
+      {openId ? <Mission key={openId} id={openId} onBack={() => onOpen(null)} onPractise={onPractise} onPractiseProbe={onPractiseProbe} /> : <List onOpen={onOpen} />}
     </div>
   )
 }
@@ -153,7 +156,7 @@ function AddForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (id
   )
 }
 
-function Mission({ id, onBack, onPractise }: { id: string; onBack: () => void; onPractise: (role: string) => void }) {
+function Mission({ id, onBack, onPractise, onPractiseProbe }: { id: string; onBack: () => void; onPractise: (role: string) => void; onPractiseProbe?: (question: string) => void }) {
   const [target, setTarget] = useState<Target | null>(null)
   const [failures, setFailures] = useState(0)
   const [sqlOpen, setSqlOpen] = useState(false)
@@ -276,6 +279,8 @@ function Mission({ id, onBack, onPractise }: { id: string; onBack: () => void; o
               )
             })}
           </section>
+
+          <MatchSection targetId={id} onPractiseProbe={onPractiseProbe} />
 
           <section className="ml-glass tg-card-body" aria-labelledby="tg-rounds">
             <h2 id="tg-rounds">Rounds to practise</h2>

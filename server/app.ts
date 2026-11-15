@@ -19,6 +19,7 @@ import type { AgentEvent, Debrief, InterviewRow, ProfileRow, ReflectionRow, Repo
 import { z } from 'zod'
 import { summarise } from './domain/practice.js'
 import { buildRounds, extractSkills } from './domain/scout.js'
+import { extractClaims, matchClaims } from './domain/resume.js'
 import type { ReflectionProvider } from './providers/types.js'
 import { ProviderFailure, createNimClient, withDeadline, type NimLog } from './providers/nim.js'
 import { workspaceMiddleware } from './middleware/workspace.js'
@@ -525,6 +526,18 @@ export function buildApp(deps: AppDeps): Hono {
       await say('Scout', `Read the job description (${target.jd.split(/\s+/).filter(Boolean).length} words).`)
       skills = extractSkills(target.jd)
       await say('Scout', skills.length ? `Found ${skills.length} skills: ${skills.map(s => s.name).join(', ')}.` : 'Found no skills I know by name.')
+      // Compare the résumé with the job. Never fails Scout: storage may be "not ready" (Supabase), and the route can compute on demand.
+      const resume = (await repo.getProfile(workspace).catch(() => null))?.resumeText
+      if (resume) {
+        const claims = extractClaims(resume)
+        try {
+          await repo.replaceResumeClaims(workspace, claims)
+          await repo.replaceGapMatches(workspace, target.id, matchClaims(skills, claims))
+        } catch { /* storage_not_ready: GET /targets/:id/match computes it on demand */ }
+        await say('Scout', 'I compared your résumé with the job.')
+      } else {
+        await say('Scout', 'No résumé on file, so I skipped the comparison.')
+      }
       rounds = buildRounds(skills)
       await say('Scout', `Built ${rounds.length} rounds from them.`)
       const plan = await runOnboardingStep(provider, {

@@ -70,6 +70,8 @@ export type OnboardingRequest =
     }
   /** The Loop: the Coach's debrief of a SQL round. Only the attempts given. */
   | { step: 'sqlDebrief'; role: string; attempts: { title: string; query: string; passed: boolean }[] }
+  /** The Loop: up to three résumé probe questions, rewritten more naturally. `quote` is the learner's own résumé line. */
+  | { step: 'resumeProbe'; role: string; probes: { skill: string; quote: string | null; question: string }[] }
 
 const question = (min: number, max: number) =>
   z.string().trim().min(min).max(max).refine(q => q.endsWith('?'), 'must be a question')
@@ -95,6 +97,7 @@ export const OnboardingOutputSchemas = {
     keepWorkingOn: z.string().trim().min(8).max(300),
     suggestion: z.string().trim().min(8).max(400).refine(t => t.startsWith('Next time'), 'must start with "Next time"'),
   }),
+  resumeProbe: z.object({ q1: question(8, 300), q2: z.string().trim().max(300).default(''), q3: z.string().trim().max(300).default('') }),
 } as const
 
 export interface FollowUpRequest {

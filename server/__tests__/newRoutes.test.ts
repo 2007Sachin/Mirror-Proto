@@ -10,7 +10,7 @@ const send = (app: App, method: string, path: string, headers: Record<string, st
   app.request(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
 
 const attempt = { interviewId: null, questionIndex: null, question: 'Why that join?', attempt: 1, answer: 'Because of the keys.', kind: 'explain', itemId: 'sql-1' }
-const story = { title: 'Fixed churn', themes: ['impact'], situation: 's', task: 't', action: 'a', result: 'r', quote: null, question: null, sourceInterviewId: null, sourceTurnId: null }
+const story = { title: 'Fixed churn', themes: ['ownership'], situation: 's', task: 't', action: 'a', result: 'r', quote: null, question: null, sourceInterviewId: null, sourceTurnId: null }
 const QS = ['Tell me about a project you led?', 'What was your own part in it?', 'What got in the way?', 'What changed because of it?', 'What would you do differently?', 'Why this role now?']
 
 describe('answer attempts routes', () => {

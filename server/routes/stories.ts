@@ -1,12 +1,13 @@
 import { z } from 'zod'
 import { AppError } from '../middleware/errors.js'
+import { MAX_THEMES, THEME_IDS } from '../../src/stories/themes.js'
 import type { Api, RouteDeps } from './deps.js'
 
 const text = (max: number) => z.string().trim().max(max)
 const storySchema = z.object({
   title: text(200).min(1),
-  // ponytail: the 12-theme cap belongs to the stories feature; this only bounds the payload.
-  themes: z.array(text(60).min(1)).max(50),
+  // Shared theme list, each theme at most once, never more than all of them.
+  themes: z.array(z.string().refine(t => THEME_IDS.includes(t), 'unknown theme')).max(MAX_THEMES).refine(t => new Set(t).size === t.length, 'duplicate theme'),
   situation: text(2000),
   task: text(2000),
   action: text(2000),

@@ -174,6 +174,22 @@ describe('GET /targets/:id/match', () => {
     expect(body.matches.find((m: { skill: string }) => m.skill === 'SQL').status).toBe('partial')
   })
 
+  it('logs only the error code when saving fails, and saved is true otherwise', async () => {
+    const { createMemoryRepository } = await import('../repo/memory.js')
+    const repo = createMemoryRepository()
+    const boom = () => Promise.reject(Object.assign(new Error('secret row text'), { code: '42501' }))
+    const wrapped = Object.assign(Object.create(repo), repo, { replaceResumeClaims: boom, replaceGapMatches: boom })
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const bad = makeApp({ repo: wrapped, env: makeEnv() }).app
+    const body = await j(await bad.request(`/targets/${await setup(bad)}/match`, { headers: WS }))
+    expect(body.saved).toBe(false)
+    expect(JSON.stringify(log.mock.calls)).toContain('42501')
+    expect(JSON.stringify(log.mock.calls)).not.toContain('secret row text')
+    log.mockRestore()
+    const good = makeApp().app
+    expect((await j(await good.request(`/targets/${await setup(good)}/match`, { headers: WS }))).saved).toBe(true)
+  })
+
   it('keeps AI rewrites only when every quote is verbatim', async () => {
     const good = makeApp({ provider: rewriteProvider(async () => ({ q1: 'Docker comes up here. What have you done that is close to it?', q2: 'Walk me through "Worked on Python scripts" in detail?', q3: 'Tell me about "Helped with various SQL reports for the finance team" and what you did?' })) })
     const id = await setup(good.app)
@@ -215,6 +231,7 @@ describe('GET /targets/:id/match', () => {
     expect(t.status).toBe('ready')
     const body = await j(await app.request(`/targets/${id}/match`, { headers: WS }))
     expect(body.matches.find((m: { skill: string }) => m.skill === 'SQL').status).toBe('partial')
+    expect(body.saved).toBe(false)
   })
 })
 

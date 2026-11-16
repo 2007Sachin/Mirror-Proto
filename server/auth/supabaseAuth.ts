@@ -44,13 +44,25 @@ export function clientForContext(c: Context, env: Env, factory: AuthClientFactor
   })
 }
 
-/** Verifies with Supabase Auth (getUser), never the cookie alone, then reads the access token the repository needs. */
+/** Verifies the JWT locally against the project's JWKS (getClaims); falls back to Supabase Auth (getUser) only when
+ *  that errors (e.g. a symmetric-key project). Never trusts the cookie alone. Then reads the access token the repository needs. */
 async function verified(supabase: SupabaseClient) {
-  const { data, error } = await supabase.auth.getUser()
-  if (error || !data.user) return null
+  let id: string | undefined
+  let email: string | null = null
+  const { data: claims, error: claimsError } = await supabase.auth.getClaims()
+  if (!claimsError) {
+    if (!claims?.claims.sub) return null
+    id = claims.claims.sub
+    email = typeof claims.claims.email === 'string' ? claims.claims.email : null
+  } else {
+    const { data, error } = await supabase.auth.getUser()
+    if (error || !data.user) return null
+    id = data.user.id
+    email = data.user.email ?? null
+  }
   const { data: s } = await supabase.auth.getSession()
   if (!s.session?.access_token) return null
-  return { id: data.user.id, email: data.user.email ?? null, accessToken: s.session.access_token }
+  return { id, email, accessToken: s.session.access_token }
 }
 
 export function createSupabaseAuth(env: Env, opts: { clientFactory?: AuthClientFactory } = {}): AuthProvider {

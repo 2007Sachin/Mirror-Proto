@@ -12,6 +12,8 @@ export interface MatchResult {
   /** True when the assistant was asked to reword the questions; `source` then says whether it did. */
   aiAttempted: boolean
   hasResume: boolean
+  /** False when the rows could not be stored; they are shown but gone on the next visit. */
+  saved?: boolean
 }
 
 export const getMatch = (targetId: string) => request<MatchResult>(`/targets/${encodeURIComponent(targetId)}/match`)

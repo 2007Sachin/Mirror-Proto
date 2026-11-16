@@ -8,7 +8,7 @@ import { j, makeEnv } from './helpers.js'
 
 const env = makeEnv({ supabaseUrl: 'http://supabase.test', supabaseAnonKey: 'anon', authGoogle: true })
 
-interface FakeOpts { user?: { id: string; email: string } | null; exchangeFails?: boolean; otpError?: { status: number } | null }
+interface FakeOpts { claimsFail?: boolean; user?: { id: string; email: string } | null; exchangeFails?: boolean; otpError?: { status: number } | null }
 
 /** A fake Supabase client: no network. It records calls and writes the cookies the real library would. */
 function fake(opts: FakeOpts = {}) {
@@ -17,6 +17,11 @@ function fake(opts: FakeOpts = {}) {
     const has = () => cookies.getAll().some(c => c.name === 'sb-test-auth-token' && c.value === 'good')
     return {
       auth: {
+        getClaims: async () => {
+          calls.push('getClaims')
+          if (opts.claimsFail) return { data: null, error: { message: 'unsupported' } }
+          return has() && opts.user ? { data: { claims: { sub: opts.user.id, email: opts.user.email } }, error: null } : { data: null, error: null }
+        },
         getUser: async () => {
           calls.push('getUser')
           return has() && opts.user ? { data: { user: opts.user }, error: null } : { data: { user: null }, error: { message: 'no' } }
@@ -196,24 +201,33 @@ describe('guarded routes with the real requireUser', () => {
 })
 
 describe('createSupabaseAuth', () => {
-  it('fromContext verifies with getUser before reading the token, and returns the token', async () => {
+  it('fromContext verifies with getClaims before reading the token, and returns the token', async () => {
     const { auth, calls } = setup()
     const { Hono } = await import('hono')
     const h = new Hono()
     h.get('/x', async c => c.json(await auth.fromContext(c)))
     const res = await h.request('/x', { headers: SESSION })
     expect(await j(res)).toEqual({ id: 'u1', email: 'a@b.co', accessToken: 'jwt-1' })
-    expect(calls).toEqual(['getUser', 'getSession'])
+    expect(calls).toEqual(['getClaims', 'getSession'])
     expect(await j(await h.request('/x', { headers: { cookie: 'sb-test-auth-token=forged' } }))).toBeNull()
   })
 
-  it('fromUpgrade is read-only and verifies via getUser', async () => {
+  it('falls back to getUser only when getClaims errors', async () => {
+    const { auth, calls } = setup({ claimsFail: true })
+    const req = (cookie: string) => ({ headers: { cookie } }) as never
+    expect(await auth.fromUpgrade(req('sb-test-auth-token=good'))).toEqual({ id: 'u1', email: 'a@b.co', accessToken: 'jwt-1' })
+    expect(await auth.fromUpgrade(req('sb-test-auth-token=forged'))).toBeNull()
+    expect(calls.filter(c => c === 'getUser')).toHaveLength(2)
+  })
+
+  it('fromUpgrade is read-only and verifies via getClaims', async () => {
     const { auth, calls } = setup()
     const req = (cookie?: string) => ({ headers: cookie ? { cookie } : {} }) as never
     expect(await auth.fromUpgrade(req('sb-test-auth-token=good'))).toEqual({ id: 'u1', email: 'a@b.co', accessToken: 'jwt-1' })
     expect(await auth.fromUpgrade(req('sb-test-auth-token=forged'))).toBeNull()
     expect(await auth.fromUpgrade(req())).toBeNull()
-    expect(calls.filter(c => c === 'getUser')).toHaveLength(3)
+    expect(calls.filter(c => c === 'getClaims')).toHaveLength(3)
+    expect(calls).not.toContain('getUser')
   })
 
   it('compose picks demo, supabase or nobody', async () => {

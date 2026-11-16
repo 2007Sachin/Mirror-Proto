@@ -11,6 +11,9 @@ declare module 'hono' {
   }
 }
 
+// ponytail: per-process; a restart re-ensures once per user (the upsert is idempotent).
+const ensured = new Set<string>()
+
 /** 401 unless the session resolves; then exposes `user`, `workspace` (= user.id) and the per-request `repo`. */
 export function requireUser(auth: AuthProvider, repoFor: RepoFactory) {
   return createMiddleware(async (c, next) => {
@@ -20,7 +23,10 @@ export function requireUser(auth: AuthProvider, repoFor: RepoFactory) {
     c.set('user', user)
     c.set('workspace', user.id)
     c.set('repo', repo)
-    await repo.ensureWorkspace(user.id)
+    if (!ensured.has(user.id)) {
+      await repo.ensureWorkspace(user.id)
+      ensured.add(user.id)
+    }
     await next()
   })
 }

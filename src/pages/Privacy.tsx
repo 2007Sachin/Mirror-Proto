@@ -26,8 +26,8 @@ export default function Privacy({ onBack, onOpenSettings }: { onBack: () => void
       <ul className="pv-list">{HANDLES.map(([t, d]) => <li key={t}><b>{t}</b><span>{d}</span></li>)}</ul>
     </section>
     <div className="pv-actions">
-      <button type="button" className="button button--secondary" onClick={onOpenSettings}>Export or delete my data</button>
-      <button type="button" className="button button--ghost" onClick={onBack}>Back</button>
+      <button type="button" className="m-btn" onClick={onOpenSettings}>Export or delete my data</button>
+      <button type="button" className="m-btn m-btn--quiet" onClick={onBack}>Back</button>
     </div>
   </div>
 }

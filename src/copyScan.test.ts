@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { BANNED, scan, scanHtml, walkData } from './copyScan'
 
 describe('copyScan helpers', () => {
-  it('exports the three banned patterns', () => {
-    expect(BANNED.map(([name]) => name)).toEqual(['banned word', 'fixed count', 'percentage'])
+  it('exports the banned patterns', () => {
+    expect(BANNED.map(([name]) => name)).toEqual(['banned word', 'fixed count', 'percentage', 'streak', 'score', 'start speaking'])
   })
 
   it('scan flags each pattern and passes calm copy', () => {
@@ -18,7 +18,7 @@ describe('copyScan helpers', () => {
 
   it('scanHtml reads text and accessible attributes', () => {
     expect(scanHtml('x', '<p>Fine</p><input placeholder="evidence" />')).toHaveLength(1)
-    expect(scanHtml('x', '<img alt="a 50% score" /><p>ok</p>')).toHaveLength(1)
+    expect(scanHtml('x', '<img alt="a 50% score" /><p>ok</p>').length).toBeGreaterThanOrEqual(2)
     expect(scanHtml('x', '<p>Plain words</p>')).toEqual([])
   })
 

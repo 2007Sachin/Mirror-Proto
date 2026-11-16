@@ -1,0 +1,20 @@
+{
+  "cruxes": [
+    {
+      "question": "Does collapsing Today into a Briefing throw away a page that already has one owner?",
+      "sides": [
+        { "position": "Keep the model, polish the name", "seats": ["Wickman"] },
+        { "position": "Name it Briefing and shorten it", "seats": ["Graham", "Sara", "Bezos", "Buffett", "Elon"] }
+      ]
+    },
+    {
+      "question": "Is a replay count in the hero a grade in disguise?",
+      "sides": [
+        { "position": "Yes, name the replay, do not count it", "seats": ["Buffett", "Sara"] },
+        { "position": "A count is fine if it causes the rep", "seats": ["Elon"] }
+      ]
+    }
+  ],
+  "unanimous": false,
+  "note": "Five seats want Briefing. Wickman wants to keep the working model and only change words."
+}

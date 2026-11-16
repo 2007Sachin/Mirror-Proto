@@ -1,0 +1,13 @@
+{
+  "option": "B",
+  "label": "GO",
+  "recommendation": "One stage open on a named path. No solved-of-total. Story lines are hints.",
+  "conditions": [
+    "No grades, counts as grades, or the word score on the page"
+  ],
+  "next_steps": [
+    "Ship in this pull request"
+  ],
+  "cheapest_test": "Ask what the page is for.",
+  "kill_criteria": "If the page still feels random, cut to the one next action."
+}

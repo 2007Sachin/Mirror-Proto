@@ -1,9 +1,10 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-import '../landing.css'
 import './targets.css'
 import FallbackNote from '../components/FallbackNote'
 import MatchSection from '../features/match/MatchSection'
 import { api, type Skill, type SkillArea, type Target, type TargetSummary } from '../lib/api'
+import * as data from '../lib/data'
+import { rolesNeedStories, themeHint } from '../stories/bank'
 
 // The SQL round (and sql.js with it) loads only when someone opens it.
 const SqlRound = lazy(() => import('./target/SqlRound'))
@@ -28,26 +29,29 @@ function when(date: string | null): string | null {
   if (n > 1) return `in ${n} days`
   return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
 }
-function countdown(date: string | null): string | null {
+function dayLabel(date: string | null): string | null {
   if (!date) return null
   const n = daysUntil(date)
-  if (n < 0) return null
-  return n === 0 ? 'Interview is today' : n === 1 ? '1 day to go' : `${n} days to go`
+  if (n < 0) return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+  if (n === 0) return 'This is the day'
+  if (n === 1) return 'Tomorrow'
+  return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long' })
 }
 const time = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
 
-export default function Targets({ openId, onOpen, onPractise, onPractiseProbe, onScreen }: {
+export default function Targets({ openId, onOpen, onPractise, onPractiseProbe, onScreen, onAddStory }: {
   openId: string | null
   onOpen: (id: string | null) => void
   onPractise: (role: string) => void
-  /** Optional: when given, each résumé probe question gets a "Practise this question" button. */
+  /** Optional: when given, each résumé probe question gets a prepare button. */
   onPractiseProbe?: (question: string) => void
   /** Starts a realistic screening call for this target. */
   onScreen?: (targetId: string) => void
+  onAddStory?: (theme: string | null) => void
 }) {
   return (
-    <div className="mirror-landing targets">
-      {openId ? <Mission key={openId} id={openId} onBack={() => onOpen(null)} onPractise={onPractise} onPractiseProbe={onPractiseProbe} onScreen={onScreen} /> : <List onOpen={onOpen} />}
+    <div className="targets">
+      {openId ? <Mission key={openId} id={openId} onBack={() => onOpen(null)} onPractise={onPractise} onPractiseProbe={onPractiseProbe} onScreen={onScreen} onAddStory={onAddStory} /> : <List onOpen={onOpen} />}
     </div>
   )
 }
@@ -66,27 +70,27 @@ function List({ onOpen }: { onOpen: (id: string | null) => void }) {
     <div className="tg-wrap">
       <header className="tg-top">
         <div>
-          <p className="ml-eyebrow">Your targets</p>
-          <h1>Where you are headed</h1>
+          <p className="m-kicker">Roles</p>
+          <h1>Roles you are preparing for</h1>
         </div>
-        {!adding && <button type="button" className="ml-btn ml-btn--sm" onClick={() => setAdding(true)}>Add a target</button>}
+        {!adding && <button type="button" className="m-btn" onClick={() => setAdding(true)}>Add a role</button>}
       </header>
 
       {adding && <AddForm onCancel={() => setAdding(false)} onCreated={onOpen} />}
 
       {loadError && (
         <p className="tg-note" role="alert">
-          We could not load your targets. <button type="button" className="tg-link" onClick={load}>Try again</button>
+          We could not load your roles. <button type="button" className="tg-link" onClick={load}>Try again</button>
         </p>
       )}
 
-      {items === null && <p className="tg-note" role="status">Loading your targets…</p>}
+      {items === null && <p className="tg-note" role="status">Loading your roles…</p>}
 
       {items && items.length === 0 && !loadError && !adding && (
-        <section className="ml-glass tg-empty">
-          <h2>A target is a job you want.</h2>
-          <p>Paste its job description and we will work out what they look for and plan your practice. Then you rehearse the rounds before the real thing.</p>
-          <button type="button" className="ml-btn ml-btn--sm" onClick={() => setAdding(true)}>Add your first target</button>
+        <section className="m-card tg-empty">
+          <h2>A role is a job you are preparing for.</h2>
+          <p>Paste the job description. MIRROR reads what they ask for, lines it up with your résumé, and gives you a way to prepare.</p>
+          <button type="button" className="m-btn" onClick={() => setAdding(true)}>Add a role</button>
         </section>
       )}
 
@@ -94,13 +98,13 @@ function List({ onOpen }: { onOpen: (id: string | null) => void }) {
         <ul className="tg-list">
           {items.map(t => (
             <li key={t.id}>
-              <button type="button" className="ml-glass tg-card" onClick={() => onOpen(t.id)}>
+              <button type="button" className="m-card tg-card" onClick={() => onOpen(t.id)}>
                 <span className="tg-card-main">
                   <b>{t.company}</b>
                   <span>{t.role}</span>
                   {when(t.interviewDate) && <small>Interview {when(t.interviewDate)}</small>}
                 </span>
-                <span className={`ml-chip tg-status ${t.status === 'ready' ? 'is-ready' : ''}`}>{t.status === 'ready' ? 'Ready' : 'Scouting…'}</span>
+                <span className={`m-chip tg-status ${t.status === 'ready' ? 'is-ready' : ''}`}>{t.status === 'ready' ? 'Understood' : 'Reading the role'}</span>
               </button>
             </li>
           ))}
@@ -132,14 +136,14 @@ function AddForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (id
       const t = await api.createTarget({ company: c, role: r, jd: j, ...(date ? { interviewDate: date } : {}) })
       onCreated(t.id)
     } catch {
-      setError('We could not create the target. Check your connection and try again.')
+      setError('We could not save this role. Check your connection and try again.')
       inFlight.current = false
       setBusy(false)
     }
   }
 
   return (
-    <form className="ml-glass tg-form" onSubmit={e => void submit(e)} noValidate>
+    <form className="m-card tg-form" onSubmit={e => void submit(e)} noValidate>
       <div className="tg-fields">
         <label>Company<input value={company} maxLength={120} onChange={e => setCompany(e.target.value)} autoComplete="organization" autoFocus /></label>
         <label>Role<input value={role} maxLength={120} onChange={e => setRole(e.target.value)} /></label>
@@ -148,25 +152,32 @@ function AddForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (id
       <label>Job description
         <textarea value={jd} onChange={e => setJd(e.target.value)} rows={10} placeholder="Paste the whole posting here." />
       </label>
-      <p className={`tg-count ${jd.trim().length > 0 && jd.trim().length < MIN_JD ? 'is-low' : ''}`}>{jd.length.toLocaleString()} / {MAX_JD.toLocaleString()} characters</p>
+      <p className={`tg-count ${jd.trim().length > 0 && jd.trim().length < MIN_JD ? 'is-low' : ''}`}>{jd.trim().length > MAX_JD ? 'That is too long to save.' : jd.trim().length > 0 && jd.trim().length < MIN_JD ? 'Paste a little more of the posting.' : jd.trim().length >= MIN_JD ? 'That is enough to read.' : 'Paste the posting when you are ready.'}</p>
       {error && <p className="tg-error" role="alert">{error}</p>}
       <div className="tg-actions">
-        <button type="submit" className="ml-btn ml-btn--sm" disabled={busy}>{busy ? 'Creating…' : 'Create target'}</button>
-        <button type="button" className="ml-btn ml-btn--sm ml-btn--quiet" onClick={onCancel} disabled={busy}>Cancel</button>
+        <button type="submit" className="m-btn" disabled={busy}>{busy ? 'Saving…' : 'Save this role'}</button>
+        <button type="button" className="m-btn m-btn--quiet" onClick={onCancel} disabled={busy}>Cancel</button>
       </div>
     </form>
   )
 }
 
-function Mission({ id, onBack, onPractise, onPractiseProbe, onScreen }: { id: string; onBack: () => void; onPractise: (role: string) => void; onPractiseProbe?: (question: string) => void; onScreen?: (targetId: string) => void }) {
+function Mission({ id, onBack, onPractise, onPractiseProbe, onScreen, onAddStory }: { id: string; onBack: () => void; onPractise: (role: string) => void; onPractiseProbe?: (question: string) => void; onScreen?: (targetId: string) => void; onAddStory?: (theme: string | null) => void }) {
   const [target, setTarget] = useState<Target | null>(null)
   const [failures, setFailures] = useState(0)
   const [sqlOpen, setSqlOpen] = useState(false)
+  const [stage, setStage] = useState<'understand' | 'prepare' | 'day' | 'after' | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState(false)
   const [tick, setTick] = useState(0) // bump to refetch now
   const refetch = useCallback(() => setTick(n => n + 1), [])
+  const [storyRows, setStoryRows] = useState<{ title: string; themes: string[] }[]>([])
+  useEffect(() => {
+    let live = true
+    data.stories.list().then(rows => { if (live) setStoryRows(rows) }).catch(() => { if (live) setStoryRows([]) })
+    return () => { live = false }
+  }, [id, tick])
 
   // ponytail: fixed 1s poll, no backoff; add one if the server ever needs it.
   // Poll once a second while Scout works; stop when ready or unmounted. A failed fetch just retries.
@@ -193,15 +204,15 @@ function Mission({ id, onBack, onPractise, onPractiseProbe, onScreen }: { id: st
     try { await api.deleteTarget(id); onBack() } catch { setDeleting(false); setDeleteError(true) }
   }
 
-  const back = <button type="button" className="tg-link tg-back" onClick={onBack}>← All targets</button>
+  const back = <button type="button" className="tg-link tg-back" onClick={onBack}>All roles</button>
 
   if (!target) {
     return (
       <div className="tg-wrap">
         {back}
         {failures >= 3
-          ? <p className="tg-note" role="alert">We cannot reach this target right now. We keep trying. <button type="button" className="tg-link" onClick={onBack}>Back to targets</button></p>
-          : <p className="tg-note" role="status">Opening your target…</p>}
+          ? <p className="tg-note" role="alert">We cannot reach this role right now. We keep trying. <button type="button" className="tg-link" onClick={onBack}>Back to roles</button></p>
+          : <p className="tg-note" role="status">Opening this role…</p>}
       </div>
     )
   }
@@ -220,117 +231,135 @@ function Mission({ id, onBack, onPractise, onPractiseProbe, onScreen }: { id: st
   }
 
   const ready = target.status === 'ready'
-  const left = countdown(target.interviewDate)
+  const day = dayLabel(target.interviewDate)
   const debriefs = [...target.debriefs].reverse()
+  const need = rolesNeedStories([{ id, company: target.company, role: target.role, skills: target.skills }], storyRows)[0]
+  const open = stage ?? (day === 'This is the day' ? 'day' : ready ? 'prepare' : 'understand')
 
   return (
     <div className="tg-wrap">
       {back}
       <header className="tg-top">
         <div>
-          <p className="ml-eyebrow">{target.company}</p>
+          <p className="m-kicker">{target.company}</p>
           <h1>{target.role}</h1>
         </div>
-        {left && <span className="ml-chip tg-days">{left}</span>}
+        {day && <span className="m-chip tg-days">{day}</span>}
       </header>
 
-      <section className="ml-glass tg-card-body" aria-labelledby="tg-live">
-        <h2 id="tg-live">{ready ? 'What we did' : 'Working on it'}</h2>
-        {target.events.length === 0
-          ? <p className="tg-muted" role="status">Scout is getting started…</p>
-          : (
-            <ol className="tg-feed" aria-live="polite">
-              {target.events.map((e, i) => (
-                <li key={`${e.at}-${i}`} className={i === target.events.length - 1 && !ready ? 'is-new' : ''}>
-                  <span className="tg-agent">{e.agent}</span>
-                  <span>{e.text}</span>
-                </li>
-              ))}
-            </ol>
-          )}
-        {!ready && failures >= 3 && <p className="tg-muted" role="alert">Having trouble reaching the server. We keep trying.</p>}
-      </section>
+      <ol className="tg-stages" aria-label="How you prepare for this role">
+        {([
+          ['understand', 'Understand'],
+          ['prepare', 'Prepare'],
+          ['day', 'Interview day'],
+          ['after', 'Afterwards'],
+        ] as const).map(([stageId, label]) => (
+          <li key={stageId}><button type="button" className={open === stageId ? 'is-now' : ''} aria-current={open === stageId ? 'true' : undefined} onClick={() => setStage(stageId)}>{label}</button></li>
+        ))}
+      </ol>
 
-      {ready && (
-        <>
+      <p className="tg-muted" role="status">{ready ? 'The role has been read.' : 'Reading the job description.'}</p>
+      {target.events.length > 0 && (
+        <details className="tg-feed-details">
+          <summary>What has been read</summary>
+          <ol className="tg-feed" aria-live="polite">
+            {target.events.map((e, i) => (
+              <li key={`${e.at}-${i}`} className={i === target.events.length - 1 && !ready ? 'is-new' : ''}>
+                <span className="tg-agent">{e.agent}</span>
+                <span>{e.text}</span>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+      {!ready && failures >= 3 && <p className="tg-muted" role="alert">Having trouble reaching the server. We keep trying.</p>}
+
+      {open === 'understand' && <section className="m-card tg-card-body" aria-labelledby="tg-skills">
+          <h2 id="tg-skills">Understand</h2>
+          <p className="tg-muted">What the posting asks for, in their words, lined up with your résumé.</p>
+          {target.skills.length === 0 && <p className="tg-muted">{ready ? 'We did not find specific skills in this description.' : 'Skills will appear here once the posting has been read.'}</p>}
+          {AREAS.map(a => {
+            const list = target.skills.filter((s: Skill) => s.area === a.id)
+            return list.length === 0 ? null : (
+              <div key={a.id} className="tg-area">
+                <h3>{a.label}</h3>
+                <ul>
+                  {list.map(s => (
+                    <li key={s.name}>
+                      <span className="tg-skill"><b>{s.name}</b><span className={`m-chip tg-weight ${s.weight === 'core' ? 'is-core' : ''}`}>{s.weight === 'core' ? 'Core' : 'Useful'}</span></span>
+                      <q>{s.quote}</q>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          })}
+          <MatchSection targetId={id} onPractiseProbe={onPractiseProbe} />
+        </section>}
+
+        {open === 'prepare' && <section className="m-card tg-card-body" aria-labelledby="tg-prepare">
+          <h2 id="tg-prepare">Prepare</h2>
           {target.nextStep && (
-            <section className="ml-glass tg-card-body tg-plan">
-              <p className="ml-eyebrow">The Planner&rsquo;s plan</p>
+            <div className="tg-plan">
               <p className="tg-next">{target.nextStep}</p>
               <FallbackNote source={target.nextStepSource} />
-            </section>
+            </div>
           )}
-
-          <section className="ml-glass tg-card-body" aria-labelledby="tg-skills">
-            <h2 id="tg-skills">What they&rsquo;ll look for</h2>
-            {target.skills.length === 0 && <p className="tg-muted">We did not find specific skills in this description.</p>}
-            {AREAS.map(a => {
-              const list = target.skills.filter((s: Skill) => s.area === a.id)
-              return list.length === 0 ? null : (
-                <div key={a.id} className="tg-area">
-                  <h3>{a.label}</h3>
-                  <ul>
-                    {list.map(s => (
-                      <li key={s.name}>
-                        <span className="tg-skill"><b>{s.name}</b><span className={`ml-chip tg-weight ${s.weight === 'core' ? 'is-core' : ''}`}>{s.weight === 'core' ? 'Core' : 'Nice to have'}</span></span>
-                        <q>{s.quote}</q>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )
-            })}
-          </section>
-
-          <MatchSection targetId={id} onPractiseProbe={onPractiseProbe} />
-
-          <section className="ml-glass tg-card-body" aria-labelledby="tg-rounds">
-            <h2 id="tg-rounds">Rounds to practise</h2>
-            <ul className="tg-rounds">
-              {target.rounds.map(r => (
+          <p>{themeHint(need.storyTitle, need.needs)}</p>
+          {onAddStory && need.needsId && <button type="button" className="m-btn m-btn--quiet" onClick={() => onAddStory(need.needsId)}>Add that story</button>}
+          <ul className="tg-rounds">
+            {target.rounds.map(r => {
+              const primary = r.available && r.id === target.rounds.find(x => x.available)?.id && !(onScreen && ready && target.skills.length > 0)
+              return (
                 <li key={r.id}>
                   <div><b>{r.title}</b><p>{r.why}</p></div>
                   {r.available
-                    ? <button type="button" className="ml-btn ml-btn--sm" onClick={() => (r.kind === 'sql' ? setSqlOpen(true) : onPractise(target.role))}>Start</button>
-                    : <span className="ml-chip tg-next-chip">Next</span>}
+                    ? <button type="button" className={primary ? 'm-btn' : 'm-btn m-btn--quiet'} onClick={() => (r.kind === 'sql' ? setSqlOpen(true) : onPractise(target.role))}>Practise</button>
+                    : <span className="m-chip tg-next-chip">Later</span>}
                 </li>
-              ))}
-            </ul>
-            {onScreen && (
-              <div className="tg-screen">
-                <button type="button" className="ml-btn ml-btn--sm" disabled={target.skills.length === 0} aria-describedby={target.skills.length === 0 ? 'tg-screen-why' : undefined} onClick={() => onScreen(target.id)}>Practise a screening call</button>
-                <p className="tg-muted">A short call with questions from this job, no hints, and it ends by itself.</p>
-                {target.skills.length === 0 && <p id="tg-screen-why" className="tg-muted">We did not find skills in this description yet, so there is nothing to ask about.</p>}
-              </div>
-            )}
-          </section>
-
-          {debriefs.length > 0 && (
-            <section className="ml-glass tg-card-body" aria-labelledby="tg-debriefs">
-              <h2 id="tg-debriefs">How it went</h2>
-              <ul className="tg-debriefs">
-                {debriefs.map(d => (
-                  <li key={d.id}>
-                    <p className="tg-meta">{time(d.createdAt)} · SQL round · solved {d.solved} of {d.total} {d.total === 1 ? 'problem' : 'problems'}</p>
-                    <p><b>Went well.</b> {d.wentWell}</p>
-                    <p><b>Keep working on.</b> {d.keepWorkingOn}</p>
-                    <p><b>Suggestion.</b> {d.suggestion}</p>
-                  </li>
-                ))}
-              </ul>
-            </section>
+              )
+            })}
+          </ul>
+          {onScreen && (
+            <div className="tg-screen">
+              <button type="button" className={ready && target.skills.length > 0 ? 'm-btn' : 'm-btn m-btn--quiet'} disabled={!ready || target.skills.length === 0} aria-describedby={target.skills.length === 0 ? 'tg-screen-why' : undefined} onClick={() => onScreen(target.id)}>Rehearse a screening call</button>
+              <p className="tg-muted">A short call with questions from this job. No hints. It ends on its own.</p>
+              {target.skills.length === 0 && <p id="tg-screen-why" className="tg-muted">There is nothing to ask about until the posting has been read.</p>}
+            </div>
           )}
-        </>
-      )}
+        </section>}
+
+      {open === 'day' && <section className="m-card tg-card-body" aria-labelledby="tg-day">
+        <h2 id="tg-day">Interview day</h2>
+        <p>{day ?? 'No date yet. Add one and Briefing will keep the day in view.'}</p>
+        {day === 'This is the day' && <p className="tg-muted">A short warm-up is enough. Leave the longer practice for another day.</p>}
+      </section>}
+
+      {open === 'after' && <section className="m-card tg-card-body" aria-labelledby="tg-after">
+        <h2 id="tg-after">Afterwards</h2>
+        {debriefs.length === 0 && <p className="tg-muted">After you practise a round, what worked and what to strengthen will sit here.</p>}
+        {debriefs.length > 0 && (
+          <ul className="tg-debriefs">
+            {debriefs.map(d => (
+              <li key={d.id}>
+                <p className="tg-meta">{time(d.createdAt)} · SQL round</p>
+                <p><b>What worked.</b> {d.wentWell}</p>
+                <p><b>What to strengthen.</b> {d.keepWorkingOn}</p>
+                <p><b>Next.</b> {d.suggestion}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>}
 
       <div className="tg-danger">
         {!confirmDelete
-          ? <button type="button" className="tg-link" onClick={() => setConfirmDelete(true)}>Delete this target</button>
+          ? <button type="button" className="tg-link" onClick={() => setConfirmDelete(true)}>Remove this role</button>
           : (
             <div role="group" aria-label="Confirm delete" className="tg-confirm">
               <span>Delete {target.company}? This cannot be undone.</span>
-              <button type="button" className="ml-btn ml-btn--sm" onClick={() => void remove()} disabled={deleting}>{deleting ? 'Deleting…' : 'Yes, delete'}</button>
-              <button type="button" className="ml-btn ml-btn--sm ml-btn--quiet" onClick={() => setConfirmDelete(false)} disabled={deleting}>Keep it</button>
+              <button type="button" className="m-btn m-btn--quiet" onClick={() => void remove()} disabled={deleting}>{deleting ? 'Deleting…' : 'Yes, delete'}</button>
+              <button type="button" className="m-btn m-btn--quiet" onClick={() => setConfirmDelete(false)} disabled={deleting}>Keep it</button>
             </div>
           )}
         {deleteError && <p className="tg-error" role="alert">We could not delete it. Try again.</p>}

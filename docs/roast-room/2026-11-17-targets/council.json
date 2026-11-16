@@ -1,0 +1,22 @@
+{
+  "title": "How a target should read",
+  "decision": "Replace the stacked mission page with a five-stage path, or keep it.",
+  "mode": "full",
+  "options": [
+    { "id": "A", "label": "Polish the current stack" },
+    { "id": "B", "label": "Five-stage path for one job" },
+    { "id": "C", "label": "One flat checklist" },
+    { "id": "D", "label": "Leave the page as it is" }
+  ],
+  "weights": {
+    "bezos": { "weight": 3, "reason": "Work backwards from interview day" },
+    "graham": { "weight": 3, "reason": "Structure only if candidates want it" },
+    "wickman": { "weight": 2, "reason": "One sequence, one owner" },
+    "blakely": { "weight": 2, "reason": "Wording must sound human" },
+    "buffett": { "weight": 2, "reason": "Solved-of-total is a grade" },
+    "musk": { "weight": 1, "reason": "Delete the scout feed if it does not help" }
+  },
+  "seats": ["graham", "blakely", "bezos", "buffett", "musk", "wickman"],
+  "brief": "Targets feels random. The founder wants add, understand, prepare, interview day, debrief, grounded in real frameworks, with no grades.",
+  "assumptions": ["One to three roles, not a CRM", "Match and stories can join in the client"]
+}

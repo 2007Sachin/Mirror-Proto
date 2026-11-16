@@ -1,0 +1,13 @@
+{
+  "cruxes": [
+    {
+      "question": "Is matching a story to a role by shared words honest enough to show?",
+      "sides": [
+        { "position": "No. Drop the counts and stop there", "seats": ["Buffett"] },
+        { "position": "Yes, if the page says it is a hint, not a verdict", "seats": ["Sara", "Graham", "Bezos"] }
+      ]
+    }
+  ],
+  "unanimous": false,
+  "note": "The bank is wanted. The fight is whether a role match will mislead."
+}

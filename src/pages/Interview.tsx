@@ -347,7 +347,7 @@ export default function Interview(p: InterviewProps) {
         <div className="iv-bar" role="toolbar" aria-label="Call controls">
           <div className="iv-bar-g">
             <div className="iv-cbw">
-              <button type="button" className={`iv-cb iv-cb--mic ${muted ? 'is-off' : ''}`} style={{ ['--lvl' as string]: muted ? 0 : level }} onClick={micPress} aria-pressed={mic ? muted : undefined} aria-label={mic ? (muted ? 'Unmute microphone' : 'Mute microphone') : 'Start speaking'} title={mic ? 'Mute (M)' : 'Start speaking (M)'}>
+              <button type="button" className={`iv-cb iv-cb--mic ${muted ? 'is-off' : ''}`} style={{ ['--lvl' as string]: muted ? 0 : level }} onClick={micPress} aria-pressed={mic ? muted : undefined} aria-label={mic ? (muted ? 'Unmute microphone' : 'Mute microphone') : 'Speak'} title={mic ? 'Mute (M)' : 'Speak (M)'}>
                 {muted || !mic ? <MicOff size={22} aria-hidden="true" /> : <Mic size={22} aria-hidden="true" />}
               </button>
               <span>{mic ? (muted ? 'Unmute' : 'Mute') : 'Speak'}</span>
@@ -416,7 +416,7 @@ export default function Interview(p: InterviewProps) {
           </div>
 
           {!sc && <div id="iv-tp-tips" role="tabpanel" aria-labelledby="iv-tab-tips" hidden={tabPanelHidden('tips')} className="iv-tp iv-tips">
-            <p className="iv-note">Gentle guidance for this answer. It is not a score.</p>
+            <p className="iv-note">Gentle guidance for this answer. It does not rank you.</p>
             <ul className="iv-check">
               {([['happened', 'What happened'], ['did', 'What you did'], ['changed', 'What changed']] as const).map(([k, label]) => (
                 <li key={k} data-on={cov[k]}><i aria-hidden="true">{cov[k] ? '✓' : ''}</i><span>{label}<span className="ml-sr">{cov[k] ? ', covered' : ', not yet'}</span></span></li>

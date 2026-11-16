@@ -1,0 +1,22 @@
+{
+  "title": "What a finished session should show",
+  "decision": "Compact cards that open a structured review, or keep the loose list.",
+  "mode": "full",
+  "options": [
+    { "id": "A", "label": "Relabel the current list" },
+    { "id": "B", "label": "Cards plus a structured review" },
+    { "id": "C", "label": "Transcript only" },
+    { "id": "D", "label": "Leave the page as it is" }
+  ],
+  "weights": {
+    "blakely": { "weight": 3, "reason": "The review is what the candidate feels" },
+    "graham": { "weight": 3, "reason": "A review that does not change the next rep is decoration" },
+    "bezos": { "weight": 2, "reason": "Work backwards from tomorrow's answer" },
+    "buffett": { "weight": 2, "reason": "Readiness numbers must stay off the screen" },
+    "wickman": { "weight": 2, "reason": "The same sections every time" },
+    "musk": { "weight": 1, "reason": "Delete the quote dump if it repeats the note" }
+  },
+  "seats": ["graham", "blakely", "bezos", "buffett", "musk", "wickman"],
+  "brief": "Sessions lists rows and a loose detail. The founder wants a consistent review: overview, per question, delivery, patterns, next practice. No grades.",
+  "assumptions": ["A session is a handful of answers", "STAR can be described in words without a score"]
+}

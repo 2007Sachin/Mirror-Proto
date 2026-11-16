@@ -1,10 +1,10 @@
-/* Sessions: every finished practice, newest first. Uses the tokens already on the page. */
-.fallback-note { margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted, #6b7280); }
-.sessions-list { list-style: none; margin: 18px 0; padding: 0; display: grid; gap: 10px; }
-.sessions-row { width: 100%; text-align: left; display: grid; gap: 4px; padding: 14px 16px; border-radius: 14px; border: 1px solid rgba(152,192,239,.25); background: rgba(152,192,239,.06); color: inherit; font: inherit; cursor: pointer; }
-.sessions-row[aria-current='true'] { border-color: rgba(152,192,239,.7); background: rgba(152,192,239,.14); }
-.sessions-row strong { font-size: 14px; }
-.sessions-row span { font-size: 12px; color: var(--muted, #6b7280); }
-.sessions-row p { margin: 2px 0 0; font-size: 13px; line-height: 1.5; }
-.sessions-detail { margin-top: 8px; }
-.sessions-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 14px 0; }
+.sessions-layout { display: grid; gap: 8px; }
+.sessions-layout.has-review { grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); align-items: start; }
+.sessions-cards { grid-template-columns: 1fr; }
+.sessions .m-review h2 { font-size: var(--m-text-meta); }
+.sessions .m-review h3 { font-size: var(--m-text-body); font-weight: 600; margin: 0; letter-spacing: -.02em; }
+.sessions .m-review header p, .sessions .m-review section > p { margin: 0; font-size: var(--m-text-body); line-height: 1.5; }
+.sessions blockquote { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--m-soft, #f5f5f7); font-size: var(--m-text-body); line-height: 1.5; }
+@media (max-width: 800px) {
+  .sessions-layout.has-review { grid-template-columns: 1fr; }
+}

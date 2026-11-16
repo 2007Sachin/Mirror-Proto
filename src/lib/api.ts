@@ -126,7 +126,7 @@ export interface Target {
   status: 'scouting' | 'ready'; skills: Skill[]; rounds: Round[]; events: AgentEvent[]
   debriefs: Debrief[]; nextStep: string | null; nextStepSource?: Source; createdAt: string
 }
-export type TargetSummary = Pick<Target, 'id' | 'company' | 'role' | 'interviewDate' | 'status' | 'nextStep' | 'nextStepSource' | 'createdAt'>
+export type TargetSummary = Pick<Target, 'id' | 'company' | 'role' | 'interviewDate' | 'status' | 'nextStep' | 'nextStepSource' | 'createdAt'> & { skills?: Skill[] }
 export interface SqlTurnBody {
   problem: { id: string; title: string; prompt: string }
   query: string; passed: boolean; error?: string; resultPreview?: string

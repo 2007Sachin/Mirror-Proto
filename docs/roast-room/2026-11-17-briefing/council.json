@@ -1,0 +1,22 @@
+{
+  "title": "What the home page is, and what to call it",
+  "decision": "Rename and reshape Today, or keep the PR #20 page.",
+  "mode": "full",
+  "options": [
+    { "id": "A", "label": "Polish Today, keep the name" },
+    { "id": "B", "label": "Rebuild as a short Briefing" },
+    { "id": "C", "label": "Rename to Home, keep sections" },
+    { "id": "D", "label": "Leave the page as it is" }
+  ],
+  "weights": {
+    "graham": { "weight": 3, "reason": "The page has to be what the candidate wants" },
+    "blakely": { "weight": 3, "reason": "Naming and wording are the product" },
+    "bezos": { "weight": 2, "reason": "Work backwards from interview morning" },
+    "buffett": { "weight": 2, "reason": "A hidden grade wrecks trust" },
+    "musk": { "weight": 2, "reason": "Delete steps that do not cause a rep" },
+    "wickman": { "weight": 1, "reason": "The page already has one owner" }
+  },
+  "seats": ["graham", "blakely", "bezos", "buffett", "musk", "wickman"],
+  "brief": "The home page already has one next step. The founder dislikes the name Today and the button Start speaking. Pick the name and how much to cut.",
+  "assumptions": ["No usage numbers yet", "Reversible this week", "No name test before this PR"]
+}

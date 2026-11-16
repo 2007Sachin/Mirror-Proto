@@ -15,12 +15,12 @@ describe('MatchView', () => {
     expect(screen.getByText('Not on your résumé')).toBeTruthy()
     expect(screen.getAllByText(/Worked on Python scripts/).length).toBeGreaterThan(0)
     expect(screen.getByText(/This line is vague/)).toBeTruthy()
-    expect(screen.getAllByRole('button', { name: 'Practise this question' }).length).toBe(3)
+    expect(screen.getAllByRole('button', { name: 'Prepare this question' }).length).toBe(3)
   })
 
   it('shows no practise button without the prop, and the fallback note only when the assistant was tried', () => {
     const { rerender } = render(<MatchView data={sampleMatch} onSave={async () => 'saved'} />)
-    expect(screen.queryByRole('button', { name: 'Practise this question' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Prepare this question' })).toBeNull()
     expect(screen.queryByText(/Written from your own words/)).toBeNull()
     rerender(<MatchView data={{ ...sampleMatch, aiAttempted: true }} onSave={async () => 'saved'} />)
     expect(screen.getByText(/Written from your own words/)).toBeTruthy()
@@ -29,7 +29,7 @@ describe('MatchView', () => {
   it('passes the question to onPractiseProbe', () => {
     const onPractiseProbe = vi.fn()
     render(<MatchView data={sampleMatch} onSave={async () => 'saved'} onPractiseProbe={onPractiseProbe} />)
-    fireEvent.click(screen.getAllByRole('button', { name: 'Practise this question' })[0])
+    fireEvent.click(screen.getAllByRole('button', { name: 'Prepare this question' })[0])
     expect(onPractiseProbe).toHaveBeenCalledWith(sampleMatch.matches.find(m => m.probeQuestion)!.probeQuestion)
   })
 

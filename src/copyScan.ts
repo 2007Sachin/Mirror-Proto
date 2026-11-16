@@ -8,6 +8,9 @@ export const BANNED: [string, RegExp][] = [
   ['banned word', /\b(agentic|evidence|reflect\w*|evaluat\w*)\b/i],
   ['fixed count', /\b\d+ questions?\b|\bof \d+\b|\b(one|two|three|four|five|six)[- ]question\b/i],
   ['percentage', /\d\s?%|\bpercent(age)?\b/i],
+  ['streak', /\bstreaks?\b|\bin a row\b/i],
+  ['score', /\bscores?\b/i],
+  ['start speaking', /start speaking/i],
 ]
 
 export function scan(where: string, text: string): string[] {

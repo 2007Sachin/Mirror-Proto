@@ -1,0 +1,37 @@
+{
+  "label": "GO",
+  "call": "Cards open one review. Readiness numbers stay off the screen.",
+  "recommended": "B",
+  "why": [
+    {
+      "point": "Cards open one review. Readiness numbers stay off the screen.",
+      "seat": "Chair",
+      "framework": "Weighted Round 3"
+    }
+  ],
+  "minority": {
+    "seat": "Elon",
+    "quote": "Cut any section that does not change the next sentence.",
+    "would_have_to_be_true": "People open the review and do not practise."
+  },
+  "next_steps": [
+    {
+      "when": "This week",
+      "action": "Ship with the copy scan."
+    }
+  ],
+  "kill_criteria": "See verdict.md",
+  "conditions": [
+    "Copy scan passes with realistic data"
+  ],
+  "fights": [
+    {
+      "crux": "See cruxes.json",
+      "story": "See verdict.md"
+    }
+  ],
+  "amendments": [],
+  "cheapest_test": "Ask what the page is for.",
+  "revisit": "After real use.",
+  "override_note": ""
+}

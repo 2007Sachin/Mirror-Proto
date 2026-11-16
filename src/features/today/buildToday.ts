@@ -43,7 +43,7 @@ function cleanWhy(text: string | null | undefined): string {
 const link = (label: string, action: TodayLink['action']): TodayLink => ({ label, action })
 const spoken = (question: string, why: string, minutes = 5): Hero => ({
   kind: 'spoken', kindLabel: 'spoken question', minutes, title: question, why,
-  primary: link('Start speaking', { type: 'startQuestion', question, speak: true }), secondary: null,
+  primary: link('Answer aloud', { type: 'startQuestion', question, speak: true }), secondary: null,
 })
 
 export function buildToday(input: TodayInput, now: Date): TodayModel {
@@ -74,14 +74,14 @@ export function buildToday(input: TodayInput, now: Date): TodayModel {
     if (!nearest || nearestDays !== 0) return null
     const q = nearest.match?.probes[0]?.question ?? coachNote?.practiceQuestion ?? profile?.firstQuestion ?? 'Tell me about a project you are proud of.'
     return { kind: 'warmup', kindLabel: 'warm-up', minutes: 5, title: q, why: `Your ${nearest.summary.company} interview is today. A short warm-up keeps you loose, and nothing else is due.`,
-      primary: link('Start warming up', { type: 'startQuestion', question: q, speak: true }), secondary: null }
+      primary: link('Warm up', { type: 'startQuestion', question: q, speak: true }), secondary: null }
   }
   const screening = (): Hero | null => {
     if (!nearest || nearestDays === null || nearestDays < 1 || nearestDays > 3 || !nearest.skills?.length) return null
     const c = nearest.summary.company
     return { kind: 'screening', kindLabel: 'screening call', minutes: 8, title: `Practise a ${c} screening call`,
       why: `Your interview is ${countdown(nearestDays)}. A short call with questions from the job, no hints.`,
-      primary: link('Start the call', { type: 'screening', targetId: nearest.summary.id }), secondary: null }
+      primary: link('Begin the call', { type: 'screening', targetId: nearest.summary.id }), secondary: null }
   }
   const coach = (): Hero | null => {
     const q = coachNote?.practiceQuestion?.trim()
@@ -93,8 +93,8 @@ export function buildToday(input: TodayInput, now: Date): TodayModel {
     if (!dueNow.length) return null
     const n = dueNow.length
     const minutes = dueNow.reduce((s, r) => s + (itemOf(r.itemId)?.minutes ?? 5), 0)
-    return { kind: 'replay', kindLabel: 'replay', minutes, title: `${n} ${n === 1 ? 'replay' : 'replays'} due`, why: dueNow[0].reason,
-      primary: link("Start today's replays", { type: 'openReplays', itemId: dueNow[0].itemId }), secondary: null }
+    return { kind: 'replay', kindLabel: 'replay', minutes, title: n === 1 ? 'A replay is due' : 'Replays are due', why: dueNow[0].reason,
+      primary: link('Open replays', { type: 'openReplays', itemId: dueNow[0].itemId }), secondary: null }
   }
   const practice = (): Hero | null => {
     if (!summary || !tracks) return null
@@ -103,7 +103,7 @@ export function buildToday(input: TodayInput, now: Date): TodayModel {
     if (!rec || !item) return null
     const tr = (tracks as TrackLike[]).find(t => t.track === item.track)
     return { kind: 'sql', kindLabel: `${TRACK_LABEL[item.track] ?? tr?.title ?? 'practice'} exercise`, minutes: item.minutes, title: item.title, why: rec.reason,
-      primary: link('Start this one', { type: 'openItem', itemId: item.id }), secondary: null }
+      primary: link('Open this exercise', { type: 'openItem', itemId: item.id }), secondary: null }
   }
   const firstQ = (): Hero | null => (profile?.firstQuestion?.trim() ? spoken(profile.firstQuestion.trim(), 'This is the question your first interview pointed to.') : null)
   const first = (): Hero => ({ kind: 'first', kindLabel: 'your first interview', minutes: 10, title: 'Your first interview',
@@ -161,14 +161,14 @@ export function buildToday(input: TodayInput, now: Date): TodayModel {
 
   // ---- set up ----
   const rows: SetupRow[] = []
-  if (targets?.length === 0) rows.push({ id: 'target', title: "Add a job you're preparing for", body: 'Paste the job description. Scout reads it, then Today shows your interview countdown, which skills your résumé already backs, and screening-call practice opens.', button: link('Add a target', { type: 'addTarget' }) })
+  if (targets?.length === 0) rows.push({ id: 'target', title: "Add a job you're preparing for", body: 'Paste the job description. Briefing then shows the interview day, which skills your résumé already backs, and a screening call when the role is close.', button: link('Add a role', { type: 'addTarget' }) })
   if (stories?.length === 0) rows.push({ id: 'story', title: 'Save one story you can reuse', body: "A short situation, what you did and how it ended. Today then points out which kinds of story you don't have yet.", button: link('Add a story', { type: 'addStory', theme: null }) })
   const sql = tracks?.find(t => t.track === 'sql')
   const gentle = sql ? [...sql.items].sort((a, b) => a.level - b.level)[0] : undefined
   if (summary && gentle && !summary.items.some(i => i.track === 'sql' && i.attempts > 0)) {
     rows.push({ id: 'sql', title: 'Try one SQL exercise', body: `${gentle.title} is a gentle start, about ${gentle.minutes} minutes, right in your browser.`, button: link('Open it', { type: 'openItem', itemId: gentle.id }) })
   }
-  const setup: Setup | null = rows.length ? { heading: "When you're ready, these make Today more useful", rows } : null
+  const setup: Setup | null = rows.length ? { heading: "When you're ready, these make Briefing more useful", rows } : null
 
   // ---- at most four sections: hero, comingUp, since, replays/stories row (the Set up card takes a slot too) ----
   let s = since

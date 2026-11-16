@@ -1,0 +1,37 @@
+{
+  "label": "GO",
+  "call": "One stage open on a named path. No solved-of-total. Story lines are hints.",
+  "recommended": "B",
+  "why": [
+    {
+      "point": "One stage open on a named path. No solved-of-total. Story lines are hints.",
+      "seat": "Chair",
+      "framework": "Weighted Round 3"
+    }
+  ],
+  "minority": {
+    "seat": "none",
+    "quote": "",
+    "would_have_to_be_true": "n/a"
+  },
+  "next_steps": [
+    {
+      "when": "This week",
+      "action": "Ship with the copy scan."
+    }
+  ],
+  "kill_criteria": "See verdict.md",
+  "conditions": [
+    "Copy scan passes with realistic data"
+  ],
+  "fights": [
+    {
+      "crux": "See cruxes.json",
+      "story": "See verdict.md"
+    }
+  ],
+  "amendments": [],
+  "cheapest_test": "Ask what the page is for.",
+  "revisit": "After real use.",
+  "override_note": ""
+}

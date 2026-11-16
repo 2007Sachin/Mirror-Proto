@@ -19,23 +19,23 @@ export function Skeleton({ id, title, line, nested = false }: { id: string; titl
   const H = nested ? 'h3' : 'h2'
   const body = (<><H id={id} className="today-h">{title}</H><p className="today-muted">{line}</p></>)
   return nested
-    ? <div role="group" className="ml-glass today-card today-skel" aria-labelledby={id} aria-busy="true">{body}</div>
-    : <section className="ml-glass today-card today-skel" aria-labelledby={id} aria-busy="true">{body}</section>
+    ? <div role="group" className="m-card today-card today-skel" aria-labelledby={id} aria-busy="true">{body}</div>
+    : <section className="m-card today-card today-skel" aria-labelledby={id} aria-busy="true">{body}</section>
 }
 
 /** One quiet line inside the section; the rest of Today keeps working. */
 export function SectionError({ id, title, what, nested = false }: { id: string; title: string; what: string; nested?: boolean }) {
   const H = nested ? 'h3' : 'h2'
-  const body = (<><H id={id} className="today-h">{title}</H><p className="today-muted" role="status">Couldn’t load {what} just now. The rest of Today still works.</p></>)
+  const body = (<><H id={id} className="today-h">{title}</H><p className="today-muted" role="status">Couldn’t load {what} just now. The rest of Briefing still works.</p></>)
   return nested
-    ? <div role="group" className="ml-glass today-card" aria-labelledby={id}>{body}</div>
-    : <section className="ml-glass today-card" aria-labelledby={id}>{body}</section>
+    ? <div role="group" className="m-card today-card" aria-labelledby={id}>{body}</div>
+    : <section className="m-card today-card" aria-labelledby={id}>{body}</section>
 }
 
 export function Header({ model, now }: { model: TodayModel; now: Date }) {
   return (
     <header className="today-head">
-      <p className="ml-eyebrow">Today · {fmt(now, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+      <p className="m-kicker">Briefing · {fmt(now, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
       <h1>{model.greeting}</h1>
       <p className="today-status">{model.status}</p>
     </header>
@@ -44,7 +44,7 @@ export function Header({ model, now }: { model: TodayModel; now: Date }) {
 
 export function HeroLoading() {
   return (
-    <section className="ml-glass today-hero today-skel" aria-labelledby="today-hero-h" aria-busy="true">
+    <section className="m-card today-hero today-skel" aria-labelledby="today-hero-h" aria-busy="true">
       <p className="today-kicker"><span className="today-dot" aria-hidden="true" />Your next step</p>
       <h2 id="today-hero-h" className="is-loading">Choosing your next step…</h2>
     </section>
@@ -55,15 +55,15 @@ export function HeroLoading() {
 export function Hero({ model, busy, run }: { model: TodayModel; busy: boolean; run: Run }) {
   const h = model.hero
   return (
-    <section className="ml-glass today-hero" aria-labelledby="today-hero-h">
+    <section className="m-card today-hero" aria-labelledby="today-hero-h">
       <p className="today-kicker"><span className="today-dot" aria-hidden="true" />Your next step · {h.kindLabel} · about {h.minutes} {h.minutes === 1 ? 'minute' : 'minutes'}</p>
       <div className="ml-orb today-orb" aria-hidden="true"><LiveOrb compact state="idle" /></div>
       <h2 id="today-hero-h">{h.title}</h2>
       <p className="today-why">{h.why}</p>
       <div className="today-go">
         {/* busy only ignores a second press (App guards it too); the button is never disabled */}
-        <button type="button" className="ml-btn" aria-busy={busy || undefined} onClick={() => { if (!busy) run(h.primary.action) }}>{h.primary.label}</button>
-        {h.secondary && <button type="button" className="ml-btn ml-btn--quiet" onClick={() => run(h.secondary!.action)}>{h.secondary.label}</button>}
+        <button type="button" className="m-btn" aria-busy={busy || undefined} onClick={() => { if (!busy) run(h.primary.action) }}>{h.primary.label}</button>
+        {h.secondary && <button type="button" className="m-btn m-btn--quiet" onClick={() => run(h.secondary!.action)}>{h.secondary.label}</button>}
       </div>
       {model.alternates.length > 0 && (
         <p className="today-also"><span>Or instead:</span>{model.alternates.map(a => <LinkBtn key={a.label} link={a} run={run} />)}</p>
@@ -95,7 +95,7 @@ function DateEditor({ c, onSaved, onCancel }: { c: ComingUpModel; onSaved: () =>
       <label htmlFor="today-date-input">Interview date</label>
       <input id="today-date-input" type="date" min={isoToday()} value={value} onChange={e => setValue(e.target.value)} />
       <div className="today-date-go">
-        <button type="submit" className="ml-btn ml-btn--quiet ml-btn--sm">Save the date</button>
+        <button type="submit" className="m-btn m-btn--quiet">Save the date</button>
         <button type="button" className="today-link" onClick={onCancel}>Cancel</button>
       </div>
       {state === 'failed' && <p className="today-muted" role="status">Couldn’t save the date just now. Try again in a moment.</p>}
@@ -107,7 +107,7 @@ export function ComingUp({ c, busy, run, onChanged }: { c: ComingUpModel; busy: 
   const [editing, setEditing] = useState(false)
   const date = c.interviewDate ? fmt(isoToDate(c.interviewDate), { weekday: 'long', day: 'numeric', month: 'long' }) : null
   return (
-    <section className="ml-glass today-card" aria-labelledby="today-up-h">
+    <section className="m-card today-card" aria-labelledby="today-up-h">
       <div className="today-up-head">
         <div>
           <h2 id="today-up-h" className="today-h">Coming up</h2>
@@ -158,7 +158,7 @@ function SinceList({ title, items, run, tone }: { title: string; items: SinceIte
 
 export function SinceLastWeek({ s, run }: { s: Since; run: Run }) {
   return (
-    <section className="ml-glass today-card" aria-labelledby="today-since-h">
+    <section className="m-card today-card" aria-labelledby="today-since-h">
       <h2 id="today-since-h" className="today-h">Since last week</h2>
       <div className="today-cols">
         <SinceList title="Getting stronger" items={s.stronger} run={run} tone="up" />
@@ -171,7 +171,7 @@ export function SinceLastWeek({ s, run }: { s: Since; run: Run }) {
 export function ReplaysCard({ r, run }: { r: Replays; run: Run }) {
   const first = r.due[0]
   return (
-    <div role="group" className="ml-glass today-card" aria-labelledby="today-rep-h">
+    <div role="group" className="m-card today-card" aria-labelledby="today-rep-h">
       <h3 id="today-rep-h" className="today-h">Replays</h3>
       {(r.due.length > 0 || r.upcoming.length > 0) && (
         <ul className="today-list">
@@ -180,14 +180,14 @@ export function ReplaysCard({ r, run }: { r: Replays; run: Run }) {
       )}
       {r.nothingDueLine && <p className="today-muted">{r.nothingDueLine}</p>}
       {r.compressedLine && <p className="today-muted">{r.compressedLine}</p>}
-      {first && <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={() => run({ type: 'openReplays', itemId: first.itemId })}>Start today’s replays</button>}
+      {first && <button type="button" className="m-btn m-btn--quiet" onClick={() => run({ type: 'openReplays', itemId: first.itemId })}>Open replays</button>}
     </div>
   )
 }
 
 export function StoriesCard({ s, run }: { s: StoriesModel; run: Run }) {
   return (
-    <div role="group" className="ml-glass today-card" aria-labelledby="today-stories-h">
+    <div role="group" className="m-card today-card" aria-labelledby="today-stories-h">
       <h3 id="today-stories-h" className="today-h">Your stories</h3>
       {s.have.length > 0 && (
         <div className="today-stack-sm">
@@ -210,7 +210,7 @@ export function StoriesCard({ s, run }: { s: StoriesModel; run: Run }) {
 const SETUP_ICONS = { target: Target, story: BookMarked, sql: Terminal }
 export function SetupCard({ s, run }: { s: Setup; run: Run }) {
   return (
-    <section className="ml-glass today-card today-setup" aria-labelledby="today-setup-h">
+    <section className="m-card today-card today-setup" aria-labelledby="today-setup-h">
       <h2 id="today-setup-h" className="today-big">{s.heading}</h2>
       <ul>
         {s.rows.map(r => {
@@ -219,7 +219,7 @@ export function SetupCard({ s, run }: { s: Setup; run: Run }) {
             <li key={r.id}>
               <span className="today-ic" aria-hidden="true"><Icon size={16} /></span>
               <div><b>{r.title}</b><p className="today-muted">{r.body}</p></div>
-              <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={() => run(r.button.action)}>{r.button.label}</button>
+              <button type="button" className="m-btn m-btn--quiet" onClick={() => run(r.button.action)}>{r.button.label}</button>
             </li>
           )
         })}
@@ -229,5 +229,5 @@ export function SetupCard({ s, run }: { s: Setup; run: Run }) {
 }
 
 export function Footer() {
-  return <p className="today-footer">Your practice is private to your account. Nothing here is a score.</p>
+  return <p className="today-footer">Your practice stays on your account. Nothing here ranks you.</p>
 }

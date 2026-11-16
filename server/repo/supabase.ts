@@ -103,17 +103,7 @@ function many<T>(res: { data: T[] | null; error: DbError | null }, action: strin
 
 const json = (v: unknown): Json => v as Json
 
-// Columns that exist only after migration 0009 (SCREEN_DB_READY=1); absent from the generated types.
-type ScreenColumns = Partial<{
-  kind: InterviewKind
-  question_cap: number | null
-  time_cap_seconds: number | null
-  started_at: string | null
-  target_id: string | null
-}>
-type InterviewDb = Row<'mirror_interviews'> & ScreenColumns
-
-function toInterviewRow(r: InterviewDb): InterviewRow {
+function toInterviewRow(r: Row<'mirror_interviews'>): InterviewRow {
   return {
     id: r.id,
     workspaceId: r.workspace_id,
@@ -122,7 +112,7 @@ function toInterviewRow(r: InterviewDb): InterviewRow {
     status: r.status as InterviewRow['status'],
     askedQuestions: Array.isArray(r.asked_questions) ? (r.asked_questions as string[]) : [],
     createdAt: r.created_at,
-    kind: r.kind ?? 'practice',
+    kind: (r.kind as InterviewKind | null) ?? 'practice',
     questionCap: r.question_cap ?? null,
     timeCapSeconds: r.time_cap_seconds ?? null,
     startedAt: r.started_at ?? null,
@@ -228,7 +218,7 @@ export function createUserRepository(client: Db, userId: string, opts: { screenD
   async function getInterview(workspace: string, id: string): Promise<InterviewRow | null> {
     const res = await client.from(PHASE1_TABLES.interviews).select().eq('id', id).eq('workspace_id', workspace).maybeSingle()
     const row = maybe(res, 'get interview')
-    return row ? withMeta(toInterviewRow(row as InterviewDb)) : null
+    return row ? withMeta(toInterviewRow(row)) : null
   }
 
   async function getTarget(workspace: string, id: string): Promise<Target | null> {
@@ -269,7 +259,7 @@ export function createUserRepository(client: Db, userId: string, opts: { screenD
       .eq('workspace_id', workspace)
       .eq('user_id', userId)
       .order('created_at', { ascending: true })
-    return many(res, 'list interviews').map(r => withMeta(toInterviewRow(r as InterviewDb)))
+    return many(res, 'list interviews').map(r => withMeta(toInterviewRow(r)))
   }
 
   /** Deletes in dependency order; the first failure stops the run. */
@@ -307,7 +297,7 @@ export function createUserRepository(client: Db, userId: string, opts: { screenD
         startedAt: input.startedAt ?? null,
         targetId: input.targetId ?? null,
       }
-      const extra: ScreenColumns = ready
+      const extra: Partial<Insert<'mirror_interviews'>> = ready
         ? { kind: metaRow.kind, question_cap: cap, time_cap_seconds: metaRow.timeCapSeconds, started_at: metaRow.startedAt, target_id: metaRow.targetId }
         : {}
       const res = await client
@@ -323,7 +313,7 @@ export function createUserRepository(client: Db, userId: string, opts: { screenD
         } as Insert<'mirror_interviews'>)
         .select()
         .single()
-      const row = one(res, 'create interview') as InterviewDb
+      const row = one(res, 'create interview')
       if (!ready && (isScreen || cap !== null)) screenMeta.set(row.id, metaRow)
       return withMeta(toInterviewRow(row))
     },
@@ -345,19 +335,19 @@ export function createUserRepository(client: Db, userId: string, opts: { screenD
         .eq('workspace_id', workspace)
         .select()
         .single()
-      return withMeta(toInterviewRow(one(res, 'append question') as InterviewDb))
+      return withMeta(toInterviewRow(one(res, 'append question')))
     },
 
     async listInterviewsByRole(workspace: string, role: string): Promise<InterviewRow[]> {
       const res = await client.from(PHASE1_TABLES.interviews).select().eq('workspace_id', workspace).eq('role', role)
-      return many(res, 'list interviews').map(r => withMeta(toInterviewRow(r as InterviewDb)))
+      return many(res, 'list interviews').map(r => withMeta(toInterviewRow(r)))
     },
 
     async listInterviews(workspace: string, page?: { limit?: number; before?: string }): Promise<InterviewRow[]> {
       let query = client.from(PHASE1_TABLES.interviews).select().eq('workspace_id', workspace).order('created_at', { ascending: false })
       if (page?.before) query = query.lt('created_at', page.before)
       const res = await query.limit(page?.limit ?? 20)
-      return many(res, 'list interviews').map(r => withMeta(toInterviewRow(r as InterviewDb)))
+      return many(res, 'list interviews').map(r => withMeta(toInterviewRow(r)))
     },
 
     async addTurn(workspace: string, interviewId: string, input: AddTurnInput): Promise<TurnRow> {

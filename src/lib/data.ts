@@ -85,6 +85,22 @@ let userId: string | null = null
 export function setUser(id: string | null): void {
   if (id !== userId) fallback.clear()
   userId = id
+  if (id) migrateUnscopedKeys(id)
+}
+
+/** SQL progress used to be stored without a user id. Once, at sign-in, move it under the user's own keys and delete the old ones. */
+const OLD_UNSCOPED = ['sql.path.tab', 'sql.path.placed', 'sql.diag', 'sql.mock.v1']
+function migrateUnscopedKeys(id: string): void {
+  try {
+    for (const k of OLD_UNSCOPED) {
+      const old = `mirror.${k}`
+      const value = localStorage.getItem(old)
+      if (value === null) continue
+      const scoped = `${PREFIX}${id}.${k}`
+      if (localStorage.getItem(scoped) === null) localStorage.setItem(scoped, value)
+      localStorage.removeItem(old)
+    }
+  } catch { /* storage can be blocked */ }
 }
 /** Per-user browser key for small bits of progress (null when nobody is signed in, so nothing is kept). */
 export const userKey = (key: string): string | null => storageKey(key)

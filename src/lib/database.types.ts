@@ -72,6 +72,11 @@ export type Database = {
           asked_questions: Json
           created_at: string
           user_id: string | null
+          kind: string
+          question_cap: number | null
+          time_cap_seconds: number | null
+          started_at: string | null
+          target_id: string | null
         }
         Insert: {
           id?: string
@@ -82,6 +87,11 @@ export type Database = {
           asked_questions: Json
           created_at?: string
           user_id?: string | null
+          kind?: string
+          question_cap?: number | null
+          time_cap_seconds?: number | null
+          started_at?: string | null
+          target_id?: string | null
         }
         Update: {
           id?: string
@@ -92,9 +102,15 @@ export type Database = {
           asked_questions?: Json
           created_at?: string
           user_id?: string | null
+          kind?: string
+          question_cap?: number | null
+          time_cap_seconds?: number | null
+          started_at?: string | null
+          target_id?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'mirror_interviews_workspace_id_fkey'; columns: ['workspace_id']; isOneToOne: false; referencedRelation: 'mirror_workspaces'; referencedColumns: ['slug'] }
+          { foreignKeyName: 'mirror_interviews_workspace_id_fkey'; columns: ['workspace_id']; isOneToOne: false; referencedRelation: 'mirror_workspaces'; referencedColumns: ['slug'] },
+          { foreignKeyName: 'mirror_interviews_target_id_fkey'; columns: ['target_id']; isOneToOne: false; referencedRelation: 'mirror_targets'; referencedColumns: ['id'] }
         ]
       }
       mirror_practice_attempts: {

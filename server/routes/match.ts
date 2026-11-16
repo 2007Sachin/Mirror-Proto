@@ -73,7 +73,7 @@ export function registerMatchRoutes(api: Api, { provider }: RouteDeps): (workspa
       claims = await repo.replaceResumeClaims(workspace, fresh).catch(e => (unsaved(e), fresh.map(c => ({ ...c, id: `c:${c.quote.slice(0, 24)}`, workspaceId: workspace, createdAt: at }))))
       matches = await repo.replaceGapMatches(workspace, id, rows).catch(e => (unsaved(e), rows.map(m => ({ ...m, targetId: id, id: `m:${m.skill}`, workspaceId: workspace, createdAt: at }))))
     }
-    // Supabase does not store probe questions; derive them again for stored rows that have none.
+    // Rows saved before probe questions were stored have none; derive them again.
     if (matches.some(m => m.probeQuestion === null && m.status !== 'covered')) {
       const derived = new Map(matchClaims(target.skills, claims).map(m => [m.skill, m.probeQuestion]))
       matches = matches.map(m => (m.probeQuestion === null && m.status !== 'covered' ? { ...m, probeQuestion: derived.get(m.skill) ?? null } : m))

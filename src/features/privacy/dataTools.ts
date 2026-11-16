@@ -17,10 +17,13 @@ export async function exportMyData(): Promise<string> {
   return name
 }
 
+/** What sign-out keeps: a user's own SQL progress (mirror.data.v1.<id>.sql.*). Everything else under mirror.* goes. */
+export const KEEP_ON_SIGN_OUT = /^mirror.data.v1.[^.]+.sql./
+
 /** Everything this app keeps in the browser starts with "mirror." (drafts, practice progress, the open session). */
-export function clearBrowserKeys(store: Storage): void {
+export function clearBrowserKeys(store: Storage, keep?: RegExp): void {
   try {
-    for (const k of Object.keys(store)) if (k.startsWith('mirror.')) store.removeItem(k)
+    for (const k of Object.keys(store)) if (k.startsWith('mirror.') && !keep?.test(k)) store.removeItem(k)
   } catch { /* storage can be blocked */ }
 }
 

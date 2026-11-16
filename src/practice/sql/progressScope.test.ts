@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest'
 import { setUser } from '../../lib/data'
-import { clearBrowserKeys } from '../../features/privacy/dataTools'
+import { KEEP_ON_SIGN_OUT, clearBrowserKeys } from '../../features/privacy/dataTools'
 import { loadPlaced, loadTab, savePlaced } from './pathLogic'
 import { loadDiag, saveDiag } from './plan/planLogic'
 
@@ -20,9 +20,29 @@ describe('SQL progress is kept per signed-in user', () => {
     expect(Object.keys(localStorage).filter(k => k.includes('sql'))).toEqual(['mirror.data.v1.a.sql.path.placed', 'mirror.data.v1.a.sql.diag'])
     expect(loadTab()).toBeDefined()
   })
-  it('sign-out clearing removes every mirror.* key but nothing else', () => {
+  it('delete-all clearing removes every mirror.* key but nothing else', () => {
     localStorage.setItem('mirror.draft.q1', 'x'); localStorage.setItem('mirror.data.v1.a.sql.diag', '{}'); localStorage.setItem('other', '1')
     clearBrowserKeys(localStorage)
     expect(Object.keys(localStorage)).toEqual(['other'])
+  })
+  it('sign-out keeps only mirror.data.v1.<id>.sql.* and clears every other mirror.* key', () => {
+    const keep = ['mirror.data.v1.a.sql.diag', 'mirror.data.v1.a.sql.path.placed', 'mirror.data.v1.b-2.sql.mock.v1']
+    const drop = ['mirror.data.v1.a.attempts', 'mirror.data.v1.a.stories', 'mirror.data.v1..sql.diag', 'mirror.data.v1.a.b.sql.diag', 'mirror.draft.q1', 'mirror.session', 'mirror.sql.diag', 'mirror.sql.path.tab']
+    for (const k of [...keep, ...drop, 'other']) localStorage.setItem(k, '1')
+    clearBrowserKeys(localStorage, KEEP_ON_SIGN_OUT)
+    expect(Object.keys(localStorage).sort()).toEqual([...keep, 'other'].sort())
+  })
+  it('moves the old unscoped SQL keys to the user once, then deletes them', () => {
+    const old = { 'mirror.sql.path.tab': 'plan', 'mirror.sql.path.placed': '1', 'mirror.sql.diag': '{"level":"beginner"}', 'mirror.sql.mock.v1': '{"x":1}' }
+    for (const [k, v] of Object.entries(old)) localStorage.setItem(k, v)
+    localStorage.setItem('mirror.data.v1.a.sql.diag', 'already-there')
+    setUser('a')
+    expect(Object.keys(localStorage).filter(k => !k.startsWith('mirror.data.v1.'))).toEqual([])
+    expect(localStorage.getItem('mirror.data.v1.a.sql.path.tab')).toBe('plan')
+    expect(localStorage.getItem('mirror.data.v1.a.sql.path.placed')).toBe('1')
+    expect(localStorage.getItem('mirror.data.v1.a.sql.mock.v1')).toBe('{"x":1}')
+    expect(localStorage.getItem('mirror.data.v1.a.sql.diag')).toBe('already-there') // never overwrites
+    setUser(null); setUser('a')
+    expect(localStorage.getItem('mirror.data.v1.a.sql.path.tab')).toBe('plan') // a second sign-in changes nothing
   })
 })

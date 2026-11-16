@@ -51,18 +51,18 @@ export default function Settings(p: SettingsProps) {
     <section className="settings-section"><div><h3>Technology plan</h3><p>The intended production integrations for the next build phase.</p></div><div className="tech-plan"><span>NVIDIA NIM<small>LLM orchestration</small></span><span>Sarvam<small>STT + TTS</small></span><span>Supabase<small>Backend</small></span></div></section>
     <section className="settings-section" aria-labelledby="your-data-title"><div><h3 id="your-data-title">Your data</h3><p>Take a copy of what MIRROR keeps for you, or remove it. <button type="button" className="pv-link" onClick={p.onOpenPrivacy}>Your privacy</button></p></div>
       <div className="pv-actions">
-        <button type="button" className="button button--secondary" onClick={() => void doExport()} disabled={busy}><Download size={15} /> Export my data</button>
-        <button type="button" className="button button--ghost" onClick={() => { setAsking(true); setStatus('') }} disabled={busy || asking}><Trash2 size={15} /> Delete all my data</button>
+        <button type="button" className="m-btn" onClick={() => void doExport()} disabled={busy}><Download size={15} /> Export my data</button>
+        <button type="button" className="m-btn m-btn--quiet" onClick={() => { setAsking(true); setStatus('') }} disabled={busy || asking}><Trash2 size={15} /> Delete all my data</button>
       </div>
       {asking && <div className="pv-confirm" role="group" aria-label="Confirm deleting your data">
         <p>This removes your profile, practice sessions, answers, notes, targets, stories, résumé points and review schedule from MIRROR, and the drafts saved in this browser. It cannot be undone. Your sign-in account stays, so you can start again.</p>
         <label>Type DELETE to confirm<input value={typed} onChange={e => setTyped(e.target.value)} autoComplete="off" aria-label="Type DELETE to confirm" /></label>
         <div className="pv-actions">
-          <button type="button" className="button button--ghost" onClick={() => void doDelete()} disabled={busy || typed !== 'DELETE'}>Delete everything</button>
-          <button type="button" className="button button--secondary" onClick={() => { setAsking(false); setTyped('') }} disabled={busy}>Keep my data</button>
+          <button type="button" className="m-btn m-btn--quiet" onClick={() => void doDelete()} disabled={busy || typed !== 'DELETE'}>Delete everything</button>
+          <button type="button" className="m-btn m-btn--quiet" onClick={() => { setAsking(false); setTyped('') }} disabled={busy}>Keep my data</button>
         </div>
       </div>}
       <p className="pv-note" role="status" aria-live="polite">{status}</p>
     </section>
-    <section className="settings-section danger-section"><div><h3>Reset prototype</h3><p>Clear your profile, stories and replay answers. To remove everything, use Delete all my data above.</p></div><button type="button" className="button button--ghost" onClick={p.onResetDemo}><Trash2 size={15} /> Reset demo data</button></section></div>
+    <section className="settings-section danger-section"><div><h3>Reset prototype</h3><p>Clear your profile, stories and replay answers. To remove everything, use Delete all my data above.</p></div><button type="button" className="m-btn m-btn--quiet" onClick={p.onResetDemo}><Trash2 size={15} /> Reset demo data</button></section></div>
 }

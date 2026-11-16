@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import '../landing.css'
 import './today.css'
 import { buildToday } from '../features/today/buildToday'
 import { useTodayData } from '../features/today/useTodayData'
@@ -38,7 +37,7 @@ function TodayBody({ busy, refresh, ...cb }: TodayProps & { refresh: () => void 
 
   const rowCount = (model.replays || status.replays !== 'ready' ? 1 : 0) + (model.stories || status.stories !== 'ready' ? 1 : 0)
   return (
-    <div className="mirror-landing today">
+    <div className="today">
       <div className="today-page">
         <Header model={model} now={now} />
         <div className="today-stack">

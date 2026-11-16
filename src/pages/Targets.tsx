@@ -1,5 +1,4 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-import '../landing.css'
 import './targets.css'
 import FallbackNote from '../components/FallbackNote'
 import MatchSection from '../features/match/MatchSection'
@@ -51,7 +50,7 @@ export default function Targets({ openId, onOpen, onPractise, onPractiseProbe, o
   onAddStory?: (theme: string | null) => void
 }) {
   return (
-    <div className="mirror-landing targets">
+    <div className="targets">
       {openId ? <Mission key={openId} id={openId} onBack={() => onOpen(null)} onPractise={onPractise} onPractiseProbe={onPractiseProbe} onScreen={onScreen} onAddStory={onAddStory} /> : <List onOpen={onOpen} />}
     </div>
   )
@@ -71,10 +70,10 @@ function List({ onOpen }: { onOpen: (id: string | null) => void }) {
     <div className="tg-wrap">
       <header className="tg-top">
         <div>
-          <p className="ml-eyebrow">Roles</p>
+          <p className="m-kicker">Roles</p>
           <h1>Roles you are preparing for</h1>
         </div>
-        {!adding && <button type="button" className="ml-btn ml-btn--sm" onClick={() => setAdding(true)}>Add a role</button>}
+        {!adding && <button type="button" className="m-btn" onClick={() => setAdding(true)}>Add a role</button>}
       </header>
 
       {adding && <AddForm onCancel={() => setAdding(false)} onCreated={onOpen} />}
@@ -88,10 +87,10 @@ function List({ onOpen }: { onOpen: (id: string | null) => void }) {
       {items === null && <p className="tg-note" role="status">Loading your roles…</p>}
 
       {items && items.length === 0 && !loadError && !adding && (
-        <section className="ml-glass tg-empty">
+        <section className="m-card tg-empty">
           <h2>A role is a job you are preparing for.</h2>
           <p>Paste the job description. MIRROR reads what they ask for, lines it up with your résumé, and gives you a way to prepare.</p>
-          <button type="button" className="ml-btn ml-btn--sm" onClick={() => setAdding(true)}>Add a role</button>
+          <button type="button" className="m-btn" onClick={() => setAdding(true)}>Add a role</button>
         </section>
       )}
 
@@ -99,13 +98,13 @@ function List({ onOpen }: { onOpen: (id: string | null) => void }) {
         <ul className="tg-list">
           {items.map(t => (
             <li key={t.id}>
-              <button type="button" className="ml-glass tg-card" onClick={() => onOpen(t.id)}>
+              <button type="button" className="m-card tg-card" onClick={() => onOpen(t.id)}>
                 <span className="tg-card-main">
                   <b>{t.company}</b>
                   <span>{t.role}</span>
                   {when(t.interviewDate) && <small>Interview {when(t.interviewDate)}</small>}
                 </span>
-                <span className={`ml-chip tg-status ${t.status === 'ready' ? 'is-ready' : ''}`}>{t.status === 'ready' ? 'Understood' : 'Reading the role'}</span>
+                <span className={`m-chip tg-status ${t.status === 'ready' ? 'is-ready' : ''}`}>{t.status === 'ready' ? 'Understood' : 'Reading the role'}</span>
               </button>
             </li>
           ))}
@@ -144,7 +143,7 @@ function AddForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (id
   }
 
   return (
-    <form className="ml-glass tg-form" onSubmit={e => void submit(e)} noValidate>
+    <form className="m-card tg-form" onSubmit={e => void submit(e)} noValidate>
       <div className="tg-fields">
         <label>Company<input value={company} maxLength={120} onChange={e => setCompany(e.target.value)} autoComplete="organization" autoFocus /></label>
         <label>Role<input value={role} maxLength={120} onChange={e => setRole(e.target.value)} /></label>
@@ -156,8 +155,8 @@ function AddForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (id
       <p className={`tg-count ${jd.trim().length > 0 && jd.trim().length < MIN_JD ? 'is-low' : ''}`}>{jd.trim().length > MAX_JD ? 'That is too long to save.' : jd.trim().length > 0 && jd.trim().length < MIN_JD ? 'Paste a little more of the posting.' : jd.trim().length >= MIN_JD ? 'That is enough to read.' : 'Paste the posting when you are ready.'}</p>
       {error && <p className="tg-error" role="alert">{error}</p>}
       <div className="tg-actions">
-        <button type="submit" className="ml-btn ml-btn--sm" disabled={busy}>{busy ? 'Saving…' : 'Save this role'}</button>
-        <button type="button" className="ml-btn ml-btn--sm ml-btn--quiet" onClick={onCancel} disabled={busy}>Cancel</button>
+        <button type="submit" className="m-btn" disabled={busy}>{busy ? 'Saving…' : 'Save this role'}</button>
+        <button type="button" className="m-btn m-btn--quiet" onClick={onCancel} disabled={busy}>Cancel</button>
       </div>
     </form>
   )
@@ -242,10 +241,10 @@ function Mission({ id, onBack, onPractise, onPractiseProbe, onScreen, onAddStory
       {back}
       <header className="tg-top">
         <div>
-          <p className="ml-eyebrow">{target.company}</p>
+          <p className="m-kicker">{target.company}</p>
           <h1>{target.role}</h1>
         </div>
-        {day && <span className="ml-chip tg-days">{day}</span>}
+        {day && <span className="m-chip tg-days">{day}</span>}
       </header>
 
       <ol className="tg-stages" aria-label="How you prepare for this role">
@@ -275,7 +274,7 @@ function Mission({ id, onBack, onPractise, onPractiseProbe, onScreen, onAddStory
       )}
       {!ready && failures >= 3 && <p className="tg-muted" role="alert">Having trouble reaching the server. We keep trying.</p>}
 
-      {open === 'understand' && <section className="ml-glass tg-card-body" aria-labelledby="tg-skills">
+      {open === 'understand' && <section className="m-card tg-card-body" aria-labelledby="tg-skills">
           <h2 id="tg-skills">Understand</h2>
           <p className="tg-muted">What the posting asks for, in their words, lined up with your résumé.</p>
           {target.skills.length === 0 && <p className="tg-muted">{ready ? 'We did not find specific skills in this description.' : 'Skills will appear here once the posting has been read.'}</p>}
@@ -287,7 +286,7 @@ function Mission({ id, onBack, onPractise, onPractiseProbe, onScreen, onAddStory
                 <ul>
                   {list.map(s => (
                     <li key={s.name}>
-                      <span className="tg-skill"><b>{s.name}</b><span className={`ml-chip tg-weight ${s.weight === 'core' ? 'is-core' : ''}`}>{s.weight === 'core' ? 'Core' : 'Useful'}</span></span>
+                      <span className="tg-skill"><b>{s.name}</b><span className={`m-chip tg-weight ${s.weight === 'core' ? 'is-core' : ''}`}>{s.weight === 'core' ? 'Core' : 'Useful'}</span></span>
                       <q>{s.quote}</q>
                     </li>
                   ))}
@@ -298,7 +297,7 @@ function Mission({ id, onBack, onPractise, onPractiseProbe, onScreen, onAddStory
           <MatchSection targetId={id} onPractiseProbe={onPractiseProbe} />
         </section>}
 
-        {open === 'prepare' && <section className="ml-glass tg-card-body" aria-labelledby="tg-prepare">
+        {open === 'prepare' && <section className="m-card tg-card-body" aria-labelledby="tg-prepare">
           <h2 id="tg-prepare">Prepare</h2>
           {target.nextStep && (
             <div className="tg-plan">
@@ -307,33 +306,36 @@ function Mission({ id, onBack, onPractise, onPractiseProbe, onScreen, onAddStory
             </div>
           )}
           <p>{themeHint(need.storyTitle, need.needs)}</p>
-          {onAddStory && need.needsId && <button type="button" className="ml-btn ml-btn--sm ml-btn--quiet" onClick={() => onAddStory(need.needsId)}>Add that story</button>}
+          {onAddStory && need.needsId && <button type="button" className="m-btn m-btn--quiet" onClick={() => onAddStory(need.needsId)}>Add that story</button>}
           <ul className="tg-rounds">
-            {target.rounds.map(r => (
-              <li key={r.id}>
-                <div><b>{r.title}</b><p>{r.why}</p></div>
-                {r.available
-                  ? <button type="button" className="ml-btn ml-btn--sm" onClick={() => (r.kind === 'sql' ? setSqlOpen(true) : onPractise(target.role))}>Practise</button>
-                  : <span className="ml-chip tg-next-chip">Later</span>}
-              </li>
-            ))}
+            {target.rounds.map(r => {
+              const primary = r.available && r.id === target.rounds.find(x => x.available)?.id && !(onScreen && ready && target.skills.length > 0)
+              return (
+                <li key={r.id}>
+                  <div><b>{r.title}</b><p>{r.why}</p></div>
+                  {r.available
+                    ? <button type="button" className={primary ? 'm-btn' : 'm-btn m-btn--quiet'} onClick={() => (r.kind === 'sql' ? setSqlOpen(true) : onPractise(target.role))}>Practise</button>
+                    : <span className="m-chip tg-next-chip">Later</span>}
+                </li>
+              )
+            })}
           </ul>
           {onScreen && (
             <div className="tg-screen">
-              <button type="button" className="ml-btn ml-btn--sm" disabled={!ready || target.skills.length === 0} aria-describedby={target.skills.length === 0 ? 'tg-screen-why' : undefined} onClick={() => onScreen(target.id)}>Rehearse a screening call</button>
+              <button type="button" className={ready && target.skills.length > 0 ? 'm-btn' : 'm-btn m-btn--quiet'} disabled={!ready || target.skills.length === 0} aria-describedby={target.skills.length === 0 ? 'tg-screen-why' : undefined} onClick={() => onScreen(target.id)}>Rehearse a screening call</button>
               <p className="tg-muted">A short call with questions from this job. No hints. It ends on its own.</p>
               {target.skills.length === 0 && <p id="tg-screen-why" className="tg-muted">There is nothing to ask about until the posting has been read.</p>}
             </div>
           )}
         </section>}
 
-      {open === 'day' && <section className="ml-glass tg-card-body" aria-labelledby="tg-day">
+      {open === 'day' && <section className="m-card tg-card-body" aria-labelledby="tg-day">
         <h2 id="tg-day">Interview day</h2>
         <p>{day ?? 'No date yet. Add one and Briefing will keep the day in view.'}</p>
         {day === 'This is the day' && <p className="tg-muted">A short warm-up is enough. Leave the longer practice for another day.</p>}
       </section>}
 
-      {open === 'after' && <section className="ml-glass tg-card-body" aria-labelledby="tg-after">
+      {open === 'after' && <section className="m-card tg-card-body" aria-labelledby="tg-after">
         <h2 id="tg-after">Afterwards</h2>
         {debriefs.length === 0 && <p className="tg-muted">After you practise a round, what worked and what to strengthen will sit here.</p>}
         {debriefs.length > 0 && (
@@ -356,8 +358,8 @@ function Mission({ id, onBack, onPractise, onPractiseProbe, onScreen, onAddStory
           : (
             <div role="group" aria-label="Confirm delete" className="tg-confirm">
               <span>Delete {target.company}? This cannot be undone.</span>
-              <button type="button" className="ml-btn ml-btn--sm" onClick={() => void remove()} disabled={deleting}>{deleting ? 'Deleting…' : 'Yes, delete'}</button>
-              <button type="button" className="ml-btn ml-btn--sm ml-btn--quiet" onClick={() => setConfirmDelete(false)} disabled={deleting}>Keep it</button>
+              <button type="button" className="m-btn m-btn--quiet" onClick={() => void remove()} disabled={deleting}>{deleting ? 'Deleting…' : 'Yes, delete'}</button>
+              <button type="button" className="m-btn m-btn--quiet" onClick={() => setConfirmDelete(false)} disabled={deleting}>Keep it</button>
             </div>
           )}
         {deleteError && <p className="tg-error" role="alert">We could not delete it. Try again.</p>}

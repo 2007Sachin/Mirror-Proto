@@ -25,7 +25,7 @@ const props = (extra: Partial<TodayProps> = {}): TodayProps => ({
   onOpenTarget: fn(), onAddTarget: fn(), onFirstInterview: fn(), onOpenReplays: fn(), onSayItAgain: fn(), ...extra,
 })
 const show = (d: TodayData, p = props()) => { hook.data = d; return { p, ...render(<Today {...p} />) } }
-const filled = (c: HTMLElement) => c.querySelectorAll('.ml-btn:not(.ml-btn--quiet)')
+const filled = (c: HTMLElement) => c.querySelectorAll('.m-btn:not(.m-btn--quiet)')
 const group = (name: RegExp) => screen.getByText(name).parentElement as HTMLElement
 
 describe('Today: new user', () => {

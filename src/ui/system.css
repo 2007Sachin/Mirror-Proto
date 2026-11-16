@@ -90,8 +90,12 @@
 }
 .workspace-app .settings-section {
   padding: 18px 20px;
-  margin-bottom: 12px;
+  margin-bottom: var(--m-space-3);
   border-radius: var(--m-radius);
+  background: var(--m-card);
+  border: 1px solid var(--m-line);
+  box-shadow: none;
+  backdrop-filter: none;
 }
 .workspace-app .settings-section > div:first-child > h3 { font-size: var(--m-text-title); font-weight: 600; letter-spacing: -.02em; }
 .workspace-app .settings-section > div:first-child > p,
@@ -127,6 +131,10 @@
 }
 .m-chip.is-open, .m-chips .is-open { border-style: dashed; color: var(--m-muted); background: transparent; }
 .m-btn, .workspace-app .m-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--m-space-2);
   font: inherit;
   font-size: var(--m-text-body);
   font-weight: 600;

@@ -34,7 +34,7 @@ export function MatchView({ data, onSave, onPractiseProbe }: {
           <textarea value={text} onChange={e => setText(e.target.value)} rows={8} maxLength={20000} />
         </label>
         {msg && <p className="tg-error" role="alert">{msg}</p>}
-        <button type="button" className="ml-btn ml-btn--sm" onClick={() => void save()} disabled={busy || !text.trim()}>{busy ? 'Saving…' : 'Save and compare'}</button>
+        <button type="button" className="m-btn" onClick={() => void save()} disabled={busy || !text.trim()}>{busy ? 'Saving…' : 'Save and compare'}</button>
       </>
     )
   }
@@ -57,7 +57,7 @@ export function MatchView({ data, onSave, onPractiseProbe }: {
             {m.probeQuestion && (
               <div className="mt-probe">
                 <p><b>A question to prepare for.</b> {m.probeQuestion}</p>
-                {onPractiseProbe && <button type="button" className="ml-btn ml-btn--sm ml-btn--quiet" onClick={() => onPractiseProbe(m.probeQuestion!)}>Prepare this question</button>}
+                {onPractiseProbe && <button type="button" className="m-btn m-btn--quiet" onClick={() => onPractiseProbe(m.probeQuestion!)}>Prepare this question</button>}
               </div>
             )}
           </li>
@@ -78,7 +78,7 @@ export function MatchView({ data, onSave, onPractiseProbe }: {
 export default function MatchSection({ targetId, onPractiseProbe }: { targetId: string; onPractiseProbe?: (question: string) => void }) {
   const { data, loading, error, saveResume } = useTargetMatch(targetId)
   return (
-    <section className="ml-glass tg-card-body" aria-labelledby="tg-match">
+    <section className="m-card tg-card-body" aria-labelledby="tg-match">
       <h2 id="tg-match">Your résumé vs this job</h2>
       {loading && <p className="tg-muted" role="status">Comparing your résumé…</p>}
       {error && <p className="tg-muted" role="alert">We could not compare your résumé right now.</p>}

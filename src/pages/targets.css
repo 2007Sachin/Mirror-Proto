@@ -1,5 +1,18 @@
-/* Targets: list, add form, mission screen. Uses the .mirror-landing tokens (landing.css). Mobile first. */
-.mirror-landing.targets { min-height: 100%; padding: 16px 16px 24px; font-family: inherit; }
+/* Targets. Sits in the workspace and uses the system tokens. */
+.targets {
+  --accent: var(--m-accent);
+  --ink: var(--m-ink);
+  --muted: var(--m-muted);
+  --line: var(--m-line);
+  --glass: var(--m-card);
+  --soft: var(--m-soft);
+  --glass-b: var(--m-line);
+  min-height: 100%;
+  padding: 16px 16px 24px;
+  font-family: inherit;
+  color: var(--m-ink);
+  background: transparent;
+}
 .tg-wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 8px; min-width: 0; }
 .tg-stages { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; }
 .tg-stages button { font: inherit; font-size: var(--m-text-meta); font-weight: 600; color: var(--muted); padding: 6px 12px; min-height: 44px; border-radius: 999px; border: 1px solid var(--line); background: var(--glass); cursor: pointer; }
@@ -15,7 +28,7 @@
 .targets h2 { font-size: var(--m-text-title); font-weight: 700; }
 .targets p { margin: 0; overflow-wrap: anywhere; }
 .targets .ml-eyebrow { margin: 0 0 6px; }
-.targets .ml-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+.targets .m-btn:disabled { opacity: .5; cursor: not-allowed; }
 .targets :is(button, input, textarea):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .tg-top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px; }
@@ -58,7 +71,7 @@
 }
 @keyframes tg-in { from { opacity: 0; transform: translateY(6px); } }
 
-.tg-plan { border-color: color-mix(in srgb, var(--accent) 35%, var(--glass-b)); background: linear-gradient(160deg, var(--glass), var(--soft)); }
+.tg-plan { background: var(--m-soft); border-radius: 12px; padding: var(--m-space-3); }
 .tg-next { font-size: var(--m-text-title); line-height: 1.5; font-weight: 600; }
 
 .tg-area { display: grid; gap: 8px; }
@@ -72,7 +85,8 @@
 .tg-rounds li { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
 .tg-rounds li:first-child { border-top: 0; padding-top: 0; }
 .tg-rounds p { color: var(--muted); font-size: var(--m-text-body); line-height: 1.5; margin-top: 2px; }
-.tg-rounds .ml-btn { flex: none; }
+.tg-rounds .m-btn { flex: none; }
+.tg-screen { margin-top: var(--m-space-4); display: grid; gap: var(--m-space-2); justify-items: start; }
 .tg-next-chip { flex: none; padding: 6px 14px; font-size: var(--m-text-meta); color: var(--muted); }
 
 .tg-debriefs li { display: grid; gap: 6px; padding-top: 14px; border-top: 1px solid var(--line); font-size: var(--m-text-body); line-height: 1.55; }
@@ -85,7 +99,7 @@
 
 @media (max-width: 800px) { .tg-grid { grid-template-columns: 1fr; } }
 @media (min-width: 720px) {
-  .mirror-landing.targets { padding: 16px max(16px, 2%) 24px; }
+  .targets { padding: 16px max(16px, 2%) 24px; }
   .tg-fields { grid-template-columns: 1fr 1fr 200px; }
   .tg-card-body { padding: 14px 16px; }
   .tg-confirm span { flex-basis: auto; }

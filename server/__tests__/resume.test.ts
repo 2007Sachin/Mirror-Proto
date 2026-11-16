@@ -189,6 +189,17 @@ describe('GET /targets/:id/match', () => {
     expect(no.probes[0].question).toBe('Docker comes up in this job. What is the closest thing you have done?')
   })
 
+  it('Delete all my data also drops the cached probe rewrites', async () => {
+    const { app } = makeApp({ provider: rewriteProvider(async () => ({ q1: 'Docker comes up here. What have you done that is close to it?', q2: 'Walk me through "Worked on Python scripts" in detail?', q3: 'Tell me about "Helped with various SQL reports for the finance team" and what you did?' })) })
+    const id = await setup(app)
+    await app.request(`/targets/${id}/match`, { headers: WS })
+    const del = vi.spyOn(Map.prototype, 'delete')
+    try {
+      expect((await app.request('/me/data', { method: 'DELETE', headers: H, body: JSON.stringify({ confirm: 'DELETE' }) })).status).toBe(200)
+      expect(del.mock.calls.some(([k]) => typeof k === 'string' && k.startsWith(`dev:${id}:`))).toBe(true)
+    } finally { del.mockRestore() }
+  })
+
   it('falls back on ProviderFailure and on a slow provider', async () => {
     for (const reply of [
       async () => { throw new ProviderFailure('down') },

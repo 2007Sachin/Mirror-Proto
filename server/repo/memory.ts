@@ -31,6 +31,7 @@ interface WorkspaceBucket {
   interviews: Map<string, InterviewRow>
   turns: Map<string, TurnRow[]>
   reflections: Map<string, ReflectionRow>
+  createdAt: string
 }
 
 export function createMemoryRepository(): Repository {
@@ -51,7 +52,7 @@ export function createMemoryRepository(): Repository {
   const bucket = (slug: string): WorkspaceBucket => {
     let b = workspaces.get(slug)
     if (!b) {
-      b = { interviews: new Map(), turns: new Map(), reflections: new Map() }
+      b = { interviews: new Map(), turns: new Map(), reflections: new Map(), createdAt: now() }
       workspaces.set(slug, b)
     }
     return b
@@ -306,6 +307,7 @@ export function createMemoryRepository(): Repository {
       return structuredClone({
         exportedAt: now(),
         workspace,
+        workspaceRow: b ? { slug: workspace, createdAt: b.createdAt } : null,
         profile: profiles.get(workspace) ?? null,
         interviews: [...(b?.interviews.values() ?? [])],
         turns: [...(b?.turns.values() ?? [])].flat(),

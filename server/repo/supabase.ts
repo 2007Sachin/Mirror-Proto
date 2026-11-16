@@ -688,7 +688,8 @@ export function createUserRepository(client: Db, userId: string, opts: { screenD
 
     async exportAllData(workspace: string): Promise<RepoExport> {
       const mine = <T extends { eq(c: string, v: string): T }>(q: T): T => q.eq('workspace_id', workspace).eq('user_id', userId)
-      const [profile, turns, reflections, targets, practice, answers, stories, claims, matches, replay] = await Promise.all([
+      const [workspaceRes, profile, turns, reflections, targets, practice, answers, stories, claims, matches, replay] = await Promise.all([
+        client.from(PHASE1_TABLES.workspaces).select().eq('slug', workspace).eq('user_id', userId).maybeSingle(),
         mine(client.from(PHASE1_TABLES.profiles).select()).maybeSingle(),
         mine(client.from(PHASE1_TABLES.turns).select()).order('created_at', { ascending: true }),
         mine(client.from(PHASE1_TABLES.reflections).select()).order('created_at', { ascending: true }),
@@ -702,9 +703,11 @@ export function createUserRepository(client: Db, userId: string, opts: { screenD
       ])
       const interviews = await listInterviewsAll(workspace)
       const profileRow = maybe(profile, 'export profile')
+      const wsRow = maybe(workspaceRes, 'export workspace') as { slug: string; created_at: string } | null
       return {
         exportedAt: new Date().toISOString(),
         workspace,
+        workspaceRow: wsRow ? { slug: wsRow.slug, createdAt: wsRow.created_at } : null,
         profile: profileRow ? toProfileRow(profileRow) : null,
         interviews,
         turns: many(turns, 'export turns').map(toTurnRow),

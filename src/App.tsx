@@ -74,7 +74,8 @@ export default function App() {
   const signOut = async () => {
     try { await authApi.signOut() } catch { /* the cookie may already be gone */ }
     session.clear()
-    clearBrowserKeys(localStorage); clearBrowserKeys(sessionStorage) // the next person on this computer starts clean
+    // Drafts, the open session and old unscoped keys go; each person's own saved progress (mirror.data.v1.<id>.*) stays for their next sign-in.
+    clearBrowserKeys(localStorage, 'mirror.data.v1.'); clearBrowserKeys(sessionStorage)
     window.location.assign('/') // a fresh page drops every in-memory copy of this user's data
   }
   const [targetId, setTargetId] = useState<string | null>(null)

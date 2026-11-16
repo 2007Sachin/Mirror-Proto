@@ -4,6 +4,7 @@ import './practice.css'
 import { api } from '../lib/api'
 import { findItem, moduleFor, tracks } from '../practice/tracks'
 import Path from '../practice/sql/Path'
+import YourRecord from '../practice/YourRecord'
 import type { AttemptReport, ItemStat, PracticeItem, PracticeSummary, Track } from '../practice/types'
 
 const PYTHON_NOTE = 'Plain Python, no pandas yet. The runtime downloads once (about 10 MB).'
@@ -176,6 +177,8 @@ export default function Practice({ initialItemId = null, onInitialConsumed, onCh
             })}
           </>
         )}
+
+        {!mod && summary && <YourRecord summary={summary} tracks={tracks} />}
       </div>
     </div>
   )

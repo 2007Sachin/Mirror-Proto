@@ -25,7 +25,7 @@ export function fallbackNotes(
     .sort((a, b) => a.order - b.order)
   return {
     whatStoodOut: picked.map(({ turnId, quote }) => ({ turnId, quote })),
-    keepWorkingOn: focus?.trim() ? focus.trim().slice(0, 300) : NOTES_GAP,
+    keepWorkingOn: focus?.trim() ? focusLabel(focus.trim()).slice(0, 300) : NOTES_GAP,
     suggestion: NOTES_NEXT,
   }
 }
@@ -36,8 +36,14 @@ export function quotedFollowUp(base: string, lastAnswer?: string): string {
   return `You said: “${firstSentenceOf(lastAnswer, 120)}” ${base}`.slice(0, 500)
 }
 
-/** The learner's own pressure answer, in their words, as the gap to work on. */
+export const STORY_FOCUS = 'Finishing the story: what you did and how it ended'
+
+/** Rows saved before the label existed hold `Going deeper on “…”`; show the plain label instead, never the quote. */
+export function focusLabel(focus: string): string {
+  return /^Going deeper on\s/.test(focus.trim()) ? STORY_FOCUS : focus
+}
+
+/** The gap to work on. The learner's own words are not stored here: they never belong in a label. */
 export function gapFromAnswer(answer: string): string {
-  const quote = firstSentenceOf(answer, 140)
-  return quote ? `Going deeper on “${quote}”` : 'Saying what you personally did, in one clear sentence.'
+  return answer.trim() ? STORY_FOCUS : 'Saying what you personally did, in one clear sentence.'
 }

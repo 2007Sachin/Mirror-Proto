@@ -61,6 +61,9 @@ describe('copy: screening call', () => {
     for (const target of [null, { id: 't', role: 'Analyst', company: 'Acme', skillCount: 0 }, { id: 't', role: 'Analyst', company: 'Acme', skillCount: 5 }]) {
       expect(scanHtml('screen:entry', renderToStaticMarkup(<ScreenEntryCard target={target} onStart={noop} />))).toEqual([])
     }
-    expect(renderToStaticMarkup(<ScreenEntryCard target={null} onStart={noop} />)).toContain('disabled')
+    const blocked = renderToStaticMarkup(<ScreenEntryCard target={null} onStart={noop} onOpenTarget={noop} />)
+    expect(blocked).not.toContain('disabled')
+    expect(blocked).toContain('Add a target')
+    expect(renderToStaticMarkup(<ScreenEntryCard target={{ id: 't', role: 'Analyst', company: 'Acme', skillCount: 0 }} onStart={noop} onOpenTarget={noop} />)).toContain('Open Acme')
   })
 })

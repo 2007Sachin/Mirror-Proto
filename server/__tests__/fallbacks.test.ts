@@ -131,7 +131,7 @@ describe('slow or failing model on each call', () => {
     const res = await post(app, '/onboarding/step', { step: 'contract', story: profile.story, question: 'What pushed back?', answer: profile.pressureAnswer })
     const body = await j(res)
     expect(body.source).toBe('fallback')
-    expect(body.gap).toContain('Finance did not trust the new totals.')
+    expect(body.gap).toBe('Finishing the story: what you did and how it ended') // the learner's words never land in focus
     const ok = makeApp({
       provider: { generateReflection: failing.generateReflection, generateOnboarding: async () => ({ question: 'What did you say to them?' }) },
     })

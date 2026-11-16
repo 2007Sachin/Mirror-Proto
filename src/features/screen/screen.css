@@ -9,3 +9,4 @@
 .sc-quotes q { font-style: italic; }
 .sc-actions { display: flex; gap: 8px; }
 .iv-screen-time { font-size: 15px; color: var(--muted); }
+.sc-link { font: inherit; font-weight: 600; color: var(--accent); background: none; border: 0; padding: 0 4px; min-height: 44px; cursor: pointer; justify-self: start; }

@@ -45,6 +45,8 @@ export type OnboardingRequest =
       focus: string
       transcript: { question: string; answer: string }[]
       inProgress: boolean
+      /** The nearest target (soonest interview date, else most recent), when there is one. */
+      target?: { company: string; role: string }
       /** The latest session's reflection focus, when there is one. */
       reflectionFocus?: string
     }

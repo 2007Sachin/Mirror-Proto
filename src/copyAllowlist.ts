@@ -5,6 +5,11 @@ export interface AllowEntry { where: RegExp; pattern: RegExp; reason: string }
 
 export const allowlist: AllowEntry[] = [
   {
+    where: /^today:/,
+    pattern: /^one question$/i,
+    reason: 'The new-user greeting on Today (from the redesign spec). It invites a first step; it is not a promised count of questions in a session.',
+  },
+  {
     where: /^data:stats items/,
     pattern: /\d\s?%|\bpercent\b|\bof \d/i,
     reason: 'The statistics drill teaches conversion rates and p-values, so the numbers are the subject of the question. They are quiz data, not a score or a claim about the learner.',

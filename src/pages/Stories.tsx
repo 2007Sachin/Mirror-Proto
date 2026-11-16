@@ -11,7 +11,10 @@ const FIELDS = ['situation', 'task', 'action', 'result'] as const
 const LABEL = { situation: 'Situation', task: 'Task', action: 'Action', result: 'Result' }
 const count = (n: number) => (n === 0 ? 'No story yet' : n === 1 ? '1 story' : `${n} stories`)
 
-export default function Stories({ initialQuestion = null, onInitialConsumed }: { initialQuestion?: string | null; onInitialConsumed?: () => void }) {
+const blankStory = (themes: string[]): data.StoryInput => ({ title: '', themes, situation: '', task: '', action: '', result: '', quote: null, question: null, sourceInterviewId: null, sourceTurnId: null })
+
+/** `initialTheme` (from Today's "Add a {theme} story", '' for any theme) opens a new story with that theme already ticked. */
+export default function Stories({ initialQuestion = null, initialTheme = null, onInitialConsumed }: { initialQuestion?: string | null; initialTheme?: string | null; onInitialConsumed?: () => void }) {
   const [stories, setStories] = useState<data.StoryRow[] | null>(null)
   const [error, setError] = useState('')
   const [question, setQuestion] = useState(initialQuestion ?? '')
@@ -30,6 +33,11 @@ export default function Stories({ initialQuestion = null, onInitialConsumed }: {
   useEffect(() => {
     if (initialQuestion && stories) queueMicrotask(() => { setQuestion(initialQuestion); suggest(initialQuestion, stories); onInitialConsumed?.() })
   }, [initialQuestion, stories, suggest, onInitialConsumed])
+
+  useEffect(() => {
+    if (initialTheme === null) return
+    queueMicrotask(() => { setEditing({ id: null, story: blankStory(initialTheme ? [initialTheme] : []) }); onInitialConsumed?.() })
+  }, [initialTheme, onInitialConsumed])
 
   const list = stories ?? []
   const shown = filter ? list.filter(s => s.themes.includes(filter)) : list

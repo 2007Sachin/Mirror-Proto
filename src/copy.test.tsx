@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it } from 'vitest'
-import { scan, scanHtml, walkData } from './copyScan'
+import { describe, expect, it, vi } from 'vitest'
+import { allowlist } from './copyAllowlist'
+import { BANNED, scan, scanHtml, walkData } from './copyScan'
+import { newUser, rich } from './pages/todayFixtures'
+import type { TodayData } from './features/today/types'
 import Landing from './pages/Landing'
 import FirstInterview from './pages/FirstInterview'
 import Overview from './pages/Overview'
@@ -19,6 +22,9 @@ import { levels, modules } from './practice/sql/curriculum'
 import { cases } from './practice/case/data'
 import { problems as pyProblems } from './practice/python/problems'
 import { items as statsItems } from './practice/stats/items'
+
+const todayHook = vi.hoisted(() => ({ data: null as unknown as TodayData }))
+vi.mock('./features/today/useTodayData', () => ({ useTodayData: () => todayHook.data }))
 
 // jsdom has no matchMedia; the screens only read it.
 window.matchMedia = (q: string) => ({ matches: false, media: q, addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {}, dispatchEvent: () => false, onchange: null }) as MediaQueryList
@@ -84,4 +90,51 @@ describe('copy: no banned words, fixed counts or percentages', () => {
   for (const [name, d] of data) {
     it(`data: ${name}`, () => { expect(walkData(`data:${name}`, d)).toEqual([]) })
   }
+})
+
+// Today and Practice "Your record": the house rules that only apply there (no streaks, no "x of y"), on top of the shared BANNED list.
+const TODAY_ONLY: [string, RegExp][] = [
+  ['streak', /\bstreaks?\b|\bin a row\b/i],
+  ['fraction', /\b\d+\s*(of|\/)\s*\d+\b/],
+]
+// Rendered text plus aria-label, title, placeholder and alt. SQL task data is not rendered on Today; no allowlist is needed here.
+function scanToday(where: string, html: string): string[] {
+  const root = document.createElement('div')
+  root.innerHTML = html
+  const texts = [root.textContent ?? '']
+  root.querySelectorAll('[aria-label],[placeholder],[title],[alt]').forEach(el => { for (const a of ['aria-label', 'placeholder', 'title', 'alt']) { const v = el.getAttribute(a); if (v) texts.push(v) } })
+  return texts.flatMap(t => [...BANNED, ...TODAY_ONLY].flatMap(([name, re]) => { const m = re.exec(t); return m && !allowlist.some(e => e.where.test(where) && e.pattern.test(m[0])) ? [`${where} [${name}] "${m[0]}" in: ${t.slice(0, 90)}`] : [] }))
+}
+const noop2 = () => {}
+const todayProps = { busy: false, onStart: noop2, onContinue: noop2, onLetGo: noop2, onScreen: noop2, onOpenStories: noop2, onReplay: noop2, onOpenItem: noop2, onOpenTarget: noop2, onAddTarget: noop2, onFirstInterview: noop2, onOpenReplays: noop2, onSayItAgain: noop2 }
+async function renderTodayHtml(d: TodayData) {
+  todayHook.data = d
+  const { default: Today } = await import(/* @vite-ignore */ ['./pages/', 'Today'].join('')) // needs C; imported here so the other copy tests do not depend on it
+  return renderToStaticMarkup(<Today {...todayProps} />)
+}
+
+describe('copy: Today with data (needs B and C)', () => {
+  it('passes the scan with a rich fixture (target, matches, history, stories, retries, coach note)', async () => {
+    expect(scanToday('today:rich', await renderTodayHtml(rich))).toEqual([])
+  })
+  it('passes the scan for a new user', async () => {
+    expect(scanToday('today:new', await renderTodayHtml(newUser))).toEqual([])
+  })
+  it('the extra rules catch planted strings', () => {
+    expect(scanToday('x', '<p>A 5 day streak</p>')).not.toHaveLength(0)
+    expect(scanToday('x', '<p>Three days in a row</p>')).not.toHaveLength(0)
+    expect(scanToday('x', '<p>4 of 9 topics</p>')).not.toHaveLength(0)
+    expect(scanToday('x', '<p>3/5 done</p>')).not.toHaveLength(0)
+    expect(scanToday('x', '<p>Days you practised recently. Gaps are fine.</p>')).toHaveLength(0)
+  })
+  it('no quote in labels: profile.focus never reaches the page', async () => {
+    const focus = 'Going deeper on “Under CMVR rules…”'
+    for (const base of [rich, newUser]) {
+      const html = await renderTodayHtml({ ...base, input: { ...base.input, profile: { ...base.input.profile!, focus } } })
+      expect(html).not.toMatch(/CMVR/)
+    }
+  })
+  it('Practice screen (with "Your record") passes the Today rules', () => {
+    expect(scanToday('practice', renderToStaticMarkup(<Practice />))).toEqual([])
+  })
 })

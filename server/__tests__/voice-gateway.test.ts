@@ -96,7 +96,7 @@ describe('voice gateway', () => {
 
   it('speaks the opening question, accepts a spoken turn, and does not store audio', async () => {
     const { repo, interview, port, logs } = await start()
-    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev', origin: 'http://localhost:3000' } })
     const inbox = attachInbox(ws)
     await new Promise<void>((resolve, reject) => {
       ws.on('open', () => resolve())
@@ -129,7 +129,7 @@ describe('voice gateway', () => {
 
   it('resumes a tombstoned session immediately without creating a new interview turn', async () => {
     const { repo, interview, port } = await start()
-    const first = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
+    const first = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev', origin: 'http://localhost:3000' } })
     const inbox = attachInbox(first)
     await new Promise<void>((resolve, reject) => {
       first.on('open', () => resolve())
@@ -141,7 +141,7 @@ describe('voice gateway', () => {
     first.close()
     await new Promise(resolve => setTimeout(resolve, 50))
 
-    const second = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
+    const second = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev', origin: 'http://localhost:3000' } })
     const inbox2 = attachInbox(second)
     await new Promise<void>((resolve, reject) => {
       second.on('open', () => resolve())
@@ -160,7 +160,7 @@ describe('voice gateway', () => {
 
   it('drops stale sequence numbers without applying the command', async () => {
     const { interview, port } = await start()
-    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev', origin: 'http://localhost:3000' } })
     const inbox = attachInbox(ws)
     await new Promise<void>((resolve, reject) => {
       ws.on('open', () => resolve())
@@ -194,7 +194,7 @@ describe('voice gateway', () => {
         },
       },
     })
-    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev', origin: 'http://localhost:3000' } })
     const inbox = attachInbox(ws)
     await new Promise<void>((resolve, reject) => {
       ws.on('open', () => resolve())
@@ -263,7 +263,7 @@ describe('voice gateway', () => {
     })
     const addr = http.address()
     const port = typeof addr === 'object' && addr ? addr.port : 0
-    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev', origin: 'http://localhost:3000' } })
     const inbox = attachInbox(ws)
     await new Promise<void>((resolve, reject) => {
       ws.on('open', () => resolve())
@@ -301,7 +301,7 @@ describe('voice gateway', () => {
     await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve))
     const port2 = (http.address() as { port: number }).port
     servers.push({ close() { gateway.close(); http.close() } })
-    const ws = new WebSocket(`ws://127.0.0.1:${port2}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
+    const ws = new WebSocket(`ws://127.0.0.1:${port2}/ws/voice`, { headers: { 'x-test-user': 'dev', origin: 'http://localhost:3000' } })
     const inbox = attachInbox(ws)
     await new Promise<void>((resolve, reject) => {
       ws.on('open', () => resolve())
@@ -326,7 +326,7 @@ describe('voice gateway', () => {
 
   it('accepts a simulated 90-second answer under the application safety cap', async () => {
     const { repo, interview, port } = await start()
-    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev', origin: 'http://localhost:3000' } })
     const inbox = attachInbox(ws)
     await new Promise<void>((resolve, reject) => {
       ws.on('open', () => resolve())
@@ -351,7 +351,7 @@ describe('voice gateway', () => {
 
   it('enforces the 180-second application safety limit with a controlled message', async () => {
     const { interview, port } = await start()
-    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { 'x-test-user': 'dev', origin: 'http://localhost:3000' } })
     const inbox = attachInbox(ws)
     await new Promise<void>((resolve, reject) => {
       ws.on('open', () => resolve())
@@ -402,7 +402,7 @@ describe('voice gateway', () => {
     gateway.attach(http)
     await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve))
     servers.push({ close() { gateway.close(); http.close() } })
-    const ws = new WebSocket(`ws://127.0.0.1:${(http.address() as { port: number }).port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
+    const ws = new WebSocket(`ws://127.0.0.1:${(http.address() as { port: number }).port}/ws/voice`, { headers: { 'x-test-user': 'dev', origin: 'http://localhost:3000' } })
     const inbox = attachInbox(ws)
     await new Promise<void>((resolve, reject) => {
       ws.on('open', () => resolve())
@@ -444,7 +444,7 @@ describe('voice gateway', () => {
     gateway.attach(http)
     await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve))
     servers.push({ close() { gateway.close(); http.close() } })
-    const ws = new WebSocket(`ws://127.0.0.1:${(http.address() as { port: number }).port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
+    const ws = new WebSocket(`ws://127.0.0.1:${(http.address() as { port: number }).port}/ws/voice`, { headers: { 'x-test-user': 'dev', origin: 'http://localhost:3000' } })
     const inbox = attachInbox(ws)
     await new Promise<void>((resolve, reject) => {
       ws.on('open', () => resolve())
@@ -491,7 +491,7 @@ describe('voice gateway', () => {
     gateway.attach(http)
     await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve))
     servers.push({ close() { gateway.close(); http.close() } })
-    const ws = new WebSocket(`ws://127.0.0.1:${(http.address() as { port: number }).port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
+    const ws = new WebSocket(`ws://127.0.0.1:${(http.address() as { port: number }).port}/ws/voice`, { headers: { 'x-test-user': 'dev', origin: 'http://localhost:3000' } })
     const inbox = attachInbox(ws)
     await new Promise<void>((resolve, reject) => {
       ws.on('open', () => resolve())
@@ -516,7 +516,7 @@ describe('voice gateway', () => {
       gateway.attach(http)
       await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve))
       servers.push({ close() { gateway.close(); http.close() } })
-      const ws = new WebSocket(`ws://127.0.0.1:${(http.address() as { port: number }).port}/ws/voice`, { headers: { 'x-test-user': 'dev' } })
+      const ws = new WebSocket(`ws://127.0.0.1:${(http.address() as { port: number }).port}/ws/voice`, { headers: { 'x-test-user': 'dev', origin: 'http://localhost:3000' } })
       const inbox = attachInbox(ws)
       await new Promise<void>((resolve, reject) => {
         ws.on('open', () => resolve())

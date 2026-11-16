@@ -69,7 +69,7 @@ describe('unauthenticated requests', () => {
     await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve))
     const port = (http.address() as AddressInfo).port
     const connect = async (headers?: Record<string, string>) => {
-      const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers })
+      const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { origin: 'http://localhost:3000', ...headers } })
       const outcome = await new Promise<string>(resolve => {
         ws.on('open', () => resolve('open'))
         ws.on('unexpected-response', (_req, res) => resolve(`http ${res.statusCode}`))

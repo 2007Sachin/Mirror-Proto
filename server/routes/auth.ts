@@ -1,3 +1,4 @@
+import { getConnInfo } from '@hono/node-server/conninfo'
 import { Hono, type Context } from 'hono'
 import { getCookie, setCookie } from 'hono/cookie'
 import { z } from 'zod'
@@ -44,7 +45,10 @@ export function registerAuthRoutes(app: Hono, { env, auth, repoFor, clientFactor
     hits.set(key, [...recent, now])
     return false
   }
-  const ipOf = (c: Context) => c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || 'local'
+  const ipOf = (c: Context) => {
+    if (env.trustProxy) { const f = c.req.header('x-forwarded-for')?.split(',')[0]?.trim(); if (f) return f }
+    try { return getConnInfo(c).remote.address || 'unknown' } catch { return 'unknown' }
+  }
 
   a.post('/magic-link', async c => {
     const parsed = emailSchema.safeParse(await c.req.json().catch(() => null))

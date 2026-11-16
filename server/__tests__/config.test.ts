@@ -77,12 +77,12 @@ describe('server/config', () => {
   })
 
   it('reads SITE_URL, DEMO_MODE and AUTH_GOOGLE', async () => {
-    vi.stubEnv('SITE_URL', 'https://mirror.example/')
+    vi.stubEnv('SITE_URL', 'http://mirror.example/')
     vi.stubEnv('DEMO_MODE', '1')
     vi.stubEnv('AUTH_GOOGLE', '1')
     vi.resetModules()
     const { env } = await import('../config.js')
-    expect(env).toMatchObject({ siteUrl: 'https://mirror.example', demoMode: true, authGoogle: true })
+    expect(env).toMatchObject({ siteUrl: 'http://mirror.example', demoMode: true, authGoogle: true })
   })
 
   it('a malformed NVIDIA_NIM_BASE_URL fails startup naming the key, not the value', async () => {
@@ -95,5 +95,20 @@ describe('server/config', () => {
     } catch (err) {
       expect(String(err)).not.toContain('not a url at all')
     }
+  })
+
+  it('refuses DEMO_MODE=1 in production or with an https SITE_URL', async () => {
+    vi.stubEnv('DEMO_MODE', '1')
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('SITE_URL', 'http://localhost:3000')
+    vi.resetModules()
+    await expect(import('../config.js')).rejects.toThrow(/DEMO_MODE/)
+    vi.stubEnv('NODE_ENV', 'development')
+    vi.stubEnv('SITE_URL', 'https://app.example.com')
+    vi.resetModules()
+    await expect(import('../config.js')).rejects.toThrow(/DEMO_MODE/)
+    vi.stubEnv('SITE_URL', 'http://localhost:3000')
+    vi.resetModules()
+    expect((await import('../config.js')).env.demoMode).toBe(true)
   })
 })

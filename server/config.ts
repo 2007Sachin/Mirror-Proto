@@ -14,6 +14,9 @@ const envSchema = z
     SUPABASE_ANON_KEY: z.string().optional(),
     SITE_URL: z.string().optional(),
     DEMO_MODE: z.string().optional(),
+    NODE_ENV: z.string().optional(),
+    TRUST_PROXY: z.string().optional(),
+    VOICE_LOCAL_ONLY: z.string().optional(),
     AUTH_GOOGLE: z.string().optional(),
     SUPABASE_SECRET_KEY: z.string().optional(),
     SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
@@ -56,13 +59,22 @@ const envSchema = z
     const nimApiKey = present(env.NVIDIA_NIM_API_KEY) ?? present(env.NIM_API_KEY)
     const nimModel = env.NVIDIA_NIM_MODEL || env.NIM_MODEL || DEFAULT_NIM_MODEL
     const supabaseSecret = present(env.SUPABASE_SECRET_KEY) ?? present(env.SUPABASE_SERVICE_ROLE_KEY)
+    const siteUrl = (present(env.SITE_URL) ?? 'http://localhost:3000').replace(/\/$/, '')
+    if (present(env.DEMO_MODE) === '1' && (env.NODE_ENV === 'production' || siteUrl.startsWith('https://'))) {
+      ctx.addIssue({ code: 'custom', message: 'DEMO_MODE=1 disables sign-in and cannot be used in production or with an https SITE_URL (key: DEMO_MODE)', path: ['DEMO_MODE'] })
+      return z.NEVER
+    }
     return {
       port: env.PORT,
       supabaseUrl: present(env.SUPABASE_URL),
       supabaseAnonKey: present(env.SUPABASE_ANON_KEY),
       /** Service key: tests/admin only. The running app never uses it. */
       supabaseSecretKey: supabaseSecret,
-      siteUrl: (present(env.SITE_URL) ?? 'http://localhost:3000').replace(/\/$/, ''),
+      siteUrl,
+      /** TRUST_PROXY=1: read X-Forwarded-For (only behind a proxy that overwrites it). */
+      trustProxy: present(env.TRUST_PROXY) === '1',
+      /** VOICE_LOCAL_ONLY=1: voice websocket accepts loopback peers only. */
+      voiceLocalOnly: present(env.VOICE_LOCAL_ONLY) === '1',
       /** DEMO_MODE=1: one fixed 'dev' user and no sign-in. Never for production. */
       demoMode: present(env.DEMO_MODE) === '1',
       authGoogle: present(env.AUTH_GOOGLE) === '1',

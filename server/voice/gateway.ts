@@ -58,6 +58,18 @@ interface ConnectionCtx {
   closed: boolean
 }
 
+const hostOf = (u: string) => {
+  try { return new URL(u).host } catch { return null }
+}
+/** Browsers always send Origin on a websocket upgrade: missing or foreign is refused. */
+function originAllowed(origin: string | undefined, host: string | undefined, siteUrl: string): boolean {
+  if (!origin) return false
+  const h = hostOf(origin)
+  if (h === null) return false
+  if (h === host || h === hostOf(siteUrl)) return true
+  return process.env.NODE_ENV !== 'production' && (origin === 'http://localhost:3000' || origin === 'http://localhost:5173')
+}
+
 export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
   const log = deps.log ?? noopLog
   const sessionManager = new SessionManager()
@@ -520,8 +532,12 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
           socket.destroy()
           return
         }
-        if (!LOCALHOST_ADDR.has(req.socket.remoteAddress ?? '')) {
+        if (deps.env.voiceLocalOnly && !LOCALHOST_ADDR.has(req.socket.remoteAddress ?? '')) {
           socket.destroy()
+          return
+        }
+        if (!originAllowed(req.headers.origin, req.headers.host, deps.env.siteUrl)) {
+          socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Type: text/plain\r\nContent-Length: 10\r\n\r\nbad_origin')
           return
         }
         void deps.auth

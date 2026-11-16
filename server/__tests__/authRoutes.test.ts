@@ -95,6 +95,15 @@ describe('POST /auth/magic-link', () => {
     for (let i = 0; i < 5; i++) await post(app, '/auth/magic-link', { email: `u${i}@y.co` }, { 'x-forwarded-for': '2.2.2.2' })
     expect((await post(app, '/auth/magic-link', { email: 'new@y.co' }, { 'x-forwarded-for': '2.2.2.2' })).status).toBe(429)
   })
+
+  it('ignores a spoofed X-Forwarded-For unless TRUST_PROXY=1', async () => {
+    const { app } = setup()
+    for (let i = 0; i < 5; i++) await post(app, '/auth/magic-link', { email: `s${i}@y.co` }, { 'x-forwarded-for': `3.3.3.${i}` })
+    expect((await post(app, '/auth/magic-link', { email: 'fresh@y.co' }, { 'x-forwarded-for': '8.8.8.8' })).status).toBe(429)
+    const { app: proxied } = setup({}, makeEnv({ ...env, trustProxy: true }))
+    for (let i = 0; i < 5; i++) await post(proxied, '/auth/magic-link', { email: `t${i}@y.co` }, { 'x-forwarded-for': '4.4.4.4' })
+    expect((await post(proxied, '/auth/magic-link', { email: 'other@y.co' }, { 'x-forwarded-for': '5.5.5.5' })).status).toBe(200)
+  })
 })
 
 describe('GET /auth/callback', () => {

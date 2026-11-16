@@ -70,3 +70,24 @@ export function dueReps(items: ItemStat[], now: Date, interviewDate?: string | n
   }
   return out.sort((a, b) => Number(b.compressed) - Number(a.compressed) || b.overdueDays - a.overdueDays || a.itemId.localeCompare(b.itemId))
 }
+
+export interface UpcomingRep { itemId: string; dueAt: string; compressed: boolean }
+
+/** The next due date of each non-retired item that is not due yet, within `horizonDays`, soonest first.
+ *  Dates on or after the interview day are left out; on the interview day there are none. */
+export function upcomingReps(items: ItemStat[], now: Date, interviewDate?: string | null, horizonDays = 7): UpcomingRep[] {
+  const d = daysToInterview(now, interviewDate)
+  if (d === 0) return []
+  const limit = addDays(today(now), horizonDays)
+  const out: UpcomingRep[] = []
+  for (const item of items) {
+    if (item.attempts < 1) continue
+    const p = plan(item, d)
+    if (p.retired) continue
+    const due = addDays(p.last, p.gap)
+    if (due.getTime() <= now.getTime() || due.getTime() > limit.getTime()) continue
+    if (d !== null && between(today(now), due) >= d) continue
+    out.push({ itemId: item.itemId, dueAt: due.toISOString(), compressed: p.compressed })
+  }
+  return out.sort((a, b) => a.dueAt.localeCompare(b.dueAt) || a.itemId.localeCompare(b.itemId))
+}

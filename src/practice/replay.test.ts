@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dueReps, LADDER, replayReason } from './replay'
+import { dueReps, LADDER, replayReason, upcomingReps } from './replay'
 import type { ItemStat } from './types'
 
 const at = (y: number, m: number, d: number, h = 9) => new Date(y, m - 1, d, h).toISOString()
@@ -86,5 +86,31 @@ describe('dates and determinism', () => {
   it('words reasons for missed and tried', () => {
     expect(replayReason(item('a', [[at(2026, 11, 9), false]]), now)).toBe('You missed this yesterday. Another go while it is fresh helps it stick.')
     expect(replayReason(item('a', [[at(2026, 11, 7), true]]), now)).toBe('You tried this 3 days ago, so this is a good time to replay it.')
+  })
+})
+
+describe('upcomingReps', () => {
+  const up = (x: ItemStat[], iv?: string | null, h?: number) => upcomingReps(x, now, iv, h).map(r => [r.itemId, r.dueAt.slice(0, 10)])
+  const d = (y: number, m: number, dd: number) => new Date(y, m - 1, dd).toISOString().slice(0, 10)
+  it('follows the 1/3/7 ladder', () => {
+    expect(up([item('a', [[at(2026, 11, 10, 8), true]])])).toEqual([['a', d(2026, 11, 11)]]) // rung 0: tomorrow
+    expect(up([item('a', [[at(2026, 11, 8), true], [at(2026, 11, 9), true]])])).toEqual([['a', d(2026, 11, 12)]]) // rung 1: +3
+    expect(up([rung2()])).toEqual([['a', d(2026, 11, 12)]]) // rung 2: +7 from 11-05
+  })
+  it('leaves out items that are due now and ones past the horizon', () => {
+    expect(up([item('a', [[at(2026, 11, 8), true]])])).toEqual([])
+    expect(up([rung2()], null, 1)).toEqual([])
+  })
+  it('compresses before an interview and drops dates on or after it', () => {
+    const r = upcomingReps([item('a', [[at(2026, 11, 10, 8), true]])], now, '2026-11-16')
+    expect(r[0].compressed).toBe(false)
+    expect(upcomingReps([rung2()], now, '2026-11-14')).toEqual([]) // due 11-07 under the cap: already due
+    expect(upcomingReps([item('a', [[at(2026, 11, 10, 8), true]])], now, '2026-11-11')).toEqual([]) // due on the interview day
+  })
+  it('skips retired items, unattempted items and the interview day', () => {
+    const r3 = item('a', [[at(2026, 11, 1), true], [at(2026, 11, 2), true], [at(2026, 11, 5), true], [at(2026, 11, 12), true]])
+    expect(upcomingReps([r3], new Date(2026, 10, 20, 12))).toEqual([])
+    expect(upcomingReps([{ ...item('b', [[at(2026, 11, 10), true]]), attempts: 0 }], now)).toEqual([])
+    expect(upcomingReps([item('a', [[at(2026, 11, 9), true]])], now, '2026-11-10')).toEqual([])
   })
 })

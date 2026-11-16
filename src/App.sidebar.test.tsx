@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const session = vi.hoisted(() => ({ current: {} as Record<string, unknown> }))
@@ -12,7 +12,13 @@ const base = { providers: { google: false }, refresh: () => {}, clear: () => {} 
 beforeEach(() => {
   window.matchMedia = (q: string) => ({ matches: false, media: q, addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {}, dispatchEvent: () => false, onchange: null }) as MediaQueryList
   // Every api call answers 404 JSON: the app shows its empty states, which is all the sidebar needs.
-  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'not found' }), { status: 404, headers: { 'content-type': 'application/json' } })))
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
+    // A saved profile sends the visitor from the landing straight to Today (the sidebar's home).
+    if (String(url).endsWith('/profile')) return json({ role: 'Data Analyst', story: 's', pressureQuestion: 'q', pressureAnswer: 'a', summary: 's', focus: 'f', firstQuestion: 'q?', resumeText: null, resumeName: null, mode: 'text' })
+    return json({ error: 'not found' }, 404)
+  }))
+  vi.stubGlobal('IntersectionObserver', class { observe() {} unobserve() {} disconnect() {} takeRecords() { return [] } })
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
@@ -20,6 +26,7 @@ describe('sidebar account', () => {
   it('never shows "Alex Morgan" for a signed-in session; shows the email instead', async () => {
     session.current = { ...base, status: 'signedIn', user: { id: 'u1', email: 'sam@example.com' } }
     const { container } = render(<App />)
+    fireEvent.click((await screen.findAllByText('Start with one moment'))[0])
     await waitFor(() => expect(container.querySelector('.sidebar')).not.toBeNull())
     expect(await screen.findByText('sam@example.com')).toBeTruthy()
     expect(screen.getByText('Your account and profile')).toBeTruthy()
@@ -28,6 +35,7 @@ describe('sidebar account', () => {
   it('says "Demo workspace" in demo mode', async () => {
     session.current = { ...base, status: 'demo' }
     const { container } = render(<App />)
+    fireEvent.click((await screen.findAllByText('Start with one moment'))[0])
     expect(await screen.findByText('Demo workspace')).toBeTruthy()
     expect(container.textContent).not.toMatch(/Alex Morgan/)
   })

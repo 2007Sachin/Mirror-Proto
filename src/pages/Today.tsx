@@ -53,14 +53,15 @@ function TodayBody({ busy, refresh, ...cb }: TodayProps & { refresh: () => void 
             : model.since && <SinceLastWeek s={model.since} run={run} />}
 
           {rowCount > 0 && (
-            <div className={`today-row${rowCount === 1 ? ' is-one' : ''}`}>
-              {status.replays === 'loading' ? <Skeleton id="today-rep-h" title="Replays" line="Checking your replays…" />
-                : status.replays === 'error' ? <SectionError id="today-rep-h" title="Replays" what="your replays" />
+            <section className={`today-row${rowCount === 1 ? ' is-one' : ''}`} aria-labelledby="today-row-h">
+              <h2 id="today-row-h" className="today-sr">Replays and your stories</h2>
+              {status.replays === 'loading' ? <Skeleton nested id="today-rep-h" title="Replays" line="Checking your replays…" />
+                : status.replays === 'error' ? <SectionError nested id="today-rep-h" title="Replays" what="your replays" />
                 : model.replays && <ReplaysCard r={model.replays} run={run} />}
-              {status.stories === 'loading' ? <Skeleton id="today-stories-h" title="Your stories" line="Looking at your stories…" />
-                : status.stories === 'error' ? <SectionError id="today-stories-h" title="Your stories" what="your stories" />
+              {status.stories === 'loading' ? <Skeleton nested id="today-stories-h" title="Your stories" line="Looking at your stories…" />
+                : status.stories === 'error' ? <SectionError nested id="today-stories-h" title="Your stories" what="your stories" />
                 : model.stories && <StoriesCard s={model.stories} run={run} />}
-            </div>
+            </section>
           )}
 
           {model.setup && status.hero === 'ready' && <SetupCard s={model.setup} run={run} />}

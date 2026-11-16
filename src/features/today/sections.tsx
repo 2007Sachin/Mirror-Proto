@@ -1,14 +1,10 @@
 import { useState } from 'react'
 import { BookMarked, Target, Terminal } from 'lucide-react'
 import { LiveOrb } from '../../components/LiveOrb'
-import { request, type TargetSummary } from '../../lib/api'
+import { api } from '../../lib/api'
 import type { ComingUp as ComingUpModel, Replays, Setup, Since, SinceItem, StoriesCard as StoriesModel, TodayAction, TodayLink, TodayModel } from './types'
 
 export type Run = (action: TodayAction) => void
-
-// TEMPORARY local call: subagent A adds api.updateTarget; swap this for it in integration.
-const updateTarget = (id: string, interviewDate: string | null) =>
-  request<TargetSummary>(`/targets/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ interviewDate }) })
 
 const fmt = (d: Date, o: Intl.DateTimeFormatOptions) => d.toLocaleDateString(undefined, o)
 const isoToDate = (iso: string) => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d) }
@@ -19,23 +15,21 @@ function LinkBtn({ link, run, className = '' }: { link: TodayLink; run: Run; cla
 }
 
 /** A loading card: same footprint as the section, one muted line. */
-export function Skeleton({ id, title, line }: { id: string; title: string; line: string }) {
-  return (
-    <section className="ml-glass today-card today-skel" aria-labelledby={id} aria-busy="true">
-      <h2 id={id} className="today-h">{title}</h2>
-      <p className="today-muted">{line}</p>
-    </section>
-  )
+export function Skeleton({ id, title, line, nested = false }: { id: string; title: string; line: string; nested?: boolean }) {
+  const H = nested ? 'h3' : 'h2'
+  const body = (<><H id={id} className="today-h">{title}</H><p className="today-muted">{line}</p></>)
+  return nested
+    ? <div role="group" className="ml-glass today-card today-skel" aria-labelledby={id} aria-busy="true">{body}</div>
+    : <section className="ml-glass today-card today-skel" aria-labelledby={id} aria-busy="true">{body}</section>
 }
 
 /** One quiet line inside the section; the rest of Today keeps working. */
-export function SectionError({ id, title, what }: { id: string; title: string; what: string }) {
-  return (
-    <section className="ml-glass today-card" aria-labelledby={id}>
-      <h2 id={id} className="today-h">{title}</h2>
-      <p className="today-muted" role="status">Couldn’t load {what} just now. The rest of Today still works.</p>
-    </section>
-  )
+export function SectionError({ id, title, what, nested = false }: { id: string; title: string; what: string; nested?: boolean }) {
+  const H = nested ? 'h3' : 'h2'
+  const body = (<><H id={id} className="today-h">{title}</H><p className="today-muted" role="status">Couldn’t load {what} just now. The rest of Today still works.</p></>)
+  return nested
+    ? <div role="group" className="ml-glass today-card" aria-labelledby={id}>{body}</div>
+    : <section className="ml-glass today-card" aria-labelledby={id}>{body}</section>
 }
 
 export function Header({ model, now }: { model: TodayModel; now: Date }) {
@@ -94,7 +88,7 @@ function DateEditor({ c, onSaved, onCancel }: { c: ComingUpModel; onSaved: () =>
   const save = async () => {
     if (!value || state === 'saving') return
     setState('saving')
-    try { await updateTarget(c.targetId, value); onSaved() } catch { setState('failed') }
+    try { await api.updateTarget(c.targetId, value); onSaved() } catch { setState('failed') }
   }
   return (
     <form className="today-date" onSubmit={e => { e.preventDefault(); void save() }}>
@@ -177,8 +171,8 @@ export function SinceLastWeek({ s, run }: { s: Since; run: Run }) {
 export function ReplaysCard({ r, run }: { r: Replays; run: Run }) {
   const first = r.due[0]
   return (
-    <section className="ml-glass today-card" aria-labelledby="today-rep-h">
-      <h2 id="today-rep-h" className="today-h">Replays</h2>
+    <div role="group" className="ml-glass today-card" aria-labelledby="today-rep-h">
+      <h3 id="today-rep-h" className="today-h">Replays</h3>
       {(r.due.length > 0 || r.upcoming.length > 0) && (
         <ul className="today-list">
           {[...r.due, ...r.upcoming].map(x => <li key={x.itemId}><span>{x.title}</span><span className="today-muted">{x.label}</span></li>)}
@@ -187,14 +181,14 @@ export function ReplaysCard({ r, run }: { r: Replays; run: Run }) {
       {r.nothingDueLine && <p className="today-muted">{r.nothingDueLine}</p>}
       {r.compressedLine && <p className="today-muted">{r.compressedLine}</p>}
       {first && <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={() => run({ type: 'openReplays', itemId: first.itemId })}>Start today’s replays</button>}
-    </section>
+    </div>
   )
 }
 
 export function StoriesCard({ s, run }: { s: StoriesModel; run: Run }) {
   return (
-    <section className="ml-glass today-card" aria-labelledby="today-stories-h">
-      <h2 id="today-stories-h" className="today-h">Your stories</h2>
+    <div role="group" className="ml-glass today-card" aria-labelledby="today-stories-h">
+      <h3 id="today-stories-h" className="today-h">Your stories</h3>
       {s.have.length > 0 && (
         <div className="today-stack-sm">
           <p className="today-muted">You have stories for</p>
@@ -209,7 +203,7 @@ export function StoriesCard({ s, run }: { s: StoriesModel; run: Run }) {
       )}
       <p className="today-sentence">{s.sentence}</p>
       {s.suggest && <button type="button" className="today-link" onClick={() => run({ type: 'addStory', theme: s.suggest!.id })}>Add a {s.suggest.label} story</button>}
-    </section>
+    </div>
   )
 }
 

@@ -90,3 +90,6 @@
   .today-setup li .ml-btn { grid-column: 2; }
 }
 @media (prefers-reduced-motion: reduce) { .today .ml-btn, .today .ml-btn:hover { transition: none; transform: none; } .today-orb { display: none; } }
+
+/* Visible to screen readers only: names the Replays and Your stories row. */
+.today-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

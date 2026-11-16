@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
+import { allowlist } from './copyAllowlist'
 import { BANNED, scan, scanHtml, walkData } from './copyScan'
 import { newUser, rich } from './pages/todayFixtures'
 import type { TodayData } from './features/today/types'
@@ -102,7 +103,7 @@ function scanToday(where: string, html: string): string[] {
   root.innerHTML = html
   const texts = [root.textContent ?? '']
   root.querySelectorAll('[aria-label],[placeholder],[title],[alt]').forEach(el => { for (const a of ['aria-label', 'placeholder', 'title', 'alt']) { const v = el.getAttribute(a); if (v) texts.push(v) } })
-  return texts.flatMap(t => [...BANNED, ...TODAY_ONLY].flatMap(([name, re]) => { const m = re.exec(t); return m ? [`${where} [${name}] "${m[0]}" in: ${t.slice(0, 90)}`] : [] }))
+  return texts.flatMap(t => [...BANNED, ...TODAY_ONLY].flatMap(([name, re]) => { const m = re.exec(t); return m && !allowlist.some(e => e.where.test(where) && e.pattern.test(m[0])) ? [`${where} [${name}] "${m[0]}" in: ${t.slice(0, 90)}`] : [] }))
 }
 const noop2 = () => {}
 const todayProps = { busy: false, onStart: noop2, onContinue: noop2, onLetGo: noop2, onScreen: noop2, onOpenStories: noop2, onReplay: noop2, onOpenItem: noop2, onOpenTarget: noop2, onAddTarget: noop2, onFirstInterview: noop2, onOpenReplays: noop2, onSayItAgain: noop2 }

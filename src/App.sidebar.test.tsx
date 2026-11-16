@@ -29,14 +29,14 @@ describe('sidebar account', () => {
     fireEvent.click((await screen.findAllByText('Start with one moment'))[0])
     await waitFor(() => expect(container.querySelector('.sidebar')).not.toBeNull())
     expect(await screen.findByText('sam@example.com')).toBeTruthy()
-    expect(screen.getByText('Your account and profile')).toBeTruthy()
+    expect(screen.getByText('Account')).toBeTruthy()
     expect(container.textContent).not.toMatch(/Alex Morgan/)
   })
-  it('says "Demo workspace" in demo mode', async () => {
+  it('says "Demo account" in demo mode', async () => {
     session.current = { ...base, status: 'demo' }
     const { container } = render(<App />)
     fireEvent.click((await screen.findAllByText('Start with one moment'))[0])
-    expect(await screen.findByText('Demo workspace')).toBeTruthy()
+    expect(await screen.findByText('Demo account')).toBeTruthy()
     expect(container.textContent).not.toMatch(/Alex Morgan/)
   })
 })

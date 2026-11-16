@@ -1,0 +1,13 @@
+{
+  "cruxes": [
+    {
+      "question": "Is a full review per session the product, or a second essay?",
+      "sides": [
+        { "position": "Relabel the list. Do not build a review", "seats": ["Elon"] },
+        { "position": "The review is the product, if it ends on one next practice", "seats": ["Graham", "Sara", "Bezos", "Wickman", "Buffett"] }
+      ]
+    }
+  ],
+  "unanimous": false,
+  "note": "Elon is the dissent. Everyone else wants the same sections every time, with readiness numbers kept off the screen."
+}

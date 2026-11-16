@@ -1,0 +1,22 @@
+{
+  "title": "One shell and one type system",
+  "decision": "Rebuild the sidebar, header, and profile footer on one type scale, or only swap tokens.",
+  "mode": "full",
+  "options": [
+    { "id": "A", "label": "Tokens only, keep the chrome" },
+    { "id": "B", "label": "One shell and one type system" },
+    { "id": "C", "label": "Remove the header" },
+    { "id": "D", "label": "Leave the shell" }
+  ],
+  "weights": {
+    "wickman": { "weight": 3, "reason": "One system or the pages diverge again" },
+    "blakely": { "weight": 2, "reason": "Chrome is the brand" },
+    "graham": { "weight": 2, "reason": "Chrome that does not help is playing house" },
+    "bezos": { "weight": 2, "reason": "Inconsistency is a tax" },
+    "musk": { "weight": 2, "reason": "Delete the breadcrumb and the third type system" },
+    "buffett": { "weight": 1, "reason": "The word score in profile copy is a leak" }
+  },
+  "seats": ["graham", "blakely", "bezos", "buffett", "musk", "wickman"],
+  "brief": "Three type systems, three widths, a repeating breadcrumb, and a profile form that is not saved. The founder wants one calm scale and a shell that looks finished. Practice drills stay as they are.",
+  "assumptions": ["Desktop 1280 and mobile 390", "Apple-inspired means quiet type and one accent"]
+}

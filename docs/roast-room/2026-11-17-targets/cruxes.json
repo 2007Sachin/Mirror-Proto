@@ -1,0 +1,20 @@
+{
+  "cruxes": [
+    {
+      "question": "Should the page show all five stages, or only the one the candidate is in?",
+      "sides": [
+        { "position": "Only the current stage", "seats": ["Graham", "Elon"] },
+        { "position": "All five, short, so the path is visible", "seats": ["Bezos", "Wickman", "Sara"] }
+      ]
+    },
+    {
+      "question": "Does a staged path become a grade if a stage looks finished?",
+      "sides": [
+        { "position": "Yes, so polish and delete the solved line", "seats": ["Buffett"] },
+        { "position": "No, if stages are names and not ticks", "seats": ["Bezos", "Sara"] }
+      ]
+    }
+  ],
+  "unanimous": false,
+  "note": "The room wants a path. It splits on whether the candidate sees every stage at once."
+}

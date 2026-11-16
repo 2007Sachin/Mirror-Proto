@@ -1,0 +1,37 @@
+{
+  "label": "GO WITH CONDITIONS",
+  "call": "One type scale, real account, no breadcrumb, drills untouched.",
+  "recommended": "B",
+  "why": [
+    {
+      "point": "One type scale, real account, no breadcrumb, drills untouched.",
+      "seat": "Chair",
+      "framework": "Weighted Round 3"
+    }
+  ],
+  "minority": {
+    "seat": "none",
+    "quote": "",
+    "would_have_to_be_true": "n/a"
+  },
+  "next_steps": [
+    {
+      "when": "This week",
+      "action": "Ship with the copy scan."
+    }
+  ],
+  "kill_criteria": "See verdict.md",
+  "conditions": [
+    "Copy scan passes with realistic data"
+  ],
+  "fights": [
+    {
+      "crux": "See cruxes.json",
+      "story": "See verdict.md"
+    }
+  ],
+  "amendments": [],
+  "cheapest_test": "Ask what the page is for.",
+  "revisit": "After real use.",
+  "override_note": ""
+}

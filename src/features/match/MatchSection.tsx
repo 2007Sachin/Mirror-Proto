@@ -57,7 +57,7 @@ export function MatchView({ data, onSave, onPractiseProbe }: {
             {m.probeQuestion && (
               <div className="mt-probe">
                 <p><b>A question to prepare for.</b> {m.probeQuestion}</p>
-                {onPractiseProbe && <button type="button" className="ml-btn ml-btn--sm ml-btn--quiet" onClick={() => onPractiseProbe(m.probeQuestion!)}>Practise this question</button>}
+                {onPractiseProbe && <button type="button" className="ml-btn ml-btn--sm ml-btn--quiet" onClick={() => onPractiseProbe(m.probeQuestion!)}>Prepare this question</button>}
               </div>
             )}
           </li>

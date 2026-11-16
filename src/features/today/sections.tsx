@@ -26,7 +26,7 @@ export function Skeleton({ id, title, line, nested = false }: { id: string; titl
 /** One quiet line inside the section; the rest of Today keeps working. */
 export function SectionError({ id, title, what, nested = false }: { id: string; title: string; what: string; nested?: boolean }) {
   const H = nested ? 'h3' : 'h2'
-  const body = (<><H id={id} className="today-h">{title}</H><p className="today-muted" role="status">Couldn’t load {what} just now. The rest of Today still works.</p></>)
+  const body = (<><H id={id} className="today-h">{title}</H><p className="today-muted" role="status">Couldn’t load {what} just now. The rest of Briefing still works.</p></>)
   return nested
     ? <div role="group" className="ml-glass today-card" aria-labelledby={id}>{body}</div>
     : <section className="ml-glass today-card" aria-labelledby={id}>{body}</section>
@@ -35,7 +35,7 @@ export function SectionError({ id, title, what, nested = false }: { id: string; 
 export function Header({ model, now }: { model: TodayModel; now: Date }) {
   return (
     <header className="today-head">
-      <p className="ml-eyebrow">Today · {fmt(now, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+      <p className="ml-eyebrow">Briefing · {fmt(now, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
       <h1>{model.greeting}</h1>
       <p className="today-status">{model.status}</p>
     </header>
@@ -180,7 +180,7 @@ export function ReplaysCard({ r, run }: { r: Replays; run: Run }) {
       )}
       {r.nothingDueLine && <p className="today-muted">{r.nothingDueLine}</p>}
       {r.compressedLine && <p className="today-muted">{r.compressedLine}</p>}
-      {first && <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={() => run({ type: 'openReplays', itemId: first.itemId })}>Start today’s replays</button>}
+      {first && <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={() => run({ type: 'openReplays', itemId: first.itemId })}>Open replays</button>}
     </div>
   )
 }
@@ -229,5 +229,5 @@ export function SetupCard({ s, run }: { s: Setup; run: Run }) {
 }
 
 export function Footer() {
-  return <p className="today-footer">Your practice is private to your account. Nothing here is a score.</p>
+  return <p className="today-footer">Your practice stays on your account. Nothing here ranks you.</p>
 }

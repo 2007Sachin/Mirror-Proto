@@ -32,7 +32,7 @@ describe('Today: new user', () => {
   it('has one filled primary, a Set up card with three rows, and no "0"', () => {
     const { container } = show(newUser)
     expect(filled(container)).toHaveLength(1)
-    const card = screen.getByText("When you're ready, these make Today more useful").closest('section') as HTMLElement
+    const card = screen.getByText("When you're ready, these make Briefing more useful").closest('section') as HTMLElement
     expect(within(card).getAllByRole('button')).toHaveLength(3)
     for (const t of ["Add a job you're preparing for", 'Save one story you can reuse', 'Try one SQL exercise']) expect(card.textContent).toContain(t)
     expect(container.textContent).not.toMatch(/(^|\D)0(\D|$)/)
@@ -78,7 +78,7 @@ describe('Today: states', () => {
   it('a failed section shows one role=status line while the rest renders', () => {
     const { container } = show(withStatus(rich, { stories: 'error' }))
     const line = screen.getAllByRole('status').find(e => /Couldn.t load your stories just now/.test(e.textContent ?? ''))
-    expect(line?.textContent).toContain('The rest of Today still works.')
+    expect(line?.textContent).toContain('The rest of Briefing still works.')
     expect(screen.getByRole('heading', { level: 1 })).toBeTruthy()
     expect(within(group(/Your résumé backs/)).getByText('SQL joins')).toBeTruthy()
     expect(filled(container)).toHaveLength(1)

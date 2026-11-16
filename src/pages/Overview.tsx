@@ -300,7 +300,7 @@ export default function Overview({ profile, busy, onStart, onContinue, onLetGo, 
           )}
           <div className="today-go">
             <button type="button" className="ml-btn" disabled={busy} onClick={() => onStart(note?.practiceQuestion, true)}>
-              Start speaking
+              Answer aloud
             </button>
             <button type="button" className="ml-btn ml-btn--quiet" disabled={busy} onClick={() => onStart(note?.practiceQuestion, false)}>
               Type instead

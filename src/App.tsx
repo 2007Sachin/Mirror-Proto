@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api, authApi, ApiError, type Profile, type Reflection } from './lib/api'
 import type { OrbState } from './components/LiveOrb'
 import Landing from './pages/Landing'
@@ -12,6 +12,7 @@ import Sessions from './pages/Sessions'
 import Stories from './pages/Stories'
 import SettingsPage from './pages/Settings'
 import Privacy from './pages/Privacy'
+import Account from './pages/Account'
 import { saveStoryFromAnswer } from './stories/saveStory'
 import { useVoiceSession } from './voice/useVoiceSession'
 import * as data from './lib/data'
@@ -24,7 +25,7 @@ import { ScreenDebriefPage } from './features/screen/ScreenDebrief'
 import { createScreen } from './lib/screenApi'
 import {
   BookMarked, BookOpen,
-  ChevronDown, Circle, Fingerprint, Home as HomeIcon,
+  Circle, Home as HomeIcon,
   Menu, MessageCircle,
   Settings, Target,
   X,
@@ -66,9 +67,6 @@ const SESSION_STORAGE_KEY = 'mirror.phase1.sessionId'
 function Brand({ onClick }: { onClick: () => void }) {
   return <button className="brand" onClick={onClick} aria-label="MIRROR home"><span className="brand-mark"><i /><i /></span><span>MIRROR</span></button>
 }
-function FieldLabel({ children, optional = false }: { children: ReactNode; optional?: boolean }) {
-  return <label className="field-label">{children}{optional && <span>Optional</span>}</label>
-}
 export default function App() {
   const [view, setView] = useState<View>('home')
   // Auth: who is signed in. The landing is public; every other view needs a session (or the local demo).
@@ -86,7 +84,7 @@ export default function App() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [practiceItem, setPracticeItem] = useState<string | null>(null)
   const [answers, setAnswers] = useState<Answer[]>([])
-  const [assessedRole, setAssessedRole] = useState('')
+  const [, setAssessedRole] = useState('')
   const [answer, setAnswer] = useState('')
   const [questionIndex, setQuestionIndex] = useState(0)
   const [orbState, setOrbState] = useState<OrbState>('idle')
@@ -94,10 +92,6 @@ export default function App() {
   const [mobileNav, setMobileNav] = useState(false)
   const [voiceSpeed, setVoiceSpeed] = useState('Natural')
   const [language, setLanguage] = useState('English')
-  const [profileName, setProfileName] = useState('')
-  const [profileLocation, setProfileLocation] = useState('Bengaluru, India')
-  const [profileExperience, setProfileExperience] = useState('2–4 years')
-  const [profileBio, setProfileBio] = useState('I enjoy turning ambiguous problems into clear, useful product decisions.')
   const [calmMotion, setCalmMotion] = useState(false)
   const [toast, setToast] = useState('')
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -148,7 +142,6 @@ export default function App() {
   const interviewOrb = voice.active ? voice.orbState : orbState
 
   const total = questionCap ?? QUESTION_COUNT
-  const completed = answers.length === total && assessedRole === role && Boolean(sessionId)
 
   const [storyQuestion, setStoryQuestion] = useState<string | null>(null)
   /** A theme Today wants a new story for ('' = any); null when nothing was asked. */
@@ -473,7 +466,7 @@ export default function App() {
   }
 
   const navItems: { id: View; label: string; icon: typeof HomeIcon }[] = [
-    { id: 'workspace', label: 'Today', icon: HomeIcon },
+    { id: 'workspace', label: 'Briefing', icon: HomeIcon },
     { id: 'practice', label: 'Practice', icon: BookOpen },
     { id: 'targets', label: 'Targets', icon: Target },
     { id: 'reports', label: 'Sessions', icon: MessageCircle },
@@ -481,10 +474,10 @@ export default function App() {
   ]
   return <div className={`app workspace-app ${calmMotion ? 'reduce-motion' : ''}`}><div className="ambient ambient--two" />
     <aside className={`sidebar ${mobileNav ? 'sidebar--open' : ''}`}><div className="sidebar-top"><Brand onClick={() => go('home')} /><button className="mobile-close" onClick={() => setMobileNav(false)}><X /></button></div><nav>{navItems.map(item => <button key={item.id} className={view === item.id || (view === 'report' && item.id === 'reports') ? 'active' : ''} onClick={() => { if (item.id === 'targets') setTargetId(null); go(item.id) }}><item.icon size={18} />{item.label}</button>)}</nav><div className="sidebar-bottom"><button onClick={() => go('settings')} className={view === 'settings' ? 'active' : ''}><Settings size={18} />Settings</button><button className="demo-profile" onClick={() => go('profile')}>{session.status === 'signedIn'
-      ? <><span>{(session.user.email ?? '?').charAt(0).toUpperCase()}</span><div><b>{session.user.email ?? 'Your account'}</b><small>Your account and profile</small></div></>
-      : <><span>D</span><div><b>Demo workspace</b><small>View candidate profile</small></div></>}</button></div></aside>
+      ? <><span>{(session.user.email ?? '?').charAt(0).toUpperCase()}</span><div><b>{session.user.email ?? 'Your account'}</b><small>Account</small></div></>
+      : <><span>D</span><div><b>Demo account</b><small>Not saved to an account</small></div></>}</button></div></aside>
     {mobileNav && <button className="nav-scrim" aria-label="Close navigation" onClick={() => setMobileNav(false)} />}
-    <main className="workspace-main"><header className="workspace-header"><button className="mobile-menu" onClick={() => setMobileNav(true)}><Menu size={21} /></button><div>{view !== 'workspace' && <span className="workspace-breadcrumb">MIRROR / {view === 'report' || view === 'reports' ? 'SESSIONS' : view.toUpperCase()}</span>}</div><div className="header-actions">{session.status === 'demo' && <span className="demo-badge"><Circle size={7} fill="currentColor" /> DEMO</span>}<AccountMenu email={session.status === 'signedIn' ? session.user.email : null} onSignOut={() => void signOut()} /></div></header>
+    <main className="workspace-main"><header className="workspace-header"><button className="mobile-menu" onClick={() => setMobileNav(true)}><Menu size={21} /></button><div /><div className="header-actions">{session.status === 'demo' && <span className="demo-badge"><Circle size={7} fill="currentColor" /> DEMO</span>}<AccountMenu email={session.status === 'signedIn' ? session.user.email : null} onSignOut={() => void signOut()} /></div></header>
       {view === 'workspace' && (TODAY_V1
         ? <Overview profile={profile} busy={busy} onStart={(question, speak) => { setVoiceMode(speak); void startInterview(role, question, speak) }} onContinue={resumeInterview} onLetGo={letGo} onScreen={id => void startScreening(id)} onOpenStories={openStories} onReplay={id => { setSessionId(id); go('report') }} onOpenItem={id => { setPracticeItem(id); go('practice') }} />
         : <Today
@@ -502,10 +495,10 @@ export default function App() {
           onAddTarget={() => { setTargetId(null); go('targets') }}
           onFirstInterview={() => go('firstInterview')}
         />)}
-      {view === 'targets' && <Targets openId={targetId} onOpen={setTargetId} onPractise={r => void startInterview(r)} onPractiseProbe={q => void startInterview(role, q)} onScreen={id => void startScreening(id)} />}
+      {view === 'targets' && <Targets openId={targetId} onOpen={setTargetId} onPractise={r => void startInterview(r)} onPractiseProbe={q => void startInterview(role, q)} onScreen={id => void startScreening(id)} onAddStory={theme => addStory(theme)} />}
       {view === 'screen' && sessionId && <ScreenDebriefPage interviewId={sessionId} onDone={() => { setScreen(null); go('workspace') }} />}
       {view === 'practice' && <Practice initialItemId={practiceItem} onInitialConsumed={() => setPracticeItem(null)} />}
-      {view === 'profile' && <div className="workspace-content profile-content"><div className="page-title"><div><p className="eyebrow">YOUR CANDIDATE PROFILE</p><h1>Profile</h1><p>Shape the context MIRROR uses. Nothing here becomes an assessment by itself. These details stay on this page and are not saved to your account.</p></div></div><section className="profile-identity"><div className="profile-avatar">{(profileName || (session.status === 'signedIn' ? session.user.email : '') || 'You').charAt(0).toUpperCase()}</div><div><h2>{profileName || (session.status === 'signedIn' ? session.user.email : null) || 'Your profile'}</h2><p>{role} · {profileLocation}</p><span><Circle size={7} fill="currentColor" /> {session.status === 'signedIn' ? `Signed in as ${session.user.email ?? 'your account'}` : 'Demo profile · Not saved to an account'}</span></div></section><div className="profile-layout"><section className="profile-form"><div className="profile-form-title"><h2>About you</h2><p>Keep this brief. Your interview answers matter more than this form.</p></div><div className="profile-field-grid"><div><FieldLabel>Display name</FieldLabel><input value={profileName} placeholder={session.status === 'signedIn' ? session.user.email ?? '' : ''} onChange={e => setProfileName(e.target.value)} /></div><div><FieldLabel>Location</FieldLabel><input value={profileLocation} onChange={e => setProfileLocation(e.target.value)} /></div><div><FieldLabel>Experience</FieldLabel><div className="select-wrap"><select value={profileExperience} onChange={e => setProfileExperience(e.target.value)}><option>Student / recent graduate</option><option>0–2 years</option><option>2–4 years</option><option>5–8 years</option><option>8+ years</option></select><ChevronDown size={16} /></div></div><div><FieldLabel>Current direction</FieldLabel><div className="profile-role-link">{role}</div></div></div><FieldLabel>Short introduction</FieldLabel><textarea value={profileBio} onChange={e => setProfileBio(e.target.value)} /></section><aside className="profile-summary"><div className="card-label">PROFILE SNAPSHOT</div><h3>{profile?.focus ?? 'Interview practice'}</h3><dl><div><dt>Experience</dt><dd>{profileExperience}</dd></div><div><dt>Sessions done</dt><dd>{completed ? 1 : 0}</dd></div></dl><div className="profile-evidence-note"><Fingerprint size={17} /><p>Profile details personalise your practice. They never generate a readiness score.</p></div></aside></div></div>}
+      {view === 'profile' && <Account session={session} role={role} onSettings={() => go('settings')} />}
       {(view === 'reports' || view === 'report') && <Sessions openId={view === 'report' ? sessionId : null} refreshKey={reflection?.interviewId} onPractise={() => void startInterview()} onSaveStory={turn => void saveStoryFromAnswer({ question: turn.question, answer: turn.answer, sourceInterviewId: sessionId, sourceTurnId: turn.id }).then(() => notify('Saved to your stories.')).catch(() => notify('Could not save that story just now.'))} />}
       {view === 'stories' && <Stories initialQuestion={storyQuestion} initialTheme={storyTheme} onInitialConsumed={() => { setStoryQuestion(null); setStoryTheme(null) }} />}
       {view === 'settings' && <SettingsPage voiceSpeed={voiceSpeed} setVoiceSpeed={setVoiceSpeed} language={language} setLanguage={setLanguage} calmMotion={calmMotion} setCalmMotion={setCalmMotion} notify={notify} onResetDemo={resetDemo} onOpenPrivacy={() => go('privacy')} onDeleted={afterDataDeleted} />}

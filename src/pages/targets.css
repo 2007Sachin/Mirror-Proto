@@ -1,6 +1,15 @@
 /* Targets: list, add form, mission screen. Uses the .mirror-landing tokens (landing.css). Mobile first. */
-.mirror-landing.targets { min-height: 100%; padding: 24px 16px 56px; }
-.tg-wrap { max-width: 860px; margin: 0 auto; display: grid; gap: 16px; min-width: 0; }
+.mirror-landing.targets { min-height: 100%; padding: 24px 16px 48px; font-family: inherit; }
+.tg-wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 12px; min-width: 0; }
+.tg-stages { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; }
+.tg-stages button { font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); padding: 6px 12px; min-height: 44px; border-radius: 999px; border: 1px solid var(--line); background: var(--glass); cursor: pointer; }
+.tg-stages button.is-now { color: var(--accent); border-color: var(--accent); }
+.tg-stages button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tg-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 12px; align-items: start; }
+.tg-grid .tg-card-body { align-content: start; }
+.tg-feed-details { font-size: 14px; }
+.tg-feed-details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+.tg-grid > .tg-card-body .tg-card-body { background: transparent; border: 0; box-shadow: none; padding: 0; }
 .targets h1, .targets h2, .targets h3 { letter-spacing: -.02em; line-height: 1.15; text-wrap: balance; margin: 0; }
 .targets h1 { font-size: clamp(24px, 5vw, 34px); font-weight: 700; overflow-wrap: anywhere; }
 .targets h2 { font-size: 19px; font-weight: 700; }
@@ -74,8 +83,9 @@
 .tg-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 14px; }
 .tg-confirm span { flex-basis: 100%; }
 
+@media (max-width: 800px) { .tg-grid { grid-template-columns: 1fr; } }
 @media (min-width: 720px) {
-  .mirror-landing.targets { padding: 32px max(20px, 4%) 56px; }
+  .mirror-landing.targets { padding: 28px max(20px, 4%) 48px; }
   .tg-fields { grid-template-columns: 1fr 1fr 200px; }
   .tg-card-body { padding: 24px 26px; }
   .tg-confirm span { flex-basis: auto; }

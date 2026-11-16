@@ -1,0 +1,22 @@
+{
+  "title": "How the story bank should help",
+  "decision": "A map of themes, STAR gaps, and which role needs which story, or keep the bank.",
+  "mode": "full",
+  "options": [
+    { "id": "A", "label": "Polish, drop the counts" },
+    { "id": "B", "label": "Bank with a theme and role map" },
+    { "id": "C", "label": "Editor only" },
+    { "id": "D", "label": "Leave the page as it is" }
+  ],
+  "weights": {
+    "blakely": { "weight": 3, "reason": "The story is what they are proud to say" },
+    "graham": { "weight": 3, "reason": "Useful only if it changes practice" },
+    "bezos": { "weight": 2, "reason": "Work backwards from the interview question" },
+    "wickman": { "weight": 2, "reason": "Same STAR shape every time" },
+    "musk": { "weight": 2, "reason": "The counted theme rows are the thing to delete" },
+    "buffett": { "weight": 1, "reason": "Counts are a grade in disguise" }
+  },
+  "seats": ["graham", "blakely", "bezos", "buffett", "musk", "wickman"],
+  "brief": "Stories is a loose bank with a count per theme. The founder wants theme coverage, STAR completeness, and which target needs which story, without counts.",
+  "assumptions": ["A handful of stories, not fifty", "Word overlap is good enough to join a story to a role"]
+}

@@ -1,0 +1,13 @@
+{
+  "cruxes": [
+    {
+      "question": "Is a new shell the work, or playing house around pages that are not done?",
+      "sides": [
+        { "position": "A short honest frame, then stop", "seats": ["Graham", "Sara"] },
+        { "position": "One type system or the pages diverge next week", "seats": ["Wickman", "Bezos", "Elon", "Buffett"] }
+      ]
+    }
+  ],
+  "unanimous": false,
+  "note": "Nobody wants the breadcrumb or the canned profile. The split is how much chrome to rebuild."
+}

@@ -23,6 +23,16 @@ export const allowlist: AllowEntry[] = [
   {
     where: /^data:(concepts|curriculum|python problems)/,
     pattern: /\bof \d+\b|\d%|\bpercent(age)?\b/i,
-    reason: 'Teaching text about a data value or a SQL feature, for example "95% of rows are true" for index selectivity, or "percent change". Not a progress or score figure.',
+    reason: 'Teaching text about a data value or a SQL feature, for example "95% of rows are true" for index selectivity, or "percent change". Not a progress figure about the candidate.',
+  },
+  {
+    where: /^data:/,
+    pattern: /\bstreaks?\b|\bscores?\b|\bin a row\b/i,
+    reason: 'Teaching text. A SQL exercise may ask about a login streak or a column named score. That is the subject of the question, not a grade for the candidate.',
+  },
+  {
+    where: /^(screen:Landing|screen:Privacy|privacy page)$/,
+    pattern: /\bscores?\b/i,
+    reason: 'The landing and the privacy page use the word only to promise that interview answers are not graded.',
   },
 ]

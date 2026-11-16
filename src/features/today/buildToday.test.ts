@@ -42,7 +42,7 @@ describe('hero branches', () => {
   })
   it('5 shows replays due today', () => {
     const m = buildToday({ ...rich, coachNote: null, targets: [], summary: { items: [stat('sql-1', 'Joins', [[at(11, 9), true]])], days: [] } }, now)
-    expect(m.hero).toMatchObject({ kind: 'replay', title: '1 replay due', minutes: 6 })
+    expect(m.hero).toMatchObject({ kind: 'replay', title: 'A replay is due', minutes: 6 })
     expect(m.hero.primary.action).toEqual({ type: 'openReplays', itemId: 'sql-1' })
   })
   it('6 falls back to recommend()', () => {
@@ -69,7 +69,7 @@ describe('users', () => {
     expect(m.isNewUser).toBe(true)
     expect(m.greeting).toBe('Welcome. Start with one question.')
     expect(m.hero.title).toBe(profile.firstQuestion)
-    expect(m.setup?.heading).toBe("When you're ready, these make Today more useful")
+    expect(m.setup?.heading).toBe("When you're ready, these make Briefing more useful")
     expect(m.setup?.rows.map(r => r.id)).toEqual(['target', 'story', 'sql'])
     expect(m.setup?.rows[2].body).toBe('Top customer in each country is a gentle start, about 6 minutes, right in your browser.')
     expect(buildToday({ ...fresh, coachNote: coach }, now).hero.title).toBe(coach.practiceQuestion)

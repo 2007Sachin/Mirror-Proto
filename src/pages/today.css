@@ -1,11 +1,11 @@
 /* Today (new). Built on the .mirror-landing tokens in landing.css: --accent, --ink, --muted, --glass, --line, --soft. Dark mode comes from those tokens. */
-.mirror-landing.today { min-height: 100%; padding: 36px max(16px, 4%) 56px; font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif; }
-.today-page { max-width: 1040px; margin: 0 auto; }
+.mirror-landing.today { min-height: 100%; padding: 28px max(16px, 3%) 40px; font-family: inherit; }
+.today-page { max-width: 1120px; margin: 0 auto; }
 .today h1, .today h2, .today h3 { letter-spacing: -.03em; line-height: 1.12; text-wrap: balance; }
 .today-head .ml-eyebrow { margin: 0 0 6px; }
 .today-head h1 { margin: 0; font-size: clamp(28px, 3.4vw, 36px); font-weight: 700; }
 .today-status { margin: 8px 0 0; max-width: 60ch; color: var(--muted); font-size: 17px; line-height: 1.55; }
-.today-stack { display: grid; gap: 18px; margin-top: 26px; }
+.today-stack { display: grid; gap: 12px; margin-top: 18px; }
 
 .today-card { padding: 22px 24px; display: grid; gap: 12px; align-content: start; min-width: 0; border-radius: 24px; }
 .today-h { margin: 0; font-size: 13px; font-weight: 650; color: var(--muted); letter-spacing: 0; }

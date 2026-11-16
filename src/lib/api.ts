@@ -235,6 +235,8 @@ export const api = {
   recordAttempt: (report: AttemptReport) =>
     request<{ id: string }>('/practice/attempts', { method: 'POST', body: JSON.stringify(report) }),
   practiceSummary: () => request<PracticeSummary>('/practice/summary'),
+  updateTarget: (id: string, interviewDate: string | null) =>
+    request<TargetSummary>(`/targets/${id}`, { method: 'PATCH', body: JSON.stringify({ interviewDate }) }),
   deleteTarget: (id: string) => request<null>(`/targets/${id}`, { method: 'DELETE' }),
   sqlTurn: (id: string, body: SqlTurnBody) =>
     request<{ followUp: string; source: Source }>(`/targets/${id}/sql-turn`, { method: 'POST', body: JSON.stringify(body) }),

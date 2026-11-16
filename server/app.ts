@@ -6,7 +6,7 @@ import type { Env } from './config.js'
 import { isNimConfigured, isSarvamConfigured, isSupabaseConfigured } from './config.js'
 import { FALLBACK_QUESTIONS, totalFor } from './domain/questions.js'
 import { interviewContext, nextFollowUp, persistFollowUp as persistFollowUpDomain } from './domain/followUp.js'
-import { fallbackNotes } from './domain/fallbacks.js'
+import { fallbackNotes, focusLabel } from './domain/fallbacks.js'
 import { addTurnSchema, createInterviewSchema } from './domain/schemas.js'
 import { extractResumeText, onboardingStepSchema, profileSchema, runOnboardingStep, MAX_RESUME_BYTES } from './domain/onboarding.js'
 import { createMockStt } from './voice/stt/mockStt.js'
@@ -55,6 +55,13 @@ export interface AppDeps {
 }
 
 const startedAt = Date.now()
+
+/** Soonest upcoming interview date, else the most recently created target. */
+export function nearestTarget(list: Target[], nowMs: number): Target | null {
+  const today = new Date(nowMs).toISOString().slice(0, 10)
+  const upcoming = list.filter(t => t.interviewDate && t.interviewDate >= today).sort((a, b) => a.interviewDate!.localeCompare(b.interviewDate!))
+  return upcoming[0] ?? [...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null
+}
 
 /** Notes written without the model are saved with model 'fallback', so a reload still knows. */
 const reflectionSource = (r: ReflectionRow) => (r.model === 'fallback' ? 'fallback' : 'ai')
@@ -523,13 +530,16 @@ export function buildApp(deps: AppDeps): Hono {
           { question: 'Tell me about something you did that you’re proud of.', answer: profile.story },
           { question: profile.pressureQuestion, answer: profile.pressureAnswer },
         ]
-    const key = `${workspace}:${done?.id ?? 'first'}:${profile.focus}:${interviews.some(i => i.status === 'in_progress')}`
+    const nearest = nearestTarget(await repo.listTargets(workspace), now())
+    const target = nearest && { company: nearest.company, role: nearest.role }
+    const key = `${workspace}:${done?.id ?? 'first'}:${profile.focus}:${interviews.some(i => i.status === 'in_progress')}:${target ? `${target.company}|${target.role}` : ''}`
     const cached = coachNotes.get(key)
     if (cached) return c.json({ ...cached, basedOn: done ? 'interview' : 'first-interview' })
     const note = await runOnboardingStep(provider, {
       step: 'coach',
       role: profile.role,
       focus: profile.focus,
+      ...(target ? { target } : {}),
       transcript,
       inProgress: interviews.some(i => i.status === 'in_progress'),
       reflectionFocus: done ? (await repo.getReflection(workspace, done.id))?.focus : undefined,
@@ -587,14 +597,18 @@ export function buildApp(deps: AppDeps): Hono {
   }
 
   const short = (max: number) => z.string().trim().min(1).max(max)
+  /** YYYY-MM-DD that exists on the calendar (2026-02-31 does not). */
+  const calendarDate = z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .refine(d => {
+      const t = Date.parse(`${d}T00:00:00Z`)
+      return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === d
+    })
   const createTargetSchema = z.object({
     company: short(120),
     role: short(120),
-    interviewDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .refine(d => !Number.isNaN(Date.parse(d)))
-      .optional(),
+    interviewDate: calendarDate.optional(),
     jd: z.string().trim().min(20).max(20_000),
   })
   const sqlTurnSchema = z.object({
@@ -653,10 +667,22 @@ export function buildApp(deps: AppDeps): Hono {
     return c.json(target, 201)
   })
 
+  const summary = (t: Target) => ({ id: t.id, company: t.company, role: t.role, interviewDate: t.interviewDate, status: t.status, nextStep: t.nextStep, nextStepSource: nextStepSource(t), createdAt: t.createdAt })
+
   api.get('/targets', async c => {
     const repo = c.get('repo')
     const list = await repo.listTargets(c.get('workspace'))
-    return c.json(list.map(t => ({ id: t.id, company: t.company, role: t.role, interviewDate: t.interviewDate, status: t.status, nextStep: t.nextStep, nextStepSource: nextStepSource(t), createdAt: t.createdAt })))
+    return c.json(list.map(summary))
+  })
+
+  const patchTargetSchema = z.object({ interviewDate: calendarDate.nullable() })
+  api.patch('/targets/:id', async c => {
+    const repo = c.get('repo')
+    const body = patchTargetSchema.parse(await c.req.json().catch(() => ({})))
+    if (body.interviewDate && body.interviewDate < new Date(now()).toISOString().slice(0, 10)) throw new AppError(400, 'interview_date_in_past')
+    const target = await repo.updateTarget(c.get('workspace'), c.req.param('id'), { interviewDate: body.interviewDate })
+    if (!target) throw new AppError(404, 'target_not_found')
+    return c.json(summary(target))
   })
 
   api.get('/targets/:id', async c => {
@@ -724,7 +750,7 @@ export function buildApp(deps: AppDeps): Hono {
     const repo = c.get('repo')
     const profile = await repo.getProfile(c.get('workspace'))
     if (!profile) throw new AppError(404, 'profile_not_found')
-    return c.json(profile)
+    return c.json({ ...profile, focus: focusLabel(profile.focus) })
   })
 
   api.delete('/profile', async c => {

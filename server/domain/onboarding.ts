@@ -1,7 +1,7 @@
 import { extractText, getDocumentProxy } from 'unpdf'
 import { z } from 'zod'
 import { OPENING_QUESTION } from './questions.js'
-import { gapFromAnswer } from './fallbacks.js'
+import { focusLabel, gapFromAnswer } from './fallbacks.js'
 import { ProviderFailure } from '../providers/nim.js'
 import type { OnboardingRequest, ReflectionProvider } from '../providers/types.js'
 
@@ -62,14 +62,16 @@ function fallback(req: OnboardingRequest): Record<string, string> {
         role: 'Interview practice',
         firstQuestion: OPENING_QUESTION,
       }
-    case 'coach':
+    case 'coach': {
+      const focus = focusLabel(req.focus)
       return {
         observation:
           (req.inProgress ? 'You have an interview open. Finish it when you’re ready. ' : '') +
-          `You chose to work on ${req.focus} first. The next practice stays on that, using a story you’ve already told.`,
-        nextPractice: `Spend ten minutes on ${req.focus}, starting from the same story.`,
+          `You chose to work on ${focus} first. The next practice stays on that, using a story you’ve already told.`,
+        nextPractice: `Spend ten minutes on ${focus}, starting from the same story.`,
         practiceQuestion: OPENING_QUESTION,
       }
+    }
     case 'planner': {
       const sql = req.rounds.find(r => r.title.startsWith('SQL') && r.available)
       return {

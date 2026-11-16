@@ -72,7 +72,8 @@ export function answerAttemptQuery(filter: AnswerAttemptFilter = {}): { kind: st
 
 // ---- stories ----
 
-export const storySource = (sourceInterviewId: string | null): 'manual' | 'interview' => (sourceInterviewId ? 'interview' : 'manual')
+type StorySource = 'manual' | 'first_interview' | 'interview'
+export const storySource = (sourceInterviewId: string | null, source?: StorySource): StorySource => source ?? (sourceInterviewId ? 'interview' : 'manual')
 
 export function storyInsert(userId: string, input: StoryInput): Insert<'mirror_stories'> {
   return {
@@ -85,7 +86,7 @@ export function storyInsert(userId: string, input: StoryInput): Insert<'mirror_s
     themes: input.themes,
     quote: input.quote,
     question: input.question,
-    source: storySource(input.sourceInterviewId),
+    source: storySource(input.sourceInterviewId, input.source),
     source_interview_id: input.sourceInterviewId,
     source_turn_id: input.sourceTurnId,
     archived_at: null,
@@ -102,7 +103,8 @@ export function storyPatch(patch: Partial<StoryInput>, nowIso: string): Update<'
   if (patch.themes !== undefined) u.themes = patch.themes
   if (patch.quote !== undefined) u.quote = patch.quote
   if (patch.question !== undefined) u.question = patch.question
-  if (patch.sourceInterviewId !== undefined) { u.source_interview_id = patch.sourceInterviewId; u.source = storySource(patch.sourceInterviewId) }
+  if (patch.sourceInterviewId !== undefined) { u.source_interview_id = patch.sourceInterviewId; u.source = storySource(patch.sourceInterviewId, patch.source) }
+  else if (patch.source !== undefined) u.source = patch.source
   if (patch.sourceTurnId !== undefined) u.source_turn_id = patch.sourceTurnId
   return u
 }
@@ -121,6 +123,7 @@ export function storyFromRow(userId: string, r: Row<'mirror_stories'>): StoryRow
     question: r.question,
     sourceInterviewId: r.source_interview_id,
     sourceTurnId: r.source_turn_id,
+    source: storySource(r.source_interview_id, r.source as StorySource),
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   }

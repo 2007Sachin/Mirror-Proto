@@ -58,7 +58,7 @@ export class VoiceClient {
 
   constructor(options: VoiceClientOptions = {}) {
     this.url = options.url ?? VOICE_WS_URL
-        this.resumeWindowMs = options.resumeWindowMs ?? 60_000
+    this.resumeWindowMs = options.resumeWindowMs ?? 60_000
     this.backoff = options.backoff ?? { initialMs: 500, maxMs: 8_000 }
     this.onConnectionChange = options.onConnectionChange
   }

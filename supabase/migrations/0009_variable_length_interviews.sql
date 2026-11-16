@@ -35,3 +35,6 @@ alter table public.mirror_interviews
   add column if not exists target_id uuid references public.mirror_targets(id) on delete set null;
 
 notify pgrst, 'reload schema';
+
+-- Applied to live as 0009_variable_length_interviews on 2026-11-16 (plus index below).
+create index if not exists mirror_interviews_target_id_idx on public.mirror_interviews (target_id);

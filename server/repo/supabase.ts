@@ -103,7 +103,7 @@ function many<T>(res: { data: T[] | null; error: DbError | null }, action: strin
 
 const json = (v: unknown): Json => v as Json
 
-// Columns that exist only after migration 0008 (SCREEN_DB_READY=1); absent from the generated types.
+// Columns that exist only after migration 0009 (SCREEN_DB_READY=1); absent from the generated types.
 type ScreenColumns = Partial<{
   kind: InterviewKind
   question_cap: number | null
@@ -211,14 +211,14 @@ function toAttempt(r: Row<'mirror_practice_attempts'>): PracticeAttemptRow {
 
 type ScreenMeta = Pick<InterviewRow, 'kind' | 'questionCap' | 'timeCapSeconds' | 'startedAt' | 'targetId'>
 
-// ponytail: lost on a server restart, which only matters for a screen already running; applying 0008 removes this.
+// ponytail: lost on a server restart, which only matters for a screen already running; applying 0009 removes this.
 // Module level because a repository is now built per request (interview ids are unique uuids).
 const screenMeta = new Map<string, ScreenMeta>()
 
 /**
  * Every query runs through `client`, which carries the signed-in user's token (anon key), so RLS applies.
  * `workspace` arguments are the user's id (slug = user id). The service role is never used here.
- * `screenDbReady` is true once migration 0008 is applied (SCREEN_DB_READY=1); until then screen metadata lives
+ * `screenDbReady` is true once migration 0009 is applied (SCREEN_DB_READY=1); until then screen metadata lives
  * in memory and a screen is capped at 4 questions.
  */
 export function createUserRepository(client: Db, userId: string, opts: { screenDbReady?: boolean } = {}): Repository {
@@ -639,11 +639,7 @@ export function createUserRepository(client: Db, userId: string, opts: { screenD
         .insert(rows.map(r => gapMatchInsert(userId, targetId, r, r.claimQuote ? (claimIds.get(r.claimQuote) ?? null) : null)))
         .select()
       const saved = many(res, 'save gap matches')
-      // Only the stored columns persist; this response keeps the caller's area, probe and source.
-      return saved.map((r, i) => {
-        const src = rows[i]
-        return { ...gapMatchFromRow(userId, r, src?.claimQuote ?? null), ...(src ? { area: src.area, probeQuestion: src.probeQuestion, source: src.source } : {}) }
-      })
+      return saved.map((r, i) => gapMatchFromRow(userId, r, rows[i]?.claimQuote ?? null))
     },
 
     listGapMatches,

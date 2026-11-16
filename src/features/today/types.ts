@@ -131,3 +131,26 @@ export interface TodayModel {
   /** No completed interview, no practice attempts, no targets, no stories. */
   isNewUser: boolean
 }
+
+/** Per-section load state. `useTodayData()` (src/features/today/useTodayData.ts) returns it with the input; each section renders as soon as its own data arrives. */
+export type SectionStatus = 'loading' | 'ready' | 'error'
+export interface TodayStatus { hero: SectionStatus; comingUp: SectionStatus; since: SectionStatus; replays: SectionStatus; stories: SectionStatus }
+export interface TodayData { input: TodayInput; status: TodayStatus }
+
+/** Props of src/pages/Today.tsx (App wires them). Tests mock `useTodayData` and pass these. */
+export interface TodayProps {
+  busy: boolean
+  onStart: (question: string, speak: boolean) => void
+  onContinue: (interviewId: string) => void
+  onLetGo: (interviewId: string) => void
+  onScreen: (targetId: string) => void
+  onOpenStories: (theme: string | null) => void
+  onReplay: (interviewId: string) => void
+  onOpenItem: (itemId: string) => void
+  onOpenTarget: (targetId: string | null) => void
+  onAddTarget: () => void
+  onFirstInterview: () => void
+  /** Opens the replays (Practice) at the first due item, or the Practice page when null. */
+  onOpenReplays: (itemId: string | null) => void
+  onSayItAgain: (interviewId: string, questionIndex: number) => void
+}

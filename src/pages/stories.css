@@ -1,7 +1,7 @@
-.stories-page { display: grid; gap: 12px; }
-.stories-page label, .stories-page legend { font-size: 13px; font-weight: 650; color: var(--m-muted, #6e6e73); }
+.stories-page { display: grid; gap: 8px; }
+.stories-page label, .stories-page legend { font-size: var(--m-text-meta); font-weight: 650; color: var(--m-muted, #6e6e73); }
 .stories-page input:not([type=checkbox]), .stories-page textarea {
-  width: 100%; box-sizing: border-box; font: inherit; font-size: 15px; padding: 10px 12px;
+  width: 100%; box-sizing: border-box; font: inherit; font-size: var(--m-text-body); padding: 10px 12px;
   border-radius: 10px; border: 1px solid var(--m-line, rgba(0,0,0,.08)); background: #fff; color: inherit;
 }
 .stories-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -10,11 +10,11 @@
 .stories-roles li { display: grid; gap: 2px; min-width: 0; }
 .stories-roles p, .stories-page p { margin: 0; overflow-wrap: anywhere; }
 .stories-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.stories-chip { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; }
+.stories-chip { display: inline-flex; gap: 6px; align-items: center; font-size: var(--m-text-meta); }
 .stories-quote { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--m-soft, #f5f5f7); }
-.stories-quote span { display: block; font-size: 12px; color: var(--m-muted, #6e6e73); }
+.stories-quote span { display: block; font-size: var(--m-text-meta); color: var(--m-muted, #6e6e73); }
 .stories-error { color: #9f3a2f; margin: 0; }
 .m-grid-cards article { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid var(--m-line, rgba(0,0,0,.08)); border-radius: 12px; background: #fff; }
-.m-grid-cards h3 { margin: 0; font-size: 16px; font-weight: 600; }
+.m-grid-cards h3 { margin: 0; font-size: var(--m-text-body); font-weight: 600; }
 .stories-page .m-btn:focus-visible, .stories-page .m-link:focus-visible { outline: 2px solid var(--m-accent, #1d4f91); outline-offset: 2px; }
 @media (max-width: 800px) { .stories-page .m-split { grid-template-columns: 1fr; } }

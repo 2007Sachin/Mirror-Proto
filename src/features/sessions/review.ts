@@ -27,6 +27,12 @@ export interface SessionReview {
 const PARTS: StarLine['key'][] = ['situation', 'task', 'action', 'result']
 const LABEL: Record<StarLine['key'], string> = { situation: 'Situation', task: 'Task', action: 'Action', result: 'Result' }
 
+function sentence(text: string): string {
+  const t = text.trim()
+  if (!t || /[.!?]$/.test(t)) return t
+  return `${t}.`
+}
+
 function safe(text: string, fallback: string): string {
   const t = text.trim()
   return t && scan('review', t).length === 0 ? t : fallback
@@ -78,11 +84,15 @@ export function patternAcross(current: InterviewSession, previous: InterviewSess
   const lines: string[] = []
   const now = fillerRate(current)
   const then = fillerRate(previous)
-  if (now.words > 0 && then.words > 0) {
-    const nowRate = now.fillers * then.words
-    const thenRate = then.fillers * now.words
-    if (nowRate < thenRate) lines.push('Fewer filler words for the length of these answers than the session before.')
-    else if (nowRate > thenRate) lines.push('More filler words for the length of these answers than the session before.')
+  if (now.words > 0 && then.words > 0 && (now.fillers > 0 || then.fillers > 0)) {
+    const nowRate = now.fillers / now.words
+    const thenRate = then.fillers / then.words
+    const base = Math.max(nowRate, thenRate)
+    // Ignore a small swing. A one-word difference in a long answer is not a pattern.
+    if (base > 0 && Math.abs(nowRate - thenRate) / base >= 0.25) {
+      if (nowRate < thenRate) lines.push('Fewer filler words for the length of these answers than the session before.')
+      else lines.push('More filler words for the length of these answers than the session before.')
+    }
   }
   const gap = openPart(current)
   const prevGap = openPart(previous)
@@ -106,7 +116,7 @@ export function reviewSession(session: InterviewSession, previous: InterviewSess
       star: starLines(t.answer),
     }))
   const kind = session.kind === 'screen' ? 'A screening call' : 'A practice conversation'
-  const focus = reflection?.focus ? safe(reflection.focus, '') : ''
+  const focus = reflection?.focus ? sentence(safe(reflection.focus, '')) : ''
   const overview = focus
     ? `${kind} for ${session.role}. ${focus}`
     : `${kind} for ${session.role}. The notes are not written yet. Your answers are saved.`

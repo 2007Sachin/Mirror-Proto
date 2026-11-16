@@ -21,7 +21,7 @@ describe('PATCH /targets/:id', () => {
     expect(res.status).toBe(200)
     const body = await j(res)
     expect(body).toMatchObject({ id: t.id, company: 'Northwind', role: 'Analyst', interviewDate: '2026-06-25' })
-    expect(Object.keys(body).sort()).toEqual(['company', 'createdAt', 'id', 'interviewDate', 'nextStep', 'nextStepSource', 'role', 'status'])
+    expect(Object.keys(body).sort()).toEqual(['company', 'createdAt', 'id', 'interviewDate', 'nextStep', 'nextStepSource', 'role', 'skills', 'status'])
     expect((await j<{ interviewDate: string }[]>(await send(app, 'GET', '/targets', undefined, WS)))[0].interviewDate).toBe('2026-06-25')
   })
 

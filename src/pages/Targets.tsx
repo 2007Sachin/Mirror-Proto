@@ -5,7 +5,7 @@ import FallbackNote from '../components/FallbackNote'
 import MatchSection from '../features/match/MatchSection'
 import { api, type Skill, type SkillArea, type Target, type TargetSummary } from '../lib/api'
 import * as data from '../lib/data'
-import { rolesNeedStories } from '../stories/bank'
+import { rolesNeedStories, themeHint } from '../stories/bank'
 
 // The SQL round (and sql.js with it) loads only when someone opens it.
 const SqlRound = lazy(() => import('./target/SqlRound'))
@@ -306,7 +306,7 @@ function Mission({ id, onBack, onPractise, onPractiseProbe, onScreen, onAddStory
               <FallbackNote source={target.nextStepSource} />
             </div>
           )}
-          <p>{need.storyTitle ? `A hint: ${need.storyTitle} shares a theme with this role.` : 'No theme matches yet.'}{need.needs ? ` A hint: a story about ${need.needs.toLowerCase()} is still open.` : ''}</p>
+          <p>{themeHint(need.storyTitle, need.needs)}</p>
           {onAddStory && need.needsId && <button type="button" className="ml-btn ml-btn--sm ml-btn--quiet" onClick={() => onAddStory(need.needsId)}>Add that story</button>}
           <ul className="tg-rounds">
             {target.rounds.map(r => (

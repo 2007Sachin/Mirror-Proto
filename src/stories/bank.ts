@@ -27,6 +27,14 @@ export function openParts(story: { situation: string; task: string; action: stri
   return PARTS.filter(([key]) => !story[key].trim()).map(([, label]) => label)
 }
 
+/** One line. A hint and "no theme matches" never sit in the same sentence. */
+export function themeHint(storyTitle: string | null, needs: string | null): string {
+  if (storyTitle && needs) return `A hint: ${storyTitle} shares a theme with this role, and a story about ${needs.toLowerCase()} is still open.`
+  if (storyTitle) return `A hint: ${storyTitle} shares a theme with this role.`
+  if (needs) return `A hint: a story about ${needs.toLowerCase()} is still open.`
+  return 'No theme matches yet.'
+}
+
 export function rolesNeedStories(
   targets: { id: string; company: string; role: string; skills: Pick<Skill, 'area' | 'name' | 'quote'>[] }[],
   stories: Pick<StoryRow, 'title' | 'themes'>[],

@@ -84,7 +84,6 @@ export default function App() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [practiceItem, setPracticeItem] = useState<string | null>(null)
   const [answers, setAnswers] = useState<Answer[]>([])
-  const [, setAssessedRole] = useState('')
   const [answer, setAnswer] = useState('')
   const [questionIndex, setQuestionIndex] = useState(0)
   const [orbState, setOrbState] = useState<OrbState>('idle')
@@ -157,7 +156,7 @@ export default function App() {
     if (!roleName) return go('firstInterview')
     setBusy(true)
     setFlowState('starting')
-    setQuestionIndex(0); setAnswers([]); setAssessedRole(roleName); setAnswer(''); setOrbState('thinking'); setReflection(null); setSessionId(null); setQuestionCap(null); setScreen(null)
+    setQuestionIndex(0); setAnswers([]); setAnswer(''); setOrbState('thinking'); setReflection(null); setSessionId(null); setQuestionCap(null); setScreen(null)
     try {
       const session = await api.createInterview(roleName, undefined, openingQuestion)
       setSessionId(session.id)
@@ -183,7 +182,7 @@ export default function App() {
   /** Re-enter an interview that is still open. The interview screen re-reads its progress from the server. */
   const resumeInterview = (id: string, roleName: string) => {
     sessionStorage.setItem(SESSION_STORAGE_KEY, id)
-    setSessionId(id); setAssessedRole(roleName); setReflection(null); setAnswer(''); setFlowState('idle'); setOrbState('idle')
+    setSessionId(id); setRole(roleName); setReflection(null); setAnswer(''); setFlowState('idle'); setOrbState('idle')
     go('interview')
   }
   const submitAnswer = async () => {
@@ -284,7 +283,6 @@ export default function App() {
     setQuestionIndex(0); setAnswers([]); setAnswer(''); setOrbState('thinking'); setReflection(null); setSessionId(null); setQuestionCap(null); setScreen(null)
     try {
       const session = await createScreen(role || 'Screening call', targetId)
-      setAssessedRole(session.role)
       setSessionId(session.id)
       setQuestionCap(session.questionCap ?? null)
       setScreen({ startedAt: session.startedAt ? Date.parse(session.startedAt) : Date.now(), capSeconds: session.timeCapSeconds ?? 480 })
@@ -390,7 +388,6 @@ export default function App() {
         setQuestionCap(session.questionCap ?? null)
         setScreen(session.kind === 'screen' && session.startedAt ? { startedAt: Date.parse(session.startedAt), capSeconds: session.timeCapSeconds ?? 480 } : null)
         setRole(session.role)
-        setAssessedRole(session.role)
         setAnswers(session.turns.map(t => ({ question: t.question, answer: t.answer })))
         if (session.currentQuestion) setCurrentQuestion(session.currentQuestion)
         if (session.nextQuestionIndex !== null) setQuestionIndex(session.nextQuestionIndex)

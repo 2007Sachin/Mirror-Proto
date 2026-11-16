@@ -5,7 +5,7 @@ import * as data from '../lib/data'
 import { draftStory } from '../stories/starLogic'
 import { suggestStories, type Suggestion } from '../stories/suggest'
 import { MAX_THEMES, THEMES, themeName } from '../stories/themes'
-import { openParts, rolesNeedStories, themeMap } from '../stories/bank'
+import { openParts, rolesNeedStories, themeHint, themeMap } from '../stories/bank'
 
 type Editing = { id: string | null; story: data.StoryInput }
 const FIELDS = ['situation', 'task', 'action', 'result'] as const
@@ -37,9 +37,13 @@ export default function Stories({ initialQuestion = null, initialTheme = null, o
         if (!live) return
         setTargets(rows)
         const next: typeof skills = {}
-        await Promise.all(rows.map(async t => {
-          try { next[t.id] = (await api.getTarget(t.id)).skills } catch { next[t.id] = [] }
-        }))
+        const missing = rows.filter(t => !t.skills)
+        for (const t of rows) if (t.skills) next[t.id] = t.skills
+        if (missing.length) {
+          await Promise.all(missing.map(async t => {
+            try { next[t.id] = (await api.getTarget(t.id)).skills } catch { next[t.id] = [] }
+          }))
+        }
         if (live) setSkills(next)
       } catch { if (live) setTargets([]) }
     })()
@@ -128,7 +132,7 @@ export default function Stories({ initialQuestion = null, initialTheme = null, o
               <li key={r.id}>
                 <strong>{r.role}</strong>
                 <span className="m-quiet">{r.company}</span>
-                <p>{r.storyTitle ? `A hint: ${r.storyTitle} shares a theme with this role.` : 'No theme matches yet.'}{r.needs ? ` A hint: a story about ${r.needs.toLowerCase()} is still open.` : ''}</p>
+                <p>{themeHint(r.storyTitle, r.needs)}</p>
               </li>
             ))}
           </ul>

@@ -667,7 +667,7 @@ export function buildApp(deps: AppDeps): Hono {
     return c.json(target, 201)
   })
 
-  const summary = (t: Target) => ({ id: t.id, company: t.company, role: t.role, interviewDate: t.interviewDate, status: t.status, nextStep: t.nextStep, nextStepSource: nextStepSource(t), createdAt: t.createdAt })
+  const summary = (t: Target) => ({ id: t.id, company: t.company, role: t.role, interviewDate: t.interviewDate, status: t.status, nextStep: t.nextStep, nextStepSource: nextStepSource(t), createdAt: t.createdAt, skills: t.skills })
 
   api.get('/targets', async c => {
     const repo = c.get('repo')

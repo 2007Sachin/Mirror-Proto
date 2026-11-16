@@ -60,6 +60,22 @@ describe('reviewSession', () => {
     expect(patternAcross(older, newer)).toMatch(/Fewer filler words for the length/)
   })
 
+  it('ignores a small change in filler rate', () => {
+    const body = 'When our team had a deadline, I had to cut scope and I wrote the notes for the team. '.repeat(30)
+    const older = session({ id: 's0', turns: [turn(0, `${'um '.repeat(10)}${body}`)] })
+    const newer = session({ turns: [turn(0, `${'um '.repeat(11)}${body}`)] })
+    expect(patternAcross(newer, older) ?? '').not.toMatch(/filler/)
+  })
+
+  it('ends the note with a stop when the saved line has none', () => {
+    const s = session({ turns: [turn(0, full)] })
+    const review = reviewSession(s, null, {
+      id: 'r', interviewId: 's1', readinessLabel: null, readinessRange: null, evidence: [],
+      focus: 'Open with what changed', suggestion: null, model: 'm', source: 'fallback',
+    })
+    expect(review.overview).toMatch(/changed\.$/)
+  })
+
   it('names a repeating gap across two sessions', () => {
     const shaped = 'When our team had a deadline, I had to cut scope.'
     const older = session({ id: 's0', createdAt: '2026-10-01T00:00:00Z', turns: [turn(0, shaped)] })

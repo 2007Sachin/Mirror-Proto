@@ -86,6 +86,8 @@ export function setUser(id: string | null): void {
   if (id !== userId) fallback.clear()
   userId = id
 }
+/** Per-user browser key for small bits of progress (null when nobody is signed in, so nothing is kept). */
+export const userKey = (key: string): string | null => storageKey(key)
 const storageKey = (key: string) => (userId ? `${PREFIX}${userId}.${key}` : null)
 const memKey = (key: string) => `${userId ?? ''}|${key}`
 const KEYS = ['attempts', 'stories', 'claims', 'matches', 'replay'] as const

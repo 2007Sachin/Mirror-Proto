@@ -46,7 +46,7 @@ function rankProbes(matches: { skill: string; weight: string; status: string; cl
 }
 
 /** Résumé claims, per-target matches and probe questions. Plain CRUD stays; extraction and matching sit on top. */
-export function registerMatchRoutes(api: Api, { provider }: RouteDeps): void {
+export function registerMatchRoutes(api: Api, { provider }: RouteDeps): (workspace: string) => void {
   // ponytail: in-process cache of the AI rewrite per set of draft questions; a restart simply asks again.
   const rewrites = new Map<string, { questions: string[] | null }>()
 
@@ -129,4 +129,6 @@ export function registerMatchRoutes(api: Api, { provider }: RouteDeps): void {
     const { matches } = matchesSchema.parse(await c.req.json().catch(() => ({})))
     return c.json({ matches: await c.get('repo').replaceGapMatches(workspace, id, matches) })
   })
+
+  return workspace => { for (const k of [...rewrites.keys()]) if (k.startsWith(`${workspace}:`)) rewrites.delete(k) }
 }

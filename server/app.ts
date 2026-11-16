@@ -743,12 +743,13 @@ export function buildApp(deps: AppDeps): Hono {
   const routeDeps = { provider, env }
   registerReplayRoutes(api, routeDeps)
   registerStoriesRoutes(api, routeDeps)
-  registerMatchRoutes(api, routeDeps)
+  const clearRewrites = registerMatchRoutes(api, routeDeps)
   registerAloudRoutes(api, routeDeps)
   registerScreenRoutes(api, routeDeps)
   // Deleting a user's data also drops their in-memory caches (keys start with `<workspace>:`).
   registerMeRoutes(api, routeDeps, workspace => {
     for (const cache of [idempotency, coachNotes]) for (const k of [...cache.keys()]) if (k.startsWith(`${workspace}:`)) cache.delete(k)
+    clearRewrites(workspace)
   })
 
   // Reset: clears every new store for the workspace.

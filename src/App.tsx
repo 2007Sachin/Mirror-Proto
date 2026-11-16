@@ -14,6 +14,7 @@ import Privacy from './pages/Privacy'
 import { saveStoryFromAnswer } from './stories/saveStory'
 import { useVoiceSession } from './voice/useVoiceSession'
 import * as data from './lib/data'
+import { clearBrowserKeys } from './features/privacy/dataTools'
 import { useSession } from './features/auth/useSession'
 import AuthGate from './features/auth/AuthGate'
 import AccountMenu from './features/auth/AccountMenu'
@@ -22,7 +23,7 @@ import { ScreenDebriefPage } from './features/screen/ScreenDebrief'
 import { createScreen } from './lib/screenApi'
 import {
   BookMarked, BookOpen,
-  Check, ChevronDown, Circle, Fingerprint, Home as HomeIcon,
+  ChevronDown, Circle, Fingerprint, Home as HomeIcon,
   Menu, MessageCircle,
   Settings, Target,
   X,
@@ -62,9 +63,6 @@ const SESSION_STORAGE_KEY = 'mirror.phase1.sessionId'
 function Brand({ onClick }: { onClick: () => void }) {
   return <button className="brand" onClick={onClick} aria-label="MIRROR home"><span className="brand-mark"><i /><i /></span><span>MIRROR</span></button>
 }
-function Button({ children, onClick, variant = 'primary', disabled = false, type = 'button', className = '' }: { children: ReactNode; onClick?: () => void; variant?: 'primary' | 'secondary' | 'ghost'; disabled?: boolean; type?: 'button' | 'submit'; className?: string }) {
-  return <button type={type} className={`button button--${variant} ${className}`} onClick={onClick} disabled={disabled}>{children}</button>
-}
 function FieldLabel({ children, optional = false }: { children: ReactNode; optional?: boolean }) {
   return <label className="field-label">{children}{optional && <span>Optional</span>}</label>
 }
@@ -76,7 +74,7 @@ export default function App() {
   const signOut = async () => {
     try { await authApi.signOut() } catch { /* the cookie may already be gone */ }
     session.clear()
-    sessionStorage.removeItem(SESSION_STORAGE_KEY)
+    clearBrowserKeys(localStorage); clearBrowserKeys(sessionStorage) // the next person on this computer starts clean
     window.location.assign('/') // a fresh page drops every in-memory copy of this user's data
   }
   const [targetId, setTargetId] = useState<string | null>(null)
@@ -482,7 +480,7 @@ export default function App() {
       {view === 'targets' && <Targets openId={targetId} onOpen={setTargetId} onPractise={r => void startInterview(r)} onPractiseProbe={q => void startInterview(role, q)} onScreen={id => void startScreening(id)} />}
       {view === 'screen' && sessionId && <ScreenDebriefPage interviewId={sessionId} onDone={() => { setScreen(null); go('workspace') }} />}
       {view === 'practice' && <Practice initialItemId={practiceItem} onInitialConsumed={() => setPracticeItem(null)} />}
-      {view === 'profile' && <div className="workspace-content profile-content"><div className="page-title"><div><p className="eyebrow">YOUR CANDIDATE PROFILE</p><h1>Profile</h1><p>Shape the context MIRROR uses. Nothing here becomes an assessment by itself.</p></div><Button onClick={() => notify('Profile changes saved in this prototype.')}><Check size={15} /> Save profile</Button></div><section className="profile-identity"><div className="profile-avatar">{profileName.charAt(0)}</div><div><h2>{profileName}</h2><p>{role} · {profileLocation}</p><span><Circle size={7} fill="currentColor" /> Prototype profile · No account connected</span></div></section><div className="profile-layout"><section className="profile-form"><div className="profile-form-title"><h2>About you</h2><p>Keep this brief. Your interview answers matter more than this form.</p></div><div className="profile-field-grid"><div><FieldLabel>Display name</FieldLabel><input value={profileName} onChange={e => setProfileName(e.target.value)} /></div><div><FieldLabel>Location</FieldLabel><input value={profileLocation} onChange={e => setProfileLocation(e.target.value)} /></div><div><FieldLabel>Experience</FieldLabel><div className="select-wrap"><select value={profileExperience} onChange={e => setProfileExperience(e.target.value)}><option>Student / recent graduate</option><option>0–2 years</option><option>2–4 years</option><option>5–8 years</option><option>8+ years</option></select><ChevronDown size={16} /></div></div><div><FieldLabel>Current direction</FieldLabel><div className="profile-role-link">{role}</div></div></div><FieldLabel>Short introduction</FieldLabel><textarea value={profileBio} onChange={e => setProfileBio(e.target.value)} /></section><aside className="profile-summary"><div className="card-label">PROFILE SNAPSHOT</div><h3>{profile?.focus ?? 'Interview practice'}</h3><dl><div><dt>Experience</dt><dd>{profileExperience}</dd></div><div><dt>Sessions done</dt><dd>{completed ? 1 : 0}</dd></div></dl><div className="profile-evidence-note"><Fingerprint size={17} /><p>Profile details personalise your practice. They never generate a readiness score.</p></div></aside></div></div>}
+      {view === 'profile' && <div className="workspace-content profile-content"><div className="page-title"><div><p className="eyebrow">YOUR CANDIDATE PROFILE</p><h1>Profile</h1><p>Shape the context MIRROR uses. Nothing here becomes an assessment by itself. These details stay on this page and are not saved to your account.</p></div></div><section className="profile-identity"><div className="profile-avatar">{profileName.charAt(0)}</div><div><h2>{profileName}</h2><p>{role} · {profileLocation}</p><span><Circle size={7} fill="currentColor" /> {session.status === 'signedIn' ? `Signed in as ${session.user.email ?? 'your account'}` : 'Demo profile · Not saved to an account'}</span></div></section><div className="profile-layout"><section className="profile-form"><div className="profile-form-title"><h2>About you</h2><p>Keep this brief. Your interview answers matter more than this form.</p></div><div className="profile-field-grid"><div><FieldLabel>Display name</FieldLabel><input value={profileName} onChange={e => setProfileName(e.target.value)} /></div><div><FieldLabel>Location</FieldLabel><input value={profileLocation} onChange={e => setProfileLocation(e.target.value)} /></div><div><FieldLabel>Experience</FieldLabel><div className="select-wrap"><select value={profileExperience} onChange={e => setProfileExperience(e.target.value)}><option>Student / recent graduate</option><option>0–2 years</option><option>2–4 years</option><option>5–8 years</option><option>8+ years</option></select><ChevronDown size={16} /></div></div><div><FieldLabel>Current direction</FieldLabel><div className="profile-role-link">{role}</div></div></div><FieldLabel>Short introduction</FieldLabel><textarea value={profileBio} onChange={e => setProfileBio(e.target.value)} /></section><aside className="profile-summary"><div className="card-label">PROFILE SNAPSHOT</div><h3>{profile?.focus ?? 'Interview practice'}</h3><dl><div><dt>Experience</dt><dd>{profileExperience}</dd></div><div><dt>Sessions done</dt><dd>{completed ? 1 : 0}</dd></div></dl><div className="profile-evidence-note"><Fingerprint size={17} /><p>Profile details personalise your practice. They never generate a readiness score.</p></div></aside></div></div>}
       {(view === 'reports' || view === 'report') && <Sessions openId={view === 'report' ? sessionId : null} refreshKey={reflection?.interviewId} onPractise={() => void startInterview()} onSaveStory={turn => void saveStoryFromAnswer({ question: turn.question, answer: turn.answer, sourceInterviewId: sessionId, sourceTurnId: turn.id }).then(() => notify('Saved to your stories.')).catch(() => notify('Could not save that story just now.'))} />}
       {view === 'stories' && <Stories initialQuestion={storyQuestion} onInitialConsumed={() => setStoryQuestion(null)} />}
       {view === 'settings' && <SettingsPage voiceSpeed={voiceSpeed} setVoiceSpeed={setVoiceSpeed} language={language} setLanguage={setLanguage} calmMotion={calmMotion} setCalmMotion={setCalmMotion} notify={notify} onResetDemo={resetDemo} onOpenPrivacy={() => go('privacy')} onDeleted={afterDataDeleted} />}

@@ -270,6 +270,8 @@ export interface ReplayItemRow extends ReplayItemInput {
 export interface RepoExport {
   exportedAt: string
   workspace: string
+  /** The mirror_workspaces row itself (it stays after Delete all my data). */
+  workspaceRow: { slug: string; createdAt: string } | null
   profile: ProfileRow | null
   interviews: InterviewRow[]
   turns: TurnRow[]

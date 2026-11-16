@@ -5,7 +5,7 @@ import { scan, scanHtml } from './copyScan'
 
 vi.mock('./practice/sql/worker/sqlRunner', () => ({ warmSql: async () => {}, runSql: async () => ({ error: 'x' }), cancelSql: () => {}, disposeSql: () => {}, isStopped: () => false }))
 vi.mock('./pages/target/sqlEngine', () => ({ sameResult: () => true }))
-vi.mock('./lib/data', () => ({ answerAttempts: { add: async (x: unknown) => x, list: async () => [] } }))
+vi.mock('./lib/data', () => ({ userKey: (k: string) => `mirror.data.v1.u1.${k}`, answerAttempts: { add: async (x: unknown) => x, list: async () => [] } }))
 
 import ExplainAloud from './practice/sql/aloud/ExplainAloud'
 import { buildExplainSteps } from './practice/sql/aloud/explainLogic'
@@ -30,7 +30,7 @@ describe('copy: spoken round', () => {
     expect(scanHtml('aloud', container.innerHTML)).toEqual([])
   })
   it('the picker with the chip on, and an old snapshot, still work', () => {
-    localStorage.setItem('mirror.sql.mock.v1', JSON.stringify({ v: 1, presetId: 'phone', name: 'Phone screen', minutes: 30, startedAt: Date.now(), deadline: Date.now() + 1e6, qs: [{ id: problems[0].id, kind: 'sql' }], ans: {}, flags: [], seen: [], spent: {}, idx: 0 }))
+    localStorage.setItem('mirror.data.v1.u1.sql.mock.v1', JSON.stringify({ v: 1, presetId: 'phone', name: 'Phone screen', minutes: 30, startedAt: Date.now(), deadline: Date.now() + 1e6, qs: [{ id: problems[0].id, kind: 'sql' }], ans: {}, flags: [], seen: [], spent: {}, idx: 0 }))
     const { container } = render(<MockTest problems={problems} concepts={[]} solved={new Set()} onAttempt={() => {}} openModule={() => {}} moduleOf={() => undefined} onBack={() => {}} />)
     expect(screen.getByText('Resume your mock test')).toBeTruthy()
     const chip = screen.getByText(/Explain out loud after each: no/)

@@ -1,3 +1,4 @@
+import { userKey } from '../../lib/data'
 // Pure helpers for the SQL path: progress counting, "continue here", and the custom queue. No React, no data imports.
 export interface ModuleLike { id: string; problemIds: string[] }
 export interface ProblemLike { id: string; topic: string; level: 1 | 2 | 3 }
@@ -67,10 +68,10 @@ export function freeSections<M extends Sectioned>(mods: M[], levelOrder: string[
   }
 }
 
-const TAB_KEY = 'mirror.sql.path.tab'
-const PLACED_KEY = 'mirror.sql.path.placed'
-const read = (k: string) => { try { return localStorage.getItem(k) } catch { return null } }
-const write = (k: string, v: string) => { try { localStorage.setItem(k, v) } catch { /* not remembered */ } }
+const TAB_KEY = 'sql.path.tab'
+const PLACED_KEY = 'sql.path.placed'
+const read = (k: string) => { try { const key = userKey(k); return key ? localStorage.getItem(key) : null } catch { return null } }
+const write = (k: string, v: string) => { try { const key = userKey(k); if (key) localStorage.setItem(key, v) } catch { /* not remembered */ } }
 export const loadTab = (): Tab => parseTab(read(TAB_KEY))
 export const saveTab = (t: Tab) => write(TAB_KEY, t)
 export const loadPlaced = (): boolean => read(PLACED_KEY) === '1'

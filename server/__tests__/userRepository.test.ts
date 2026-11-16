@@ -156,6 +156,7 @@ describe('export', () => {
   it('reads every table for this user into the RepoExport shape', async () => {
     const now = '2026-01-01T00:00:00.000Z'
     const rows = {
+      mirror_workspaces: [{ slug: U, user_id: U, created_at: now }],
       mirror_interviews: [{ id: 'iv1', workspace_id: U, user_id: U, role: 'Analyst', industry: null, status: 'completed', asked_questions: ['q?'], created_at: now }],
       mirror_turns: [{ id: 'tu1', workspace_id: U, user_id: U, interview_id: 'iv1', question_index: 0, question: 'q?', answer: 'a', transcript_source: 'text', created_at: now }],
       mirror_stories: [{ id: 's1', user_id: U, title: 'T', situation: null, task: null, action: null, result: null, themes: ['a'], source: 'x', source_interview_id: null, archived_at: null, created_at: now, updated_at: now }],
@@ -163,17 +164,18 @@ describe('export', () => {
     }
     const { repo, calls } = repoWith(undefined, rows)
     const out = await repo.exportAllData(U)
-    expect(Object.keys(out).sort()).toEqual(['answerAttempts', 'exportedAt', 'gapMatches', 'interviews', 'practiceAttempts', 'profile', 'reflections', 'replaySchedule', 'resumeClaims', 'stories', 'targets', 'turns', 'workspace'])
+    expect(Object.keys(out).sort()).toEqual(['answerAttempts', 'exportedAt', 'gapMatches', 'interviews', 'practiceAttempts', 'profile', 'reflections', 'replaySchedule', 'resumeClaims', 'stories', 'targets', 'turns', 'workspace', 'workspaceRow'])
     expect(out.workspace).toBe(U)
+    expect(out.workspaceRow).toEqual({ slug: U, createdAt: now })
     expect(out.profile).toBeNull()
     expect(out.interviews).toHaveLength(1)
     expect(out.turns[0]).toMatchObject({ interviewId: 'iv1', transcriptSource: 'text' })
     expect(out.stories[0]).toMatchObject({ title: 'T', situation: '', workspaceId: U })
     expect(out.replaySchedule[0]).toMatchObject({ itemId: 'i', workspaceId: U })
-    expect(new Set(calls.map(c => c.table)).size).toBe(11)
+    expect(new Set(calls.map(c => c.table)).size).toBe(12)
     for (const c of calls) {
       expect(c.op).toBe('select')
-      expect(eqOf(c, c.table.startsWith('mirror_') && ['mirror_answer_attempts', 'mirror_stories', 'mirror_resume_claims', 'mirror_target_gap_matches', 'mirror_replay_schedule'].includes(c.table) ? 'user_id' : 'workspace_id')).toBeDefined()
+      expect(eqOf(c, c.table.startsWith('mirror_') && ['mirror_answer_attempts', 'mirror_stories', 'mirror_resume_claims', 'mirror_target_gap_matches', 'mirror_replay_schedule'].includes(c.table) ? 'user_id' : c.table === 'mirror_workspaces' ? 'slug' : 'workspace_id')).toBeDefined()
       expect(eqOf(c, 'user_id')).toBe(U)
     }
   })

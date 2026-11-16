@@ -79,6 +79,15 @@ export function resetCapabilities(): void {
 // ---- browser backend ----
 
 const PREFIX = 'mirror.data.v1.'
+let userId: string | null = null
+
+/** Called once the session is known (null on sign-out). Browser data is keyed by user; with no user it stays in memory only. */
+export function setUser(id: string | null): void {
+  if (id !== userId) fallback.clear()
+  userId = id
+}
+const storageKey = (key: string) => (userId ? `${PREFIX}${userId}.${key}` : null)
+const memKey = (key: string) => `${userId ?? ''}|${key}`
 const KEYS = ['attempts', 'stories', 'claims', 'matches', 'replay'] as const
 type Key = (typeof KEYS)[number]
 const LOCAL_WORKSPACE = 'local'
@@ -88,8 +97,9 @@ const fallback = new Map<string, string>()
 
 function read<T>(key: Key): T[] {
   let raw: string | null = null
-  try { raw = localStorage.getItem(PREFIX + key) } catch { /* blocked */ }
-  raw ??= fallback.get(key) ?? null
+  const sk = storageKey(key)
+  if (sk) try { raw = localStorage.getItem(sk) } catch { /* blocked */ }
+  raw ??= fallback.get(memKey(key)) ?? null
   if (!raw) return []
   try {
     const v: unknown = JSON.parse(raw)
@@ -99,8 +109,9 @@ function read<T>(key: Key): T[] {
 
 function write<T>(key: Key, rows: T[]): void {
   const raw = JSON.stringify(rows)
-  fallback.set(key, raw)
-  try { localStorage.setItem(PREFIX + key, raw) } catch { /* blocked: the in-memory copy still serves this session */ }
+  fallback.set(memKey(key), raw)
+  const sk = storageKey(key)
+  if (sk) try { localStorage.setItem(sk, raw) } catch { /* blocked: the in-memory copy still serves this session */ }
 }
 
 const now = () => new Date().toISOString()
@@ -242,11 +253,12 @@ export const replay = {
   },
 }
 
-/** Reset: forgets everything in this browser and, when the server keeps the stores, there too. Never throws. */
+/** Reset: forgets this user's data in this browser and, when the server keeps the stores, there too. Never throws. */
 export async function clearAll(): Promise<void> {
   for (const key of KEYS) {
-    fallback.delete(key)
-    try { localStorage.removeItem(PREFIX + key) } catch { /* blocked */ }
+    fallback.delete(memKey(key))
+    const sk = storageKey(key)
+    if (sk) try { localStorage.removeItem(sk) } catch { /* blocked */ }
   }
   try {
     if (await serverKeepsData()) await request<null>('/data', { method: 'DELETE' })

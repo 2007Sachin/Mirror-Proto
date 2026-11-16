@@ -250,8 +250,11 @@ export interface GapMatchRow extends GapMatchInput {
 }
 
 /** A typed contract only; the first scheduler is stateless. */
+export type ReplayItemKind = 'question' | 'pattern' | 'practice_item'
 export interface ReplayItemInput {
   itemId: string
+  /** What kind of thing is scheduled; the SQL practice schedule uses 'practice_item' (the default). */
+  kind?: ReplayItemKind
   dueAt: string
   intervalDays: number
   rung: number
@@ -261,6 +264,23 @@ export interface ReplayItemRow extends ReplayItemInput {
   id: string
   workspaceId: string
   updatedAt: string
+}
+
+/** Everything stored for one user; what the export returns. */
+export interface RepoExport {
+  exportedAt: string
+  workspace: string
+  profile: ProfileRow | null
+  interviews: InterviewRow[]
+  turns: TurnRow[]
+  reflections: ReflectionRow[]
+  targets: Target[]
+  practiceAttempts: PracticeAttemptRow[]
+  answerAttempts: AnswerAttemptRow[]
+  stories: StoryRow[]
+  resumeClaims: ResumeClaimRow[]
+  gapMatches: GapMatchRow[]
+  replaySchedule: ReplayItemRow[]
 }
 
 export interface Repository {
@@ -312,4 +332,8 @@ export interface Repository {
   deleteReplayItem(workspace: string, itemId: string): Promise<void>
   /** Clears every store above for the workspace (reset). */
   deleteAllNewData(workspace: string): Promise<void>
+  /** Every row of this workspace, for the user's data export. */
+  exportAllData(workspace: string): Promise<RepoExport>
+  /** Removes everything of this workspace except the workspace row itself. */
+  deleteAllData(workspace: string): Promise<void>
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { api, ApiError, type Profile, type Reflection } from './lib/api'
+import { api, authApi, ApiError, type Profile, type Reflection } from './lib/api'
 import type { OrbState } from './components/LiveOrb'
 import Landing from './pages/Landing'
 import FirstInterview from './pages/FirstInterview'
@@ -9,21 +9,26 @@ import Practice from './pages/Practice'
 import Interview from './pages/Interview'
 import Sessions from './pages/Sessions'
 import Stories from './pages/Stories'
+import SettingsPage from './pages/Settings'
+import Privacy from './pages/Privacy'
 import { saveStoryFromAnswer } from './stories/saveStory'
 import { useVoiceSession } from './voice/useVoiceSession'
 import * as data from './lib/data'
+import { useSession } from './features/auth/useSession'
+import AuthGate from './features/auth/AuthGate'
+import AccountMenu from './features/auth/AccountMenu'
 import { useScreenClock } from './features/screen/countdown'
 import { ScreenDebriefPage } from './features/screen/ScreenDebrief'
 import { createScreen } from './lib/screenApi'
 import {
-  AudioLines, BookMarked, BookOpen,
+  BookMarked, BookOpen,
   Check, ChevronDown, Circle, Fingerprint, Home as HomeIcon,
-  Menu, MessageCircle, Pause,
+  Menu, MessageCircle,
   Settings, Target,
-  Trash2, Volume2, X,
+  X,
 } from 'lucide-react'
 
-type View = 'home' | 'firstInterview' | 'workspace' | 'targets' | 'practice' | 'interview' | 'reports' | 'report' | 'stories' | 'screen' | 'profile' | 'settings'
+type View = 'home' | 'firstInterview' | 'workspace' | 'targets' | 'practice' | 'interview' | 'reports' | 'report' | 'stories' | 'screen' | 'profile' | 'settings' | 'privacy'
 type Answer = { question: string; answer: string }
 type FlowState = 'not_completed' | 'idle' | 'starting' | 'saving' | 'waiting_nim' | 'generating_reflection' | 'provider_unavailable' | 'retryable_failure' | 'validation_failure'
 
@@ -65,6 +70,15 @@ function FieldLabel({ children, optional = false }: { children: ReactNode; optio
 }
 export default function App() {
   const [view, setView] = useState<View>('home')
+  // Auth: who is signed in. The landing is public; every other view needs a session (or the local demo).
+  const session = useSession()
+  const authed = session.status === 'signedIn' || session.status === 'demo'
+  const signOut = async () => {
+    try { await authApi.signOut() } catch { /* the cookie may already be gone */ }
+    session.clear()
+    sessionStorage.removeItem(SESSION_STORAGE_KEY)
+    window.location.assign('/') // a fresh page drops every in-memory copy of this user's data
+  }
   const [targetId, setTargetId] = useState<string | null>(null)
   const [role, setRole] = useState('')
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -332,7 +346,7 @@ export default function App() {
     if (sessionStorage.getItem(SESSION_STORAGE_KEY) === id) { sessionStorage.removeItem(SESSION_STORAGE_KEY); setSessionId(null) }
   }
   const resetDemo = () => {
-    if (!window.confirm('Reset all demonstration data and return to the beginning?')) return
+    if (!window.confirm('Clear what MIRROR has saved in this browser and start again? Your saved account data is removed from Settings, under Your data.')) return
     sessionStorage.removeItem(SESSION_STORAGE_KEY)
     void api.deleteProfile().catch(() => undefined)
     void data.clearAll()
@@ -341,8 +355,16 @@ export default function App() {
     setAnswers([]); setAnswer(''); setRole(''); setProfile(null); setSessionId(null); setReflection(null); go('home'); notify('Prototype data reset.')
   }
 
+  /** After Settings > Delete all my data: the server and browser are already clear; empty the screen state and land on Today. */
+  const afterDataDeleted = () => {
+    stopVoice()
+    setVoiceMode(false)
+    setAnswers([]); setAnswer(''); setRole(''); setProfile(null); setSessionId(null); setReflection(null); go('workspace'); notify('Your data is deleted. Your sign-in account is still here.')
+  }
+
   const profileFresh = useRef(false) // set when The First Interview finishes here, so a slow fetch can't overwrite it
   useEffect(() => {
+    if (!authed) return
     api.getProfile()
       .then(p => {
         if (profileFresh.current) return
@@ -350,13 +372,14 @@ export default function App() {
         setView(v => (v === 'firstInterview' ? 'workspace' : v)) // clicked Start before this arrived
       })
       .catch(() => undefined) // 404 = not onboarded yet
-  }, [])
+  }, [authed])
 
   useEffect(() => {
     document.title = 'MIRROR — You know what you did'
   }, [])
 
   useEffect(() => {
+    if (!authed) return
     const saved = sessionStorage.getItem(SESSION_STORAGE_KEY)
     if (!saved) return
     // Completed, abandoned or missing: forget it and show the normal Overview.
@@ -378,7 +401,7 @@ export default function App() {
       })
       // Only a missing session is forgotten; a network slip keeps the breadcrumb so the open interview is not lost.
       .catch(err => (err instanceof ApiError && err.status === 404 ? forget() : setView('workspace')))
-  }, [])
+  }, [authed])
 
   useEffect(() => {
     if (view !== 'interview' || !sessionId) return
@@ -395,6 +418,11 @@ export default function App() {
   }, [view, sessionId])
 
   if (view === 'home') return <Landing onTry={() => go(profile ? 'workspace' : 'firstInterview')} />
+
+  if (!authed) {
+    const failed = new URLSearchParams(window.location.search).get('auth') === 'failed'
+    return <AuthGate session={session} notice={failed ? 'That link did not work. Please ask for a new one.' : null} onBack={() => go('home')}><></></AuthGate>
+  }
 
   if (view === 'firstInterview') {
     return <FirstInterview
@@ -449,7 +477,7 @@ export default function App() {
   return <div className={`app workspace-app ${calmMotion ? 'reduce-motion' : ''}`}><div className="ambient ambient--two" />
     <aside className={`sidebar ${mobileNav ? 'sidebar--open' : ''}`}><div className="sidebar-top"><Brand onClick={() => go('home')} /><button className="mobile-close" onClick={() => setMobileNav(false)}><X /></button></div><nav>{navItems.map(item => <button key={item.id} className={view === item.id || (view === 'report' && item.id === 'reports') ? 'active' : ''} onClick={() => { if (item.id === 'targets') setTargetId(null); go(item.id) }}><item.icon size={18} />{item.label}</button>)}</nav><div className="sidebar-bottom"><button onClick={() => go('settings')} className={view === 'settings' ? 'active' : ''}><Settings size={18} />Settings</button><button className="demo-profile" onClick={() => go('profile')}><span>{profileName.charAt(0)}</span><div><b>{profileName}’s workspace</b><small>View candidate profile</small></div></button></div></aside>
     {mobileNav && <button className="nav-scrim" aria-label="Close navigation" onClick={() => setMobileNav(false)} />}
-    <main className="workspace-main"><header className="workspace-header"><button className="mobile-menu" onClick={() => setMobileNav(true)}><Menu size={21} /></button><div><span className="workspace-breadcrumb">MIRROR / {view === 'workspace' ? 'TODAY' : view === 'report' || view === 'reports' ? 'SESSIONS' : view.toUpperCase()}</span></div><div className="header-actions"><span className="demo-badge"><Circle size={7} fill="currentColor" /> DEMO</span><button className="avatar-button" onClick={() => go('profile')} aria-label="Open candidate profile">{profileName.charAt(0)}</button></div></header>
+    <main className="workspace-main"><header className="workspace-header"><button className="mobile-menu" onClick={() => setMobileNav(true)}><Menu size={21} /></button><div><span className="workspace-breadcrumb">MIRROR / {view === 'workspace' ? 'TODAY' : view === 'report' || view === 'reports' ? 'SESSIONS' : view.toUpperCase()}</span></div><div className="header-actions">{session.status === 'demo' && <span className="demo-badge"><Circle size={7} fill="currentColor" /> DEMO</span>}<AccountMenu email={session.status === 'signedIn' ? session.user.email : null} onSignOut={() => void signOut()} /></div></header>
       {view === 'workspace' && <Overview profile={profile} busy={busy} onStart={(question, speak) => { setVoiceMode(speak); void startInterview(role, question, speak) }} onContinue={resumeInterview} onLetGo={letGo} onScreen={id => void startScreening(id)} onOpenStories={openStories} onReplay={id => { setSessionId(id); go('report') }} onOpenItem={id => { setPracticeItem(id); go('practice') }} />}
       {view === 'targets' && <Targets openId={targetId} onOpen={setTargetId} onPractise={r => void startInterview(r)} onPractiseProbe={q => void startInterview(role, q)} onScreen={id => void startScreening(id)} />}
       {view === 'screen' && sessionId && <ScreenDebriefPage interviewId={sessionId} onDone={() => { setScreen(null); go('workspace') }} />}
@@ -457,6 +485,7 @@ export default function App() {
       {view === 'profile' && <div className="workspace-content profile-content"><div className="page-title"><div><p className="eyebrow">YOUR CANDIDATE PROFILE</p><h1>Profile</h1><p>Shape the context MIRROR uses. Nothing here becomes an assessment by itself.</p></div><Button onClick={() => notify('Profile changes saved in this prototype.')}><Check size={15} /> Save profile</Button></div><section className="profile-identity"><div className="profile-avatar">{profileName.charAt(0)}</div><div><h2>{profileName}</h2><p>{role} · {profileLocation}</p><span><Circle size={7} fill="currentColor" /> Prototype profile · No account connected</span></div></section><div className="profile-layout"><section className="profile-form"><div className="profile-form-title"><h2>About you</h2><p>Keep this brief. Your interview answers matter more than this form.</p></div><div className="profile-field-grid"><div><FieldLabel>Display name</FieldLabel><input value={profileName} onChange={e => setProfileName(e.target.value)} /></div><div><FieldLabel>Location</FieldLabel><input value={profileLocation} onChange={e => setProfileLocation(e.target.value)} /></div><div><FieldLabel>Experience</FieldLabel><div className="select-wrap"><select value={profileExperience} onChange={e => setProfileExperience(e.target.value)}><option>Student / recent graduate</option><option>0–2 years</option><option>2–4 years</option><option>5–8 years</option><option>8+ years</option></select><ChevronDown size={16} /></div></div><div><FieldLabel>Current direction</FieldLabel><div className="profile-role-link">{role}</div></div></div><FieldLabel>Short introduction</FieldLabel><textarea value={profileBio} onChange={e => setProfileBio(e.target.value)} /></section><aside className="profile-summary"><div className="card-label">PROFILE SNAPSHOT</div><h3>{profile?.focus ?? 'Interview practice'}</h3><dl><div><dt>Experience</dt><dd>{profileExperience}</dd></div><div><dt>Sessions done</dt><dd>{completed ? 1 : 0}</dd></div></dl><div className="profile-evidence-note"><Fingerprint size={17} /><p>Profile details personalise your practice. They never generate a readiness score.</p></div></aside></div></div>}
       {(view === 'reports' || view === 'report') && <Sessions openId={view === 'report' ? sessionId : null} refreshKey={reflection?.interviewId} onPractise={() => void startInterview()} onSaveStory={turn => void saveStoryFromAnswer({ question: turn.question, answer: turn.answer, sourceInterviewId: sessionId, sourceTurnId: turn.id }).then(() => notify('Saved to your stories.')).catch(() => notify('Could not save that story just now.'))} />}
       {view === 'stories' && <Stories initialQuestion={storyQuestion} onInitialConsumed={() => setStoryQuestion(null)} />}
-      {view === 'settings' && <div className="workspace-content settings-content"><div className="page-title"><div><p className="eyebrow">MAKE THE EXPERIENCE YOURS</p><h1>Settings</h1><p>Preferences for this interactive prototype. No account is connected.</p></div></div><section className="settings-section"><div><h3>Voice experience</h3><p>Preview the interface planned for Sarvam speech-to-text and text-to-speech.</p></div><div className="setting-row"><span><Volume2 size={18} /><b>Voice playback speed</b></span><div className="segmented">{['Slow', 'Natural', 'Fast'].map(item => <button key={item} className={voiceSpeed === item ? 'active' : ''} onClick={() => { setVoiceSpeed(item); notify(`Voice speed set to ${item.toLowerCase()} for this preview.`) }}>{item}</button>)}</div></div><div className="setting-row"><span><AudioLines size={18} /><b>Conversation language</b></span><div className="select-wrap small-select"><select value={language} onChange={e => setLanguage(e.target.value)}><option>English</option><option>हिन्दी</option><option>தமிழ்</option><option>తెలుగు</option></select><ChevronDown size={16} /></div></div></section><section className="settings-section"><div><h3>Comfort</h3><p>Reduce visual movement while preserving the live orb’s current state.</p></div><div className="setting-row"><span><Pause size={18} /><b>Calm motion</b></span><button className={`switch ${calmMotion ? 'on' : ''}`} onClick={() => setCalmMotion(!calmMotion)} role="switch" aria-checked={calmMotion}><i /></button></div></section><section className="settings-section"><div><h3>Technology plan</h3><p>The intended production integrations for the next build phase.</p></div><div className="tech-plan"><span>NVIDIA NIM<small>LLM orchestration</small></span><span>Sarvam<small>STT + TTS</small></span><span>Supabase<small>Backend</small></span></div></section><section className="settings-section danger-section"><div><h3>Reset prototype</h3><p>Clear demonstration answers, stories, and onboarding selections.</p></div><Button variant="ghost" onClick={resetDemo}><Trash2 size={15} /> Reset demo data</Button></section></div>}
+      {view === 'settings' && <SettingsPage voiceSpeed={voiceSpeed} setVoiceSpeed={setVoiceSpeed} language={language} setLanguage={setLanguage} calmMotion={calmMotion} setCalmMotion={setCalmMotion} notify={notify} onResetDemo={resetDemo} onOpenPrivacy={() => go('privacy')} onDeleted={afterDataDeleted} />}
+      {view === 'privacy' && <Privacy onBack={() => go('settings')} onOpenSettings={() => go('settings')} />}
     </main>{toast && <div className="toast">{toast}</div>}</div>
 }

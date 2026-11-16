@@ -2,6 +2,7 @@ import { WebSocketServer, type WebSocket } from 'ws'
 import type { Server as HttpServer, IncomingMessage } from 'node:http'
 import type { Env } from '../config.js'
 import type { Repository } from '../repo/types.js'
+import type { AuthProvider, AuthUser, RepoFactory } from '../auth/types.js'
 import { TURN_TOO_LONG_MESSAGE, VOICE_LIMITS } from './limits.js'
 import { encodeServerMessage, parseClientMessage, SeqTracker, PROTOCOL_VERSION, type ServerMessageType } from './protocol.js'
 import type { VoiceSession } from './sessionManager.js'
@@ -20,7 +21,9 @@ export type LogFn = (msg: string) => void
 
 export interface VoiceGatewayDeps {
   env: Env
-  repo: Repository
+  /** Authenticates the WebSocket upgrade; a connection without a user is refused. */
+  auth: AuthProvider
+  repoFor: RepoFactory
   stt?: SttProvider
   tts?: TtsProvider
   provider?: ReflectionProvider | null
@@ -40,6 +43,9 @@ export interface VoiceGateway {
 interface ConnectionCtx {
   ws: WebSocket
   ip: string
+  /** Who opened this socket, and their repository: both fixed at upgrade. */
+  user: AuthUser
+  repo: Repository
   inSeq: SeqTracker
   outSeq: number
   session: VoiceSession | null
@@ -199,7 +205,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
     sendJson(ctx, 'state', session.id, turnId, { state: 'thinking', turnId })
 
     const bridge = await submitVoiceTurn(
-      deps.repo,
+      ctx.repo,
       session.workspace,
       session.interviewId,
       session.questionIndex,
@@ -255,7 +261,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
   }
 
   async function handleHello(ctx: ConnectionCtx, msg: { payload?: unknown }) {
-    const payload = (msg.payload ?? {}) as { interviewId?: string; token?: string; resumeSessionId?: string }
+    const payload = (msg.payload ?? {}) as { interviewId?: string; token?: string /* ignored: identity comes from the upgrade */; resumeSessionId?: string }
     if (!stt) {
       // No speech-to-text here: say so calmly, create no session, save nothing.
       sendJson(ctx, 'voice_unavailable', null, null, { reason: 'stt_not_configured' })
@@ -279,19 +285,14 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
       lastHelloAt.set(ctx.ip, now)
     }
 
-    const workspace = (payload.token ?? '').trim()
-    if (!workspace) {
-      sendError(ctx, null, 'workspace_header_required', 'token (dev-workspace slug) is required', false)
-      closeWith(ctx, null, 'invalid_hello', 'missing token')
-      return
-    }
+    const workspace = ctx.user.id
 
     // Reconnection path: resume within the tombstone window.
     // Resume hellos skip the new-session rate limit so a dropped socket can
     // reconnect immediately without advancing the interview.
     if (payload.resumeSessionId) {
       const resumed = sessionManager.resume(payload.resumeSessionId)
-      if (!resumed || resumed.interviewId !== payload.interviewId) {
+      if (!resumed || resumed.interviewId !== payload.interviewId || resumed.workspace !== workspace) {
         sendError(ctx, null, 'session_not_resumable', 'session unknown or reconnect window expired', false)
         closeWith(ctx, null, 'session_not_resumable', 'cannot resume session')
         return
@@ -304,7 +305,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
       sessionManager.touch(resumed)
       resumed.machine.transition('listening', resumed.currentTurnId)
       log(`voice resumed session=${resumed.id} interview=${resumed.interviewId}`)
-      const resumedProgress = await interviewProgress(deps.repo, resumed.workspace, resumed.interviewId)
+      const resumedProgress = await interviewProgress(ctx.repo, resumed.workspace, resumed.interviewId)
       sendJson(ctx, 'session_ready', resumed.id, resumed.currentTurnId, {
         sessionId: resumed.id,
         interviewState: { questionIndex: resumed.questionIndex, questionCount: resumedProgress?.questionCount ?? 4 },
@@ -318,8 +319,8 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
       return
     }
 
-    await deps.repo.ensureWorkspace(workspace)
-    const progress = await interviewProgress(deps.repo, workspace, payload.interviewId ?? '')
+    await ctx.repo.ensureWorkspace(workspace)
+    const progress = await interviewProgress(ctx.repo, workspace, payload.interviewId ?? '')
     if (!progress) {
       sendError(ctx, null, 'interview_not_found', 'no such interview in this workspace', false)
       closeWith(ctx, null, 'interview_not_found', 'interview does not exist')
@@ -466,11 +467,13 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
     }
   }
 
-  function handleConnection(ws: WebSocket, req: IncomingMessage) {
+  function handleConnection(ws: WebSocket, req: IncomingMessage, user: AuthUser) {
     const ip = req.socket.remoteAddress ?? 'unknown'
     const ctx: ConnectionCtx = {
       ws,
       ip,
+      user,
+      repo: deps.repoFor(user),
       inSeq: new SeqTracker(),
       outSeq: 0,
       session: null,
@@ -521,9 +524,18 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
           socket.destroy()
           return
         }
-        wss.handleUpgrade(req, socket, head, ws => {
-          handleConnection(ws, req)
-        })
+        void deps.auth
+          .fromUpgrade(req)
+          .catch(() => null)
+          .then(user => {
+            if (!user) {
+              socket.end('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\nContent-Type: text/plain\r\nContent-Length: 15\r\n\r\nunauthenticated')
+              return
+            }
+            wss.handleUpgrade(req, socket, head, ws => {
+              handleConnection(ws, req, user)
+            })
+          })
       })
       sweepTimer = setInterval(() => {
         sessionManager.sweep()

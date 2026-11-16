@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { makeApp } from './helpers.js'
 
-const A = { 'X-Dev-Workspace': 'alpha', 'Content-Type': 'application/json' }
+const A = { 'X-Test-User': 'alpha', 'Content-Type': 'application/json' }
 const story = { title: 'Fixed churn', themes: ['ownership'], situation: 's', task: 't', action: 'a', result: 'r', quote: null, question: null, sourceInterviewId: null, sourceTurnId: null }
 const ALL = ['leadership', 'conflict', 'failure', 'ownership', 'ambiguity', 'influence', 'deadline-pressure', 'data-driven', 'customer-focus', 'learning', 'collaboration', 'mistake-recovery']
 

@@ -10,6 +10,10 @@ describe('server/config', () => {
     vi.stubEnv('SUPABASE_URL', '')
     vi.stubEnv('SUPABASE_SECRET_KEY', '')
     vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', '')
+    vi.stubEnv('SUPABASE_ANON_KEY', '')
+    vi.stubEnv('SITE_URL', '')
+    vi.stubEnv('DEMO_MODE', '')
+    vi.stubEnv('AUTH_GOOGLE', '')
     vi.stubEnv('NVIDIA_NIM_API_KEY', '')
     vi.stubEnv('NIM_API_KEY', '')
     vi.stubEnv('SARVAM_API_KEY', '')
@@ -57,13 +61,28 @@ describe('server/config', () => {
     expect(isSarvamConfigured(env)).toBe(false)
   })
 
-  it('reads SUPABASE_SECRET_KEY', async () => {
+  it('supabase mode needs the URL and the anon key; the service key is optional', async () => {
     vi.stubEnv('SUPABASE_URL', 'https://example.supabase.co')
     vi.stubEnv('SUPABASE_SECRET_KEY', 'secret-role')
+    vi.stubEnv('SUPABASE_ANON_KEY', '')
     vi.resetModules()
-    const { env, isSupabaseConfigured } = await import('../config.js')
-    expect(env.supabaseSecretKey).toBe('secret-role')
-    expect(isSupabaseConfigured(env)).toBe(true)
+    const first = await import('../config.js')
+    expect(first.env.supabaseSecretKey).toBe('secret-role')
+    expect(first.isSupabaseConfigured(first.env)).toBe(false)
+    vi.stubEnv('SUPABASE_ANON_KEY', 'anon-key')
+    vi.stubEnv('SUPABASE_SECRET_KEY', '')
+    vi.resetModules()
+    const second = await import('../config.js')
+    expect(second.isSupabaseConfigured(second.env)).toBe(true)
+  })
+
+  it('reads SITE_URL, DEMO_MODE and AUTH_GOOGLE', async () => {
+    vi.stubEnv('SITE_URL', 'https://mirror.example/')
+    vi.stubEnv('DEMO_MODE', '1')
+    vi.stubEnv('AUTH_GOOGLE', '1')
+    vi.resetModules()
+    const { env } = await import('../config.js')
+    expect(env).toMatchObject({ siteUrl: 'https://mirror.example', demoMode: true, authGoogle: true })
   })
 
   it('a malformed NVIDIA_NIM_BASE_URL fails startup naming the key, not the value', async () => {

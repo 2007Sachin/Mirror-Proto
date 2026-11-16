@@ -18,7 +18,7 @@ const baseFields = {
 
 const helloPayload = z.object({
   interviewId: z.string().min(1).max(128),
-  token: z.string().min(1).max(256),
+  token: z.string().max(256).optional(), // ignored: identity comes from the session cookie
   resumeSessionId: z.string().max(128).optional(),
 })
 

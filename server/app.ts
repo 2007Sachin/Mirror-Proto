@@ -22,18 +22,28 @@ import { buildRounds, extractSkills } from './domain/scout.js'
 import { extractClaims, matchClaims } from './domain/resume.js'
 import type { ReflectionProvider } from './providers/types.js'
 import { ProviderFailure, createNimClient, withDeadline, type NimLog } from './providers/nim.js'
-import { workspaceMiddleware } from './middleware/workspace.js'
+import { requireUser } from './auth/requireUser.js'
+import { originCheck } from './auth/csrf.js'
+import type { AuthClientFactory } from './auth/supabaseAuth.js'
+import type { AuthProvider, RepoFactory } from './auth/types.js'
 import { AppError, errorHandler } from './middleware/errors.js'
 import { registerReplayRoutes } from './routes/replay.js'
 import { registerStoriesRoutes } from './routes/stories.js'
 import { registerMatchRoutes } from './routes/match.js'
 import { registerAloudRoutes } from './routes/aloud.js'
 import { registerScreenRoutes } from './routes/screen.js'
+import { registerAuthRoutes } from './routes/auth.js'
+import { registerMeRoutes } from './routes/me.js'
 import { buildScreeningQuestions, screenTimeUp } from './domain/screening.js'
 
 export interface AppDeps {
   env: Env
-  repo: Repository
+  /** Resolves the signed-in user on every guarded route (401 otherwise). */
+  auth: AuthProvider
+  /** Builds the per-request repository for that user. */
+  repoFor: RepoFactory
+  /** Tests inject a fake Supabase client for the /auth routes. */
+  authClientFactory?: AuthClientFactory
   provider?: ReflectionProvider | null
   log?: NimLog
   /** One overall budget per AI call, in ms. Default 8 s; tests use a few ms. */
@@ -102,7 +112,7 @@ function serializeReflection(reflection: ReflectionRow) {
 }
 
 export function buildApp(deps: AppDeps): Hono {
-  const { env, repo } = deps
+  const { env, auth, repoFor } = deps
   const deadlineMs = deps.aiDeadlineMs ?? 8_000
   const rawProvider =
     deps.provider !== undefined
@@ -123,7 +133,7 @@ export function buildApp(deps: AppDeps): Hono {
   async function supabaseLive(): Promise<boolean> {
     if (!isSupabaseConfigured(env)) return false
     try {
-      const client = createClient(env.supabaseUrl!, env.supabaseSecretKey!)
+      const client = createClient(env.supabaseUrl!, env.supabaseAnonKey!)
       const probe = client.from(PHASE1_TABLES.workspaces).select('slug').limit(1)
       const timeout = new Promise<{ error: { message: string } }>(resolve => {
         setTimeout(() => resolve({ error: { message: 'timeout' } }), 1500)
@@ -136,7 +146,7 @@ export function buildApp(deps: AppDeps): Hono {
   }
 
   /** Never fails on the model: a slow or broken provider gives a catalogue question with source 'fallback'. */
-  const persistFollowUp = (interview: InterviewRow, turns: TurnRow[]) => persistFollowUpDomain(repo, interview, turns, provider)
+  const persistFollowUp = (repo: Repository, interview: InterviewRow, turns: TurnRow[]) => persistFollowUpDomain(repo, interview, turns, provider)
 
   /** Question 1 starts from their story or focus when The First Interview gave us one; else the catalog opener. */
   async function firstQuestion(profile: ProfileRow | null, role: string, industry?: string): Promise<string> {
@@ -146,7 +156,7 @@ export function buildApp(deps: AppDeps): Hono {
     return (await nextFollowUp(draft, [], context ? provider : null, context)).question
   }
 
-  async function generateAndSaveReflection(interview: InterviewRow, turns: TurnRow[]) {
+  async function generateAndSaveReflection(repo: Repository, interview: InterviewRow, turns: TurnRow[]) {
     const profile = await repo.getProfile(interview.workspaceId)
     const toQuotes = (o: { whatStoodOut: { turnId: string; quote: string }[] }) =>
       o.whatStoodOut.map(q => ({ turnId: q.turnId, quote: q.quote, observation: '', competency: '' }))
@@ -161,7 +171,7 @@ export function buildApp(deps: AppDeps): Hono {
           questions: interview.askedQuestions,
           turns: turns.map(t => ({ id: t.id, question: t.question, answer: t.answer })),
           context: profile && { focus: profile.focus, primaryStory: profile.story },
-          previousFocus: await previousReflectionFocus(interview),
+          previousFocus: await previousReflectionFocus(repo, interview),
         })
         // Quotes must be verbatim from this session's answers. The server checks; a bad quote also falls back.
         const checked = validateEvidence(turns, toQuotes(ai))
@@ -188,7 +198,7 @@ export function buildApp(deps: AppDeps): Hono {
   }
 
   /** "Keep working on" from the most recent earlier completed session, if it has one. */
-  async function previousReflectionFocus(interview: InterviewRow): Promise<string | null> {
+  async function previousReflectionFocus(repo: Repository, interview: InterviewRow): Promise<string | null> {
     const earlier = (await repo.listInterviews(interview.workspaceId)).filter(i => i.status === 'completed' && i.id !== interview.id)
     for (const i of earlier) {
       const r = await repo.getReflection(interview.workspaceId, i.id)
@@ -198,19 +208,22 @@ export function buildApp(deps: AppDeps): Hono {
   }
 
   const api = new Hono()
-  api.use('/interviews', workspaceMiddleware(repo))
-  api.use('/interviews/*', workspaceMiddleware(repo))
-  api.use('/onboarding/*', workspaceMiddleware(repo))
-  api.use('/profile', workspaceMiddleware(repo))
-  api.use('/coach-note', workspaceMiddleware(repo))
-  api.use('/targets', workspaceMiddleware(repo))
-  api.use('/targets/*', workspaceMiddleware(repo))
-  api.use('/practice/*', workspaceMiddleware(repo))
-  api.use('/replay/*', workspaceMiddleware(repo))
-  api.use('/stories', workspaceMiddleware(repo))
-  api.use('/stories/*', workspaceMiddleware(repo))
-  api.use('/resume/*', workspaceMiddleware(repo))
-  api.use('/data', workspaceMiddleware(repo))
+  const guard = requireUser(auth, repoFor)
+  api.use('*', originCheck(env)) // cookie auth: refuse cross-site writes
+  api.use('/interviews', guard)
+  api.use('/interviews/*', guard)
+  api.use('/onboarding/*', guard)
+  api.use('/profile', guard)
+  api.use('/coach-note', guard)
+  api.use('/targets', guard)
+  api.use('/targets/*', guard)
+  api.use('/practice/*', guard)
+  api.use('/replay/*', guard)
+  api.use('/stories', guard)
+  api.use('/stories/*', guard)
+  api.use('/resume/*', guard)
+  api.use('/data', guard)
+  api.use('/me/*', guard)
   // Cap request sizes before anything is buffered: 6 MB for the PDF and the audio, 64 KB for JSON.
   const limit = (maxSize: number) => bodyLimit({ maxSize, onError: c => c.json({ error: 'payload_too_large' }, 413) })
   api.use('/onboarding/resume', limit(6 * 1024 * 1024))
@@ -238,10 +251,10 @@ export function buildApp(deps: AppDeps): Hono {
     }),
   )
 
-  // What the client may rely on. Supabase mode keeps the new stores in the browser until they are wired.
+  // What the client may rely on. The new stores live on the server in both modes.
   api.get('/capabilities', c => {
-    const memory = !isSupabaseConfigured(env)
-    return c.json({ newData: memory ? 'server' : 'browser', screenLongCalls: memory || env.screenDbReady })
+    const memory = !isSupabaseConfigured(env) || env.demoMode
+    return c.json({ newData: 'server', screenLongCalls: memory || env.screenDbReady })
   })
 
   api.get('/integration-status', async c =>
@@ -262,6 +275,7 @@ export function buildApp(deps: AppDeps): Hono {
   )
 
   api.post('/interviews', async c => {
+    const repo = c.get('repo')
     const body = createInterviewSchema.parse(await c.req.json().catch(() => ({})))
     // The First Interview queues a personalised opener for the FIRST interview in the role it was built for.
     const workspace = c.get('workspace')
@@ -271,7 +285,7 @@ export function buildApp(deps: AppDeps): Hono {
       let questions = body.questions
       let role = body.role
       if (body.targetId) {
-        const target = await loadTarget(workspace, body.targetId)
+        const target = await loadTarget(repo, workspace, body.targetId)
         if (target.skills.length === 0) throw new AppError(400, 'target_has_no_skills')
         const probes = (await repo.listGapMatches(workspace, target.id).catch(() => [])).flatMap(m => (m.probeQuestion ? [m.probeQuestion] : []))
         questions = buildScreeningQuestions({ id: target.id, role: target.role, company: target.company, skills: target.skills, probes }, body.questionCount ?? 6)
@@ -301,6 +315,7 @@ export function buildApp(deps: AppDeps): Hono {
 
   // Overview: recent practice, newest first.
   api.get('/interviews', async c => {
+    const repo = c.get('repo')
     const workspace = c.get('workspace')
     // Today asks for the default recent few; Sessions pages with ?limit= and ?before=<createdAt>.
     const limit = Math.min(Math.max(Number.parseInt(c.req.query('limit') ?? '', 10) || 10, 1), 100)
@@ -321,6 +336,7 @@ export function buildApp(deps: AppDeps): Hono {
   })
 
   api.post('/interviews/:id/turns', async c => {
+    const repo = c.get('repo')
     const workspace = c.get('workspace')
     const interviewId = c.req.param('id')
     const body = addTurnSchema.parse(await c.req.json().catch(() => ({})))
@@ -365,7 +381,7 @@ export function buildApp(deps: AppDeps): Hono {
     if (!result.completed) {
       const fresh = (await repo.getInterview(workspace, interviewId)) ?? interview
       const savedTurns = await repo.getTurns(workspace, interviewId)
-      const next = await persistFollowUp(fresh, savedTurns)
+      const next = await persistFollowUp(repo, fresh, savedTurns)
       nextQuestion = next.question
       source = next.source
     }
@@ -390,6 +406,7 @@ export function buildApp(deps: AppDeps): Hono {
   })
 
   api.post('/interviews/:id/next-question', async c => {
+    const repo = c.get('repo')
     const workspace = c.get('workspace')
     const interview = await repo.getInterview(workspace, c.req.param('id'))
     if (!interview) throw new AppError(404, 'interview_not_found')
@@ -398,7 +415,7 @@ export function buildApp(deps: AppDeps): Hono {
     }
     const turns = await repo.getTurns(workspace, interview.id)
     if (turns.length >= totalFor(interview)) throw new AppError(409, 'interview_already_completed')
-    const { question, source } = await persistFollowUp(interview, turns)
+    const { question, source } = await persistFollowUp(repo, interview, turns)
     return c.json({
       source,
       nextQuestion: question,
@@ -408,6 +425,7 @@ export function buildApp(deps: AppDeps): Hono {
   })
 
   api.get('/interviews/:id', async c => {
+    const repo = c.get('repo')
     const workspace = c.get('workspace')
     const interview = await repo.getInterview(workspace, c.req.param('id'))
     if (!interview) throw new AppError(404, 'interview_not_found')
@@ -417,6 +435,7 @@ export function buildApp(deps: AppDeps): Hono {
   })
 
   api.post('/interviews/:id/complete', async c => {
+    const repo = c.get('repo')
     const workspace = c.get('workspace')
     const interview = await repo.getInterview(workspace, c.req.param('id'))
     const turns = interview ? await repo.getTurns(workspace, interview.id) : []
@@ -435,6 +454,7 @@ export function buildApp(deps: AppDeps): Hono {
   })
 
   api.post('/interviews/:id/abandon', async c => {
+    const repo = c.get('repo')
     const workspace = c.get('workspace')
     const interview = await repo.getInterview(workspace, c.req.param('id'))
     const check = canAbandon(interview)
@@ -446,6 +466,7 @@ export function buildApp(deps: AppDeps): Hono {
   })
 
   api.post('/interviews/:id/reflect', async c => {
+    const repo = c.get('repo')
     const workspace = c.get('workspace')
     const interview = await repo.getInterview(workspace, c.req.param('id'))
     if (!interview) throw new AppError(404, 'interview_not_found')
@@ -461,7 +482,7 @@ export function buildApp(deps: AppDeps): Hono {
     if (interview.status !== 'completed') {
       await repo.updateInterviewStatus(workspace, interview.id, 'completed')
     }
-    const reflection = await generateAndSaveReflection(interview, turns)
+    const reflection = await generateAndSaveReflection(repo, interview, turns)
     return c.json(serializeReflection(reflection), 201)
   })
 
@@ -501,6 +522,7 @@ export function buildApp(deps: AppDeps): Hono {
   // an interview opened or closed). ponytail: in-memory, so a server restart rewrites it once; persist it if that matters.
   const coachNotes = new Map<string, Record<string, string>>()
   api.get('/coach-note', async c => {
+    const repo = c.get('repo')
     const workspace = c.get('workspace')
     const profile = await repo.getProfile(workspace)
     if (!profile) throw new AppError(404, 'profile_not_found')
@@ -530,7 +552,7 @@ export function buildApp(deps: AppDeps): Hono {
 
   // ---- The Loop: targets ----
   /** Scout runs after the response. Each REAL step appends an event; any failure still ends in 'ready'. */
-  async function runScout(workspace: string, target: Target): Promise<void> {
+  async function runScout(repo: Repository, workspace: string, target: Target): Promise<void> {
     const events: AgentEvent[] = []
     const say = async (agent: AgentEvent['agent'], text: string, source?: 'ai' | 'fallback') => {
       events.push({ at: new Date().toISOString(), agent, text, ...(source ? { source } : {}) })
@@ -601,7 +623,7 @@ export function buildApp(deps: AppDeps): Hono {
   const nextStepSource = (t: Target): 'ai' | 'fallback' =>
     [...t.events].reverse().find(e => e.agent === 'Planner')?.source === 'fallback' ? 'fallback' : 'ai'
 
-  const loadTarget = async (workspace: string, id: string) => {
+  const loadTarget = async (repo: Repository, workspace: string, id: string) => {
     const target = await repo.getTarget(workspace, id)
     if (!target) throw new AppError(404, 'target_not_found')
     return target
@@ -619,50 +641,59 @@ export function buildApp(deps: AppDeps): Hono {
   })
 
   api.post('/practice/attempts', async c => {
+    const repo = c.get('repo')
     const body = attemptSchema.parse(await c.req.json().catch(() => ({})))
     const row = await repo.addPracticeAttempt(c.get('workspace'), body)
     return c.json({ id: row.id }, 201)
   })
 
   api.get('/practice/summary', async c => {
+    const repo = c.get('repo')
     // ponytail: reads up to 5000 attempts and folds in memory; move to SQL aggregation if a user ever exceeds that.
     return c.json(summarise(await repo.getPracticeAttempts(c.get('workspace'))))
   })
 
   api.post('/targets', async c => {
+    const repo = c.get('repo')
     const workspace = c.get('workspace')
     const body = createTargetSchema.parse(await c.req.json().catch(() => ({})))
     const target = await repo.createTarget(workspace, { ...body, interviewDate: body.interviewDate ?? null })
     // ponytail: in-process background job; a server restart mid-scout leaves 'scouting'. Move to a queue if that matters.
-    void runScout(workspace, target)
+    // The request's repo and workspace are captured here: nothing reads the context after the response.
+    void runScout(repo, workspace, target)
     return c.json(target, 201)
   })
 
   api.get('/targets', async c => {
+    const repo = c.get('repo')
     const list = await repo.listTargets(c.get('workspace'))
     return c.json(list.map(t => ({ id: t.id, company: t.company, role: t.role, interviewDate: t.interviewDate, status: t.status, nextStep: t.nextStep, nextStepSource: nextStepSource(t), createdAt: t.createdAt })))
   })
 
   api.get('/targets/:id', async c => {
-    const target = await loadTarget(c.get('workspace'), c.req.param('id'))
+    const repo = c.get('repo')
+    const target = await loadTarget(repo, c.get('workspace'), c.req.param('id'))
     return c.json({ ...target, nextStepSource: nextStepSource(target) })
   })
 
   api.delete('/targets/:id', async c => {
+    const repo = c.get('repo')
     await repo.deleteTarget(c.get('workspace'), c.req.param('id'))
     return c.body(null, 204)
   })
 
   api.post('/targets/:id/sql-turn', async c => {
-    await loadTarget(c.get('workspace'), c.req.param('id'))
+    const repo = c.get('repo')
+    await loadTarget(repo, c.get('workspace'), c.req.param('id'))
     const body = sqlTurnSchema.parse(await c.req.json().catch(() => ({})))
     const out = await runOnboardingStep(provider, { step: 'sqlFollowUp', ...body })
     return c.json({ followUp: out.question, source: out.source })
   })
 
   api.post('/targets/:id/sql-debrief', async c => {
+    const repo = c.get('repo')
     const workspace = c.get('workspace')
-    const target = await loadTarget(workspace, c.req.param('id'))
+    const target = await loadTarget(repo, workspace, c.req.param('id'))
     const { attempts } = sqlDebriefSchema.parse(await c.req.json().catch(() => ({})))
     const out = await runOnboardingStep(provider, { step: 'sqlDebrief', role: target.role, attempts })
     const solved = attempts.filter(a => a.passed).length
@@ -701,31 +732,39 @@ export function buildApp(deps: AppDeps): Hono {
   })
 
   api.get('/profile', async c => {
+    const repo = c.get('repo')
     const profile = await repo.getProfile(c.get('workspace'))
     if (!profile) throw new AppError(404, 'profile_not_found')
     return c.json(profile)
   })
 
   api.delete('/profile', async c => {
+    const repo = c.get('repo')
     await repo.deleteProfile(c.get('workspace'))
     return c.body(null, 204)
   })
 
   api.put('/profile', async c => {
+    const repo = c.get('repo')
     const body = profileSchema.parse(await c.req.json().catch(() => ({})))
     return c.json(await repo.saveProfile(c.get('workspace'), body))
   })
 
   // Plain CRUD for the new stores; each feature adds its own logic inside its module.
-  const routeDeps = { repo, provider, env }
+  const routeDeps = { provider, env }
   registerReplayRoutes(api, routeDeps)
   registerStoriesRoutes(api, routeDeps)
   registerMatchRoutes(api, routeDeps)
   registerAloudRoutes(api, routeDeps)
   registerScreenRoutes(api, routeDeps)
+  // Deleting a user's data also drops their in-memory caches (keys start with `<workspace>:`).
+  registerMeRoutes(api, routeDeps, workspace => {
+    for (const cache of [idempotency, coachNotes]) for (const k of [...cache.keys()]) if (k.startsWith(`${workspace}:`)) cache.delete(k)
+  })
 
   // Reset: clears every new store for the workspace.
   api.delete('/data', async c => {
+    const repo = c.get('repo')
     await repo.deleteAllNewData(c.get('workspace'))
     return c.body(null, 204)
   })
@@ -738,6 +777,7 @@ export function buildApp(deps: AppDeps): Hono {
       origin: ['http://localhost:3000', 'http://localhost:5173'],
     }),
   )
+  registerAuthRoutes(app, { env, auth, repoFor, clientFactory: deps.authClientFactory }) // outside the guarded groups: this is how a caller signs in
   app.route('/api', api)
   app.route('/', api)
   return app

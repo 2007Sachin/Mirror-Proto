@@ -21,15 +21,15 @@ async function createAndTurns(app: ReturnType<typeof makeApp>['app'], ws: Record
 describe('workspace isolation', () => {
   it('two workspaces cannot cross-fetch each other’s interviews', async () => {
     const { app } = makeApp()
-    const wsA = { 'X-Dev-Workspace': 'alpha' }
+    const wsA = { 'X-Test-User': 'alpha' }
     const idA = await createAndTurns(app, wsA, 'Product Analyst')
 
-    const foreign = await app.request(`/interviews/${idA}`, { headers: { 'X-Dev-Workspace': 'beta' } })
+    const foreign = await app.request(`/interviews/${idA}`, { headers: { 'X-Test-User': 'beta' } })
     expect(foreign.status).toBe(404)
 
     const foreignTurn = await app.request(`/interviews/${idA}/turns`, {
       method: 'POST',
-      headers: { ...wsA, 'X-Dev-Workspace': 'beta', 'Content-Type': 'application/json' },
+      headers: { ...wsA, 'X-Test-User': 'beta', 'Content-Type': 'application/json' },
       body: JSON.stringify({ questionIndex: 0, answer: 'Trying to write into another workspace.' }),
     })
     expect(foreignTurn.status).toBe(404)
@@ -40,9 +40,9 @@ describe('workspace isolation', () => {
 
   it('role-scoped listing never leaks other roles or workspaces', async () => {
     const { app, repo } = makeApp()
-    await createAndTurns(app, { 'X-Dev-Workspace': 'alpha' }, 'Product Analyst')
-    await createAndTurns(app, { 'X-Dev-Workspace': 'alpha' }, 'UX Designer')
-    await createAndTurns(app, { 'X-Dev-Workspace': 'beta' }, 'Product Analyst')
+    await createAndTurns(app, { 'X-Test-User': 'alpha' }, 'Product Analyst')
+    await createAndTurns(app, { 'X-Test-User': 'alpha' }, 'UX Designer')
+    await createAndTurns(app, { 'X-Test-User': 'beta' }, 'Product Analyst')
 
     const alphaAnalyst = await repo.listInterviewsByRole('alpha', 'Product Analyst')
     expect(alphaAnalyst.length).toBe(1)
@@ -70,7 +70,7 @@ describe('workspace isolation', () => {
     })
     const mine = await app.request(`/interviews/${idA}`, { headers: WS })
     expect((await j(mine)).reflection.focus).toBe('Make the result concrete.')
-    const theirs = await app.request(`/interviews/${idA}`, { headers: { 'X-Dev-Workspace': 'intruder' } })
+    const theirs = await app.request(`/interviews/${idA}`, { headers: { 'X-Test-User': 'intruder' } })
     expect(theirs.status).toBe(404)
   })
 })

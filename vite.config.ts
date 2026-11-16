@@ -20,6 +20,8 @@ export default defineConfig({
         target: 'http://localhost:8787',
         rewrite: p => p.replace(/^\/api/, ''),
       },
+      // Sign-in routes live at /auth on the server (no rewrite); the magic link lands on /auth/callback.
+      '/auth': { target: 'http://localhost:8787' },
       '/ws/voice': {
         target: 'ws://localhost:8787',
         ws: true,

@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { j, makeApp, makeEnv, WS } from './helpers.js'
-import { createMemoryRepository } from '../repo/memory.js'
-import { createSupabaseRepository } from '../repo/supabase.js'
+import { j, makeApp, WS } from './helpers.js'
 
 type App = ReturnType<typeof makeApp>['app']
-const A = { 'X-Dev-Workspace': 'alpha', 'Content-Type': 'application/json' }
-const B = { 'X-Dev-Workspace': 'beta', 'Content-Type': 'application/json' }
+const A = { 'X-Test-User': 'alpha', 'Content-Type': 'application/json' }
+const B = { 'X-Test-User': 'beta', 'Content-Type': 'application/json' }
 const send = (app: App, method: string, path: string, headers: Record<string, string>, body?: unknown) =>
   app.request(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
 
@@ -31,11 +29,11 @@ describe('answer attempts routes', () => {
     expect(await j(await send(app, 'GET', '/replay/attempts', A))).toEqual([])
   })
 
-  it('validates the body and requires the workspace header', async () => {
+  it('validates the body and requires a signed-in user', async () => {
     const { app } = makeApp()
     expect((await send(app, 'POST', '/replay/attempts', A, { ...attempt, kind: 'nope' })).status).toBe(400)
     expect((await send(app, 'POST', '/replay/attempts', A, { ...attempt, answer: '' })).status).toBe(400)
-    expect((await send(app, 'GET', '/replay/attempts', {})).status).toBe(400)
+    expect((await send(app, 'GET', '/replay/attempts', {})).status).toBe(401)
   })
 })
 
@@ -122,23 +120,6 @@ describe('GET /capabilities', () => {
     const { app } = makeApp()
     expect(await j(await app.request('/capabilities'))).toEqual({ newData: 'server', screenLongCalls: true })
   })
-
-  it('supabase mode keeps new data in the browser; long screens need SCREEN_DB_READY', async () => {
-    const base = { supabaseUrl: 'https://example.supabase.co', supabaseSecretKey: 'k' }
-    const repo = createSupabaseRepository(base.supabaseUrl, base.supabaseSecretKey)
-    const off = makeApp({ env: makeEnv(base), repo })
-    expect(await j(await off.app.request('/api/capabilities'))).toEqual({ newData: 'browser', screenLongCalls: false })
-    const on = makeApp({ env: makeEnv({ ...base, screenDbReady: true }), repo })
-    expect(await j(await on.app.request('/capabilities'))).toEqual({ newData: 'browser', screenLongCalls: true })
-  })
-
-  it('a not-ready store answers 503 storage_not_ready', async () => {
-    const repo = createSupabaseRepository('https://example.supabase.co', 'k')
-    const app = makeApp({ repo: { ...repo, ensureWorkspace: async () => {} } }).app
-    const res = await send(app, 'GET', '/stories', A)
-    expect(res.status).toBe(503)
-    expect((await j(res)).error).toBe('storage_not_ready')
-  })
 })
 
 describe('screen interviews', () => {
@@ -212,10 +193,4 @@ describe('screen interviews', () => {
     const reflect = await send(app, 'POST', `/interviews/${id}/reflect`, headers)
     expect(reflect.status).toBe(409)
   })
-})
-
-it('memory repo and supabase repo expose the same method names', () => {
-  const mem = Object.keys(createMemoryRepository()).sort()
-  const sb = Object.keys(createSupabaseRepository('https://example.supabase.co', 'k')).sort()
-  expect(sb).toEqual(mem)
 })

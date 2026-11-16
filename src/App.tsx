@@ -14,7 +14,7 @@ import Privacy from './pages/Privacy'
 import { saveStoryFromAnswer } from './stories/saveStory'
 import { useVoiceSession } from './voice/useVoiceSession'
 import * as data from './lib/data'
-import { clearBrowserKeys } from './features/privacy/dataTools'
+import { KEEP_ON_SIGN_OUT, clearBrowserKeys } from './features/privacy/dataTools'
 import { useSession } from './features/auth/useSession'
 import AuthGate from './features/auth/AuthGate'
 import AccountMenu from './features/auth/AccountMenu'
@@ -74,8 +74,8 @@ export default function App() {
   const signOut = async () => {
     try { await authApi.signOut() } catch { /* the cookie may already be gone */ }
     session.clear()
-    // Drafts, the open session and old unscoped keys go; each person's own saved progress (mirror.data.v1.<id>.*) stays for their next sign-in.
-    clearBrowserKeys(localStorage, 'mirror.data.v1.'); clearBrowserKeys(sessionStorage)
+    // Only each person's own SQL progress (mirror.data.v1.<id>.sql.*) stays for their next sign-in; every other mirror.* key goes.
+    clearBrowserKeys(localStorage, KEEP_ON_SIGN_OUT); clearBrowserKeys(sessionStorage)
     window.location.assign('/') // a fresh page drops every in-memory copy of this user's data
   }
   const [targetId, setTargetId] = useState<string | null>(null)

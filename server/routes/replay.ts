@@ -15,6 +15,7 @@ const attemptSchema = z.object({
 
 const replayItemSchema = z.object({
   itemId: z.string().min(1).max(120),
+  kind: z.enum(['question', 'pattern', 'practice_item']).optional(),
   dueAt: z.string().min(1).max(40),
   intervalDays: z.number().int().min(0).max(3650),
   rung: z.number().int().min(0).max(20),

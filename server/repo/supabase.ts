@@ -543,15 +543,15 @@ export function createUserRepository(client: Db, userId: string, opts: { screenD
     async addAnswerAttempt(workspace: string, input: AnswerAttemptInput): Promise<AnswerAttemptRow> {
       const res = await client.from(NEW_TABLES.answerAttempts).insert(answerAttemptInsert(userId, input)).select().single()
       const row = answerAttemptFromRow(userId, one(res, 'add answer attempt'))
-      // The key cannot hold both ids; hand back what the caller gave.
-      return { ...row, workspaceId: workspace, itemId: input.itemId ?? null, questionIndex: input.questionIndex }
+      return { ...row, workspaceId: workspace, questionIndex: input.questionIndex }
     },
 
     async listAnswerAttempts(_workspace: string, filter?: AnswerAttemptFilter): Promise<AnswerAttemptRow[]> {
-      const { like, interviewId } = answerAttemptQuery(filter)
+      const { kind, itemId, interviewId } = answerAttemptQuery(filter)
       let q = client.from(NEW_TABLES.answerAttempts).select().eq('user_id', userId)
       if (interviewId) q = q.eq('interview_id', interviewId)
-      if (like) q = q.like('question_key', like)
+      if (kind) q = q.eq('kind', kind)
+      if (itemId) q = q.eq('item_id', itemId)
       const res = await q.order('created_at', { ascending: true })
       return many(res, 'list answer attempts').map(r => answerAttemptFromRow(userId, r))
     },
@@ -649,12 +649,11 @@ export function createUserRepository(client: Db, userId: string, opts: { screenD
     listGapMatches,
 
     async upsertReplayItem(_workspace: string, input: ReplayItemInput) {
-      // The unique key of this table is not known to us, so look the row up instead of relying on ON CONFLICT.
+      // Look the row up by item_key (one row per item per user) instead of relying on ON CONFLICT.
       const found = await client
         .from(NEW_TABLES.replaySchedule)
         .select()
         .eq('user_id', userId)
-        .eq('item_kind', 'practice')
         .eq('item_key', input.itemId)
         .maybeSingle()
       const existing = maybe(found, 'find replay item')
@@ -670,7 +669,6 @@ export function createUserRepository(client: Db, userId: string, opts: { screenD
         .from(NEW_TABLES.replaySchedule)
         .select()
         .eq('user_id', userId)
-        .eq('item_kind', 'practice')
         .order('due_at', { ascending: true })
       return many(res, 'list replay schedule').map(r => replayFromRow(userId, r))
     },
@@ -680,7 +678,6 @@ export function createUserRepository(client: Db, userId: string, opts: { screenD
         .from(NEW_TABLES.replaySchedule)
         .delete()
         .eq('user_id', userId)
-        .eq('item_kind', 'practice')
         .eq('item_key', itemId)
       throwIf(error, 'delete replay item')
     },

@@ -22,6 +22,8 @@ export type Database = {
           duration_seconds: number | null
           word_count: number | null
           created_at: string
+          kind: string | null
+          item_id: string | null
         }
         Insert: {
           id?: string
@@ -36,6 +38,8 @@ export type Database = {
           duration_seconds?: number | null
           word_count?: number | null
           created_at?: string
+          kind?: string | null
+          item_id?: string | null
         }
         Update: {
           id?: string
@@ -50,6 +54,8 @@ export type Database = {
           duration_seconds?: number | null
           word_count?: number | null
           created_at?: string
+          kind?: string | null
+          item_id?: string | null
         }
         Relationships: [
           { foreignKeyName: 'mirror_answer_attempts_interview_id_fkey'; columns: ['interview_id']; isOneToOne: false; referencedRelation: 'mirror_interviews'; referencedColumns: ['id'] },
@@ -291,6 +297,9 @@ export type Database = {
           resume_name: string | null
           created_at: string
           updated_at: string
+          skills: string[]
+          has_number: boolean | null
+          is_vague: boolean | null
         }
         Insert: {
           id?: string
@@ -301,6 +310,9 @@ export type Database = {
           resume_name?: string | null
           created_at?: string
           updated_at?: string
+          skills: string[]
+          has_number?: boolean | null
+          is_vague?: boolean | null
         }
         Update: {
           id?: string
@@ -311,6 +323,9 @@ export type Database = {
           resume_name?: string | null
           created_at?: string
           updated_at?: string
+          skills?: string[]
+          has_number?: boolean | null
+          is_vague?: boolean | null
         }
         Relationships: []
       }
@@ -329,6 +344,9 @@ export type Database = {
           archived_at: string | null
           created_at: string
           updated_at: string
+          quote: string | null
+          question: string | null
+          source_turn_id: string | null
         }
         Insert: {
           id?: string
@@ -344,6 +362,9 @@ export type Database = {
           archived_at?: string | null
           created_at?: string
           updated_at?: string
+          quote?: string | null
+          question?: string | null
+          source_turn_id?: string | null
         }
         Update: {
           id?: string
@@ -359,9 +380,13 @@ export type Database = {
           archived_at?: string | null
           created_at?: string
           updated_at?: string
+          quote?: string | null
+          question?: string | null
+          source_turn_id?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'mirror_stories_source_interview_id_fkey'; columns: ['source_interview_id']; isOneToOne: false; referencedRelation: 'mirror_interviews'; referencedColumns: ['id'] }
+          { foreignKeyName: 'mirror_stories_source_interview_id_fkey'; columns: ['source_interview_id']; isOneToOne: false; referencedRelation: 'mirror_interviews'; referencedColumns: ['id'] },
+          { foreignKeyName: 'mirror_stories_source_turn_id_fkey'; columns: ['source_turn_id']; isOneToOne: false; referencedRelation: 'mirror_turns'; referencedColumns: ['id'] }
         ]
       }
       mirror_target_gap_matches: {
@@ -377,6 +402,9 @@ export type Database = {
           note: string | null
           created_at: string
           updated_at: string
+          probe_question: string | null
+          area: string | null
+          source: string | null
         }
         Insert: {
           id?: string
@@ -390,6 +418,9 @@ export type Database = {
           note?: string | null
           created_at?: string
           updated_at?: string
+          probe_question?: string | null
+          area?: string | null
+          source?: string | null
         }
         Update: {
           id?: string
@@ -403,6 +434,9 @@ export type Database = {
           note?: string | null
           created_at?: string
           updated_at?: string
+          probe_question?: string | null
+          area?: string | null
+          source?: string | null
         }
         Relationships: [
           { foreignKeyName: 'mirror_target_gap_matches_target_id_fkey'; columns: ['target_id']; isOneToOne: false; referencedRelation: 'mirror_targets'; referencedColumns: ['id'] },

@@ -24,10 +24,10 @@ export type Row<T extends keyof Tables> = Tables[T]['Row']
 export type Insert<T extends keyof Tables> = Tables[T]['Insert']
 export type Update<T extends keyof Tables> = Tables[T]['Update']
 
-// ---- answer attempts: the live table has no kind/item/index columns, so they ride in question_key ----
+// ---- answer attempts: kind and item_id are real columns; question_key names the question (<interview or item>:<index>) ----
 
-export function answerAttemptKey(input: Pick<AnswerAttemptInput, 'kind' | 'interviewId' | 'itemId' | 'questionIndex'>): string {
-  return `${input.kind}:${input.interviewId ?? input.itemId ?? 'x'}:${input.questionIndex ?? 0}`
+export function answerAttemptKey(input: Pick<AnswerAttemptInput, 'interviewId' | 'itemId' | 'questionIndex'>): string {
+  return `${input.interviewId ?? input.itemId ?? 'x'}:${input.questionIndex ?? 0}`
 }
 
 export function answerAttemptInsert(userId: string, input: AnswerAttemptInput): Insert<'mirror_answer_attempts'> {
@@ -36,6 +36,8 @@ export function answerAttemptInsert(userId: string, input: AnswerAttemptInput): 
     interview_id: input.interviewId,
     turn_id: null,
     question_key: answerAttemptKey(input),
+    kind: input.kind,
+    item_id: input.itemId ?? null,
     question: input.question,
     attempt_no: input.attempt,
     answer_text: input.answer,
@@ -45,11 +47,8 @@ export function answerAttemptInsert(userId: string, input: AnswerAttemptInput): 
 }
 
 export function answerAttemptFromRow(userId: string, r: Row<'mirror_answer_attempts'>): AnswerAttemptRow {
-  const first = r.question_key.indexOf(':')
-  const last = r.question_key.lastIndexOf(':')
-  const kind: AnswerAttemptInput['kind'] = r.question_key.slice(0, first) === 'explain' ? 'explain' : 'retry'
-  const middle = first >= 0 && last > first ? r.question_key.slice(first + 1, last) : ''
-  const index = Number(r.question_key.slice(last + 1))
+  const kind: AnswerAttemptInput['kind'] = r.kind === 'explain' ? 'explain' : 'retry'
+  const index = Number(r.question_key.slice(r.question_key.lastIndexOf(':') + 1))
   return {
     id: r.id,
     workspaceId: userId,
@@ -60,24 +59,20 @@ export function answerAttemptFromRow(userId: string, r: Row<'mirror_answer_attem
     attempt: Number(r.attempt_no),
     answer: r.answer_text,
     kind,
-    itemId: kind === 'explain' && middle && middle !== 'x' && middle !== r.interview_id ? middle : null,
+    itemId: r.item_id,
     transcriptSource: r.transcript_source === 'voice' ? 'voice' : 'text',
     createdAt: r.created_at,
   }
 }
 
-const likeEscape = (s: string) => s.replace(/[\\%_]/g, c => `\\${c}`)
-
-/** `like` pattern for question_key (null: no key filter) and the interview_id to match (null: any). */
-export function answerAttemptQuery(filter: AnswerAttemptFilter = {}): { like: string | null; interviewId: string | null } {
-  const id = filter.interviewId ?? filter.itemId
-  let like: string | null = null
-  if (filter.kind) like = id ? `${filter.kind}:${likeEscape(id)}:%` : `${filter.kind}:%`
-  else if (id) like = `%:${likeEscape(id)}:%`
-  return { like, interviewId: filter.interviewId ?? null }
+/** Columns to match for a filter (null: no constraint). */
+export function answerAttemptQuery(filter: AnswerAttemptFilter = {}): { kind: string | null; itemId: string | null; interviewId: string | null } {
+  return { kind: filter.kind ?? null, itemId: filter.itemId ?? null, interviewId: filter.interviewId ?? null }
 }
 
-// ---- stories: quote, question and sourceTurnId have no live column (documented limitation) ----
+// ---- stories ----
+
+export const storySource = (sourceInterviewId: string | null): 'manual' | 'interview' => (sourceInterviewId ? 'interview' : 'manual')
 
 export function storyInsert(userId: string, input: StoryInput): Insert<'mirror_stories'> {
   return {
@@ -88,7 +83,11 @@ export function storyInsert(userId: string, input: StoryInput): Insert<'mirror_s
     action: input.action,
     result: input.result,
     themes: input.themes,
+    quote: input.quote,
+    question: input.question,
+    source: storySource(input.sourceInterviewId),
     source_interview_id: input.sourceInterviewId,
+    source_turn_id: input.sourceTurnId,
     archived_at: null,
   }
 }
@@ -101,7 +100,10 @@ export function storyPatch(patch: Partial<StoryInput>, nowIso: string): Update<'
   if (patch.action !== undefined) u.action = patch.action
   if (patch.result !== undefined) u.result = patch.result
   if (patch.themes !== undefined) u.themes = patch.themes
-  if (patch.sourceInterviewId !== undefined) u.source_interview_id = patch.sourceInterviewId
+  if (patch.quote !== undefined) u.quote = patch.quote
+  if (patch.question !== undefined) u.question = patch.question
+  if (patch.sourceInterviewId !== undefined) { u.source_interview_id = patch.sourceInterviewId; u.source = storySource(patch.sourceInterviewId) }
+  if (patch.sourceTurnId !== undefined) u.source_turn_id = patch.sourceTurnId
   return u
 }
 
@@ -115,30 +117,53 @@ export function storyFromRow(userId: string, r: Row<'mirror_stories'>): StoryRow
     task: r.task ?? '',
     action: r.action ?? '',
     result: r.result ?? '',
-    quote: null,
-    question: null,
+    quote: r.quote,
+    question: r.question,
     sourceInterviewId: r.source_interview_id,
-    sourceTurnId: null,
+    sourceTurnId: r.source_turn_id,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   }
 }
 
-// ---- resume claims: only the quote is stored; the flags are derived again on read ----
+// ---- resume claims ----
+
+export type ClaimCategory = 'skill' | 'tool' | 'project' | 'impact' | 'role' | 'education' | 'other'
+/** A line with a number reads as an impact; one that names skills as a skill; anything else as other. */
+export const claimCategory = (c: Pick<ResumeClaimInput, 'skills' | 'hasNumber'>): ClaimCategory => (c.hasNumber ? 'impact' : c.skills.length > 0 ? 'skill' : 'other')
 
 export function claimInsert(userId: string, input: ResumeClaimInput, resumeName: string | null = null): Insert<'mirror_resume_claims'> {
-  return { user_id: userId, claim: input.quote, source_quote: input.quote, resume_name: resumeName }
+  return {
+    user_id: userId,
+    claim: input.quote,
+    source_quote: input.quote,
+    category: claimCategory(input),
+    skills: input.skills,
+    has_number: input.hasNumber,
+    is_vague: input.vague,
+    resume_name: resumeName,
+  }
 }
 
 export function claimFromRow(userId: string, r: Row<'mirror_resume_claims'>): ResumeClaimRow {
   const quote = r.source_quote ?? r.claim
+  // Rows written before these columns existed have them empty: work them out again from the text.
   const d = describeClaim(quote)
-  return { id: r.id, workspaceId: userId, quote, skills: d.skills, hasNumber: d.hasNumber, vague: d.vague, createdAt: r.created_at }
+  return {
+    id: r.id,
+    workspaceId: userId,
+    quote,
+    skills: r.skills && r.skills.length > 0 ? r.skills : d.skills,
+    hasNumber: r.has_number ?? d.hasNumber,
+    vague: r.is_vague ?? d.vague,
+    createdAt: r.created_at,
+  }
 }
 
 // ---- gap matches ----
 
 const STATUSES = ['covered', 'partial', 'gap'] as const
+const AREAS = [...new Set(DICTIONARY.map(d => d.area))]
 
 export function gapMatchInsert(
   userId: string,
@@ -155,6 +180,9 @@ export function gapMatchInsert(
     claim_id: claimId,
     match_status: row.status,
     note: row.note,
+    probe_question: row.probeQuestion,
+    area: row.area,
+    source: row.source,
   }
 }
 
@@ -166,13 +194,13 @@ export function gapMatchFromRow(userId: string, r: Row<'mirror_target_gap_matche
     workspaceId: userId,
     targetId: r.target_id,
     skill: r.skill_name,
-    area: areaOf(r.skill_name),
+    area: AREAS.find(a => a === r.area) ?? areaOf(r.skill_name),
     weight: r.skill_weight === 'core' ? 'core' : 'nice',
     status: STATUSES.find(s => s === r.match_status) ?? 'gap',
     claimQuote,
     note: r.note ?? '',
-    probeQuestion: null, // not stored; GET /targets/:id/match derives it again
-    source: 'fallback',
+    probeQuestion: r.probe_question ?? null,
+    source: r.source === 'ai' ? 'ai' : 'fallback',
     createdAt: r.created_at,
   }
 }
@@ -184,10 +212,12 @@ const num = (v: unknown, fallback: number) => {
   return Number.isFinite(n) ? n : fallback
 }
 
+const REPLAY_KINDS = ['question', 'pattern', 'practice_item'] as const
+
 export function replayInsert(userId: string, input: ReplayItemInput, nowIso: string): Insert<'mirror_replay_schedule'> {
   return {
     user_id: userId,
-    item_kind: 'question',
+    item_kind: input.kind ?? 'practice_item',
     item_key: input.itemId,
     due_at: input.dueAt,
     interval_days: input.intervalDays,
@@ -202,6 +232,7 @@ export function replayFromRow(userId: string, r: Row<'mirror_replay_schedule'>):
     id: r.id,
     workspaceId: userId,
     itemId: r.item_key,
+    kind: REPLAY_KINDS.find(k => k === r.item_kind) ?? 'practice_item',
     dueAt: r.due_at,
     intervalDays: num(r.interval_days, 0),
     rung: num(r.repetitions, 0),

@@ -53,30 +53,31 @@ describe('new-table mappings through the repository', () => {
   it('answer attempts: key encoding, filters, oldest first', async () => {
     const { repo, calls } = repoWith()
     await repo.addAnswerAttempt(U, { interviewId: null, questionIndex: null, question: 'q', attempt: 2, answer: 'one two', kind: 'explain', itemId: 'sql-1', transcriptSource: 'voice' })
-    expect(rowsOf(calls[0])[0]).toMatchObject({ question_key: 'explain:sql-1:0', attempt_no: 2, answer_text: 'one two', word_count: 2, turn_id: null, interview_id: null })
+    expect(rowsOf(calls[0])[0]).toMatchObject({ question_key: 'sql-1:0', kind: 'explain', item_id: 'sql-1', attempt_no: 2, answer_text: 'one two', word_count: 2, turn_id: null, interview_id: null })
     await repo.listAnswerAttempts(U, { kind: 'retry', interviewId: 'iv1' })
     const q = calls[1]
-    expect(q.filters).toEqual(expect.arrayContaining([['eq', 'user_id', U], ['eq', 'interview_id', 'iv1'], ['like', 'question_key', 'retry:iv1:%']]))
+    expect(q.filters).toEqual(expect.arrayContaining([['eq', 'user_id', U], ['eq', 'interview_id', 'iv1'], ['eq', 'kind', 'retry']]))
     expect(q.order).toEqual(['created_at', true])
   })
 
-  it('stories: no source/quote columns, archived hidden, newest first, hard delete', async () => {
+  it('stories: quote, question, source and source turn are stored, archived hidden, newest first, hard delete', async () => {
     const { repo, calls } = repoWith()
     const s = await repo.createStory(U, { title: 't', themes: ['x'], situation: 's', task: 't', action: 'a', result: 'r', quote: 'q', question: 'qq', sourceInterviewId: null, sourceTurnId: 'tu' })
-    expect(Object.keys(rowsOf(calls[0])[0]).sort()).toEqual(['action', 'archived_at', 'result', 'situation', 'source_interview_id', 'task', 'themes', 'title', 'user_id'])
-    expect(s).toMatchObject({ quote: null, question: null, sourceTurnId: null, workspaceId: U })
+    expect(Object.keys(rowsOf(calls[0])[0]).sort()).toEqual(['action', 'archived_at', 'question', 'quote', 'result', 'situation', 'source', 'source_interview_id', 'source_turn_id', 'task', 'themes', 'title', 'user_id'])
+    expect(rowsOf(calls[0])[0]).toMatchObject({ quote: 'q', question: 'qq', source: 'manual', source_turn_id: 'tu' })
+    expect(s).toMatchObject({ quote: 'q', question: 'qq', sourceTurnId: 'tu', workspaceId: U })
     await repo.listStories(U)
     expect(calls[1].filters).toEqual(expect.arrayContaining([['eq', 'user_id', U], ['is', 'archived_at', null]]))
     expect(calls[1].order).toEqual(['created_at', false])
     await repo.updateStory(U, 's1', { title: 'new', quote: 'ignored' })
-    expect(Object.keys(calls[2].payload as object).sort()).toEqual(['title', 'updated_at'])
+    expect(Object.keys(calls[2].payload as object).sort()).toEqual(['quote', 'title', 'updated_at'])
     expect(eqOf(calls[2], 'user_id')).toBe(U)
     await repo.deleteStory(U, 's1')
     expect(calls[3]).toMatchObject({ op: 'delete', table: 'mirror_stories' })
   })
 
   it('claims: replace = detach, delete the user rows, insert; flags recomputed on read', async () => {
-    const { repo, calls } = repoWith(undefined, { mirror_resume_claims: [{ id: 'c1', user_id: U, claim: 'x', source_quote: 'Cut SQL runtime by 40%', category: 'other', resume_name: null, created_at: 't', updated_at: 't' }] })
+    const { repo, calls } = repoWith(undefined, { mirror_resume_claims: [{ id: 'c1', user_id: U, claim: 'x', source_quote: 'Cut SQL runtime by 40%', category: 'other', resume_name: null, skills: [], has_number: null, is_vague: null, created_at: 't', updated_at: 't' }] })
     await repo.replaceResumeClaims(U, [{ quote: 'a quote that is long', skills: [], hasNumber: false, vague: false }])
     expect(calls.map(c => `${c.op}:${c.table}`)).toEqual(['update:mirror_target_gap_matches', 'delete:mirror_resume_claims', 'insert:mirror_resume_claims'])
     expect(eqOf(calls[1], 'user_id')).toBe(U)
@@ -86,26 +87,26 @@ describe('new-table mappings through the repository', () => {
   })
 
   it('gap matches: claim_id looked up by quote; claim quote rebuilt from the joined claim', async () => {
-    const claim = { id: 'c1', user_id: U, claim: 'x', source_quote: 'Built SQL dashboards', category: 'other', resume_name: null, created_at: 't', updated_at: 't' }
+    const claim = { id: 'c1', user_id: U, claim: 'x', source_quote: 'Built SQL dashboards', category: 'other', resume_name: null, skills: [], has_number: null, is_vague: null, created_at: 't', updated_at: 't' }
     const match = { id: 'm1', user_id: U, target_id: 't1', skill_name: 'SQL', skill_weight: 'core', jd_quote: null, claim_id: 'c1', match_status: 'covered', note: 'n', created_at: 't', updated_at: 't' }
     const { repo, calls } = repoWith(undefined, { mirror_resume_claims: [claim], mirror_target_gap_matches: [match] })
     const saved = await repo.replaceGapMatches(U, 't1', [{ skill: 'SQL', area: 'sql', weight: 'core', status: 'covered', claimQuote: 'Built SQL dashboards', note: 'n', probeQuestion: 'p?', source: 'ai' }])
     expect(calls.map(c => `${c.op}:${c.table}`)).toEqual(['select:mirror_resume_claims', 'delete:mirror_target_gap_matches', 'insert:mirror_target_gap_matches'])
     expect(eqOf(calls[1], 'target_id')).toBe('t1')
     expect(eqOf(calls[1], 'user_id')).toBe(U)
-    expect(rowsOf(calls[2])[0]).toMatchObject({ target_id: 't1', skill_name: 'SQL', skill_weight: 'core', jd_quote: null, claim_id: 'c1', match_status: 'covered', note: 'n' })
+    expect(rowsOf(calls[2])[0]).toMatchObject({ target_id: 't1', skill_name: 'SQL', skill_weight: 'core', jd_quote: null, claim_id: 'c1', match_status: 'covered', note: 'n', probe_question: 'p?', area: 'sql', source: 'ai' })
     expect(saved[0]).toMatchObject({ probeQuestion: 'p?', source: 'ai', area: 'sql' })
     const read = await repo.listGapMatches(U, 't1')
     expect(read[0]).toMatchObject({ skill: 'SQL', claimQuote: 'Built SQL dashboards', probeQuestion: null, source: 'fallback', area: 'sql', status: 'covered' })
   })
 
   it('replay: ease and numbers arrive as strings and are coerced; an existing item is updated, not inserted', async () => {
-    const row = { id: 'r1', user_id: U, item_kind: 'question', item_key: 'sql-1', track: null, due_at: 'd', interval_days: '6', ease: '2.50', repetitions: '2', last_recall: 'again', last_reviewed_at: null, created_at: 't', updated_at: 'u' }
+    const row = { id: 'r1', user_id: U, item_kind: 'practice_item', item_key: 'sql-1', track: null, due_at: 'd', interval_days: '6', ease: '2.50', repetitions: '2', last_recall: 'again', last_reviewed_at: null, created_at: 't', updated_at: 'u' }
     const { repo, calls } = repoWith(undefined, { mirror_replay_schedule: [row] })
     expect((await repo.listReplaySchedule(U))[0]).toMatchObject({ itemId: 'sql-1', intervalDays: 6, rung: 2, lastResult: false })
     const saved = await repo.upsertReplayItem(U, { itemId: 'sql-1', dueAt: 'd2', intervalDays: 3, rung: 1, lastResult: true })
     expect(calls.map(c => c.op)).toEqual(['select', 'select', 'update'])
-    expect(calls[2].payload).toMatchObject({ item_kind: 'question', item_key: 'sql-1', repetitions: 1, last_recall: 'good', interval_days: 3 })
+    expect(calls[2].payload).toMatchObject({ item_kind: 'practice_item', item_key: 'sql-1', repetitions: 1, last_recall: 'good', interval_days: 3 })
     expect(eqOf(calls[2], 'id')).toBe('r1')
     expect(saved.itemId).toBe('sql-1')
   })

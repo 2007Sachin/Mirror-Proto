@@ -11,12 +11,15 @@
  * Then, as B, for every table: select shows no A rows, update and delete change zero A rows, inserting with A's user_id
  * is rejected, and inserting a child (turn, reflection, answer attempt, gap match) that points at A's parent is rejected.
  * The anon client with no token is rejected on every table too.
+ * A third throwaway user (C) then round-trips every column added by migration 0008 through the real repository, and every
+ * allowed value of the check-constrained columns is inserted once.
  * afterAll removes both users' rows (each with its own session) and then only the two users it created. The service key is
  * used for creating and deleting those two users and nothing else.
  */
 import { randomBytes, randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createUserRepository } from '../../repo/supabase.js'
 
 const LIVE = process.env.LIVE_RLS === '1'
 if (LIVE) await import('dotenv/config')
@@ -69,6 +72,7 @@ describe.skipIf(!LIVE)('live RLS: two users, twelve tables', () => {
   const created: string[] = [] // only users this test made
   let a: Who
   let b: Who
+  let c: Who | undefined
   let anonDb: Db
   const aRows = {} as Record<Table, string> // key of A's row per table
   const aParents: Parents = {}
@@ -116,7 +120,7 @@ describe.skipIf(!LIVE)('live RLS: two users, twelve tables', () => {
 
   afterAll(async () => {
     const order = [...TABLES].reverse()
-    for (const who of [a, b]) {
+    for (const who of [a, b, c]) {
       if (!who) continue
       for (const t of order) await who.db.from(t).delete().eq('user_id', who.id)
     }
@@ -187,4 +191,115 @@ describe.skipIf(!LIVE)('live RLS: two users, twelve tables', () => {
     const { error } = await b.db.from('mirror_stories').insert({ user_id: randomUUID(), title: 'x', themes: [] })
     expect(error).not.toBeNull()
   })
+  it('round-trips every column of migration 0008 through the repository, as a third user', async () => {
+    const admin = createClient(url, service, opts)
+    c = await makeUser(admin, 'c')
+    const parents: Parents = {}
+    const seeded: Partial<Record<Table, string>> = {}
+    for (const t of ['mirror_workspaces', 'mirror_interviews', 'mirror_turns', 'mirror_targets'] as const) {
+      const row = await insertAs(c, t, parents)
+      seeded[t] = keyOf(t, row)
+      if (t === 'mirror_interviews') parents.interview = seeded[t]
+      if (t === 'mirror_targets') parents.target = seeded[t]
+    }
+    const repo = createUserRepository(c.db, c.id)
+    const ws = c.id
+
+    // answer attempts: kind and item_id are columns now
+    const retry = await repo.addAnswerAttempt(ws, { interviewId: parents.interview!, questionIndex: 1, question: 'Q?', attempt: 2, answer: 'one two three', kind: 'retry', itemId: null, transcriptSource: 'voice' })
+    const explain = await repo.addAnswerAttempt(ws, { interviewId: null, questionIndex: null, question: 'Explain', attempt: 1, answer: 'because joins', kind: 'explain', itemId: 'sql-live-1', transcriptSource: 'text' })
+    expect(retry).toMatchObject({ kind: 'retry', itemId: null, questionIndex: 1 })
+    expect(explain).toMatchObject({ kind: 'explain', itemId: 'sql-live-1', questionIndex: null })
+    const rawAttempts = await c.db.from('mirror_answer_attempts').select('kind, item_id, question_key').eq('user_id', c.id).order('created_at')
+    expect(rawAttempts.data).toEqual([
+      { kind: 'retry', item_id: null, question_key: `${parents.interview}:1` },
+      { kind: 'explain', item_id: 'sql-live-1', question_key: 'sql-live-1:0' },
+    ])
+    expect((await repo.listAnswerAttempts(ws, { kind: 'explain' })).map(r => r.itemId)).toEqual(['sql-live-1'])
+    expect((await repo.listAnswerAttempts(ws, { itemId: 'sql-live-1' })).map(r => r.kind)).toEqual(['explain'])
+    expect((await repo.listAnswerAttempts(ws, { interviewId: parents.interview!, kind: 'retry' })).map(r => r.attempt)).toEqual([2])
+
+    // stories: quote, question, source and the source turn (a real FK to mirror_turns)
+    const base = { title: 'Live story', themes: ['ownership'], situation: 's', task: 't', action: 'a', result: 'r', quote: 'I owned the rebuild', question: 'Tell me about a project' }
+    const fromInterview = await repo.createStory(ws, { ...base, sourceInterviewId: parents.interview!, sourceTurnId: seeded.mirror_turns! })
+    const manual = await repo.createStory(ws, { ...base, title: 'Manual story', sourceInterviewId: null, sourceTurnId: null })
+    expect(fromInterview).toMatchObject({ quote: base.quote, question: base.question, sourceInterviewId: parents.interview, sourceTurnId: seeded.mirror_turns })
+    const rawStories = await c.db.from('mirror_stories').select('title, quote, question, source, source_turn_id').eq('user_id', c.id).order('created_at')
+    expect(rawStories.data).toEqual([
+      { title: 'Live story', quote: base.quote, question: base.question, source: 'interview', source_turn_id: seeded.mirror_turns },
+      { title: 'Manual story', quote: base.quote, question: base.question, source: 'manual', source_turn_id: null },
+    ])
+    const patched = await repo.updateStory(ws, manual.id, { quote: 'new quote', question: 'new question' })
+    expect(patched).toMatchObject({ quote: 'new quote', question: 'new question' })
+    const listed = await repo.listStories(ws)
+    expect(listed.map(r => r.quote).sort()).toEqual(['I owned the rebuild', 'new quote'])
+
+    // resume claims: category, skills (text[]), has_number, is_vague
+    const claims = await repo.replaceResumeClaims(ws, [
+      { quote: 'Cut report time from 3 hours to 20 minutes with SQL', skills: ['SQL'], hasNumber: true, vague: false },
+      { quote: 'Built dashboards in Python and Excel', skills: ['Python', 'Excel'], hasNumber: false, vague: false },
+      { quote: 'Helped with various things for the team', skills: [], hasNumber: false, vague: true },
+    ])
+    expect(claims).toHaveLength(3)
+    const rawClaims = await c.db.from('mirror_resume_claims').select('claim, category, skills, has_number, is_vague').eq('user_id', c.id).order('created_at')
+    expect(rawClaims.data).toEqual([
+      { claim: 'Cut report time from 3 hours to 20 minutes with SQL', category: 'impact', skills: ['SQL'], has_number: true, is_vague: false },
+      { claim: 'Built dashboards in Python and Excel', category: 'skill', skills: ['Python', 'Excel'], has_number: false, is_vague: false },
+      { claim: 'Helped with various things for the team', category: 'other', skills: [], has_number: false, is_vague: true },
+    ])
+    const readClaims = await repo.listResumeClaims(ws)
+    expect(readClaims.find(r => r.quote.startsWith('Built dashboards'))).toMatchObject({ skills: ['Python', 'Excel'], hasNumber: false, vague: false })
+    expect(readClaims.find(r => r.quote.startsWith('Helped'))).toMatchObject({ skills: [], vague: true })
+
+    // gap matches: probe_question, area, source, every weight and status
+    const matches = await repo.replaceGapMatches(ws, parents.target!, [
+      { skill: 'SQL', area: 'sql', weight: 'core', status: 'covered', claimQuote: claims[0].quote, note: 'n1', probeQuestion: 'How did you cut the time?', source: 'ai' },
+      { skill: 'Python', area: 'python', weight: 'core', status: 'partial', claimQuote: claims[1].quote, note: 'n2', probeQuestion: 'Where did you use Python?', source: 'fallback' },
+      { skill: 'Tableau', area: 'tools', weight: 'nice', status: 'gap', claimQuote: null, note: 'n3', probeQuestion: 'Tell me about a chart you built', source: 'fallback' },
+    ])
+    expect(matches).toHaveLength(3)
+    const rawMatches = await c.db.from('mirror_target_gap_matches').select('skill_name, skill_weight, match_status, probe_question, area, source, claim_id').eq('user_id', c.id).order('skill_name')
+    expect(rawMatches.data?.map(r => [r.skill_name, r.skill_weight, r.match_status, r.probe_question, r.area, r.source])).toEqual([
+      ['Python', 'core', 'partial', 'Where did you use Python?', 'python', 'fallback'],
+      ['SQL', 'core', 'covered', 'How did you cut the time?', 'sql', 'ai'],
+      ['Tableau', 'nice', 'gap', 'Tell me about a chart you built', 'tools', 'fallback'],
+    ])
+    expect(rawMatches.data?.find(r => r.skill_name === 'SQL')?.claim_id).not.toBeNull()
+    expect(rawMatches.data?.find(r => r.skill_name === 'Tableau')?.claim_id).toBeNull()
+    const readMatches = await repo.listGapMatches(ws, parents.target!)
+    expect(readMatches.find(r => r.skill === 'SQL')).toMatchObject({ probeQuestion: 'How did you cut the time?', area: 'sql', source: 'ai', status: 'covered', weight: 'core', claimQuote: claims[0].quote })
+    expect(readMatches.find(r => r.skill === 'Tableau')).toMatchObject({ area: 'tools', source: 'fallback', status: 'gap', weight: 'nice', claimQuote: null })
+
+    // replay schedule: every item kind, and the recall mapping
+    for (const kind of ['question', 'pattern', 'practice_item'] as const) {
+      const saved = await repo.upsertReplayItem(ws, { itemId: `live-${kind}`, kind, dueAt: '2026-12-01T00:00:00.000Z', intervalDays: 3, rung: 1, lastResult: true })
+      expect(saved).toMatchObject({ itemId: `live-${kind}`, kind, intervalDays: 3, rung: 1, lastResult: true })
+    }
+    const again = await repo.upsertReplayItem(ws, { itemId: 'live-question', kind: 'question', dueAt: '2026-12-05T00:00:00.000Z', intervalDays: 1, rung: 0, lastResult: false })
+    expect(again).toMatchObject({ lastResult: false, intervalDays: 1 })
+    const schedule = await repo.listReplaySchedule(ws)
+    expect(schedule.map(r => [r.itemId, r.kind]).sort()).toEqual([['live-pattern', 'pattern'], ['live-practice_item', 'practice_item'], ['live-question', 'question']])
+    const rawReplay = await c.db.from('mirror_replay_schedule').select('item_kind, item_key').eq('user_id', c.id)
+    expect(rawReplay.data).toHaveLength(3)
+
+    // the user's own export carries the new columns too
+    const everything = await repo.exportAllData(ws)
+    expect(everything.stories.map(r => r.quote)).toContain('I owned the rebuild')
+    expect(everything.gapMatches.map(r => r.probeQuestion)).toContain('How did you cut the time?')
+  }, 120_000)
+
+  it('accepts every allowed value of the check-constrained columns', async () => {
+    const who = c!
+    const ok = async (table: Table, row: Row) => {
+      const { error } = await who.db.from(table).insert(row)
+      expect(error, `${table} ${JSON.stringify(row)}`).toBeNull()
+    }
+    for (const source of ['manual', 'first_interview', 'interview']) await ok('mirror_stories', { user_id: who.id, title: `src ${source}`, themes: [], source })
+    for (const category of ['skill', 'tool', 'project', 'impact', 'role', 'education', 'other']) await ok('mirror_resume_claims', { user_id: who.id, claim: `cat ${category}`, category })
+    for (const kind of ['question', 'pattern', 'practice_item']) await ok('mirror_replay_schedule', { user_id: who.id, item_kind: kind, item_key: `allowed-${kind}`, track: 'sql' })
+    const target = (await who.db.from('mirror_targets').select('id').eq('user_id', who.id).limit(1).single()).data?.id as string
+    for (const w of ['core', 'nice']) for (const m of ['covered', 'partial', 'gap']) await ok('mirror_target_gap_matches', { user_id: who.id, target_id: target, skill_name: `s-${w}-${m}`, skill_weight: w, match_status: m })
+    const bad = await who.db.from('mirror_resume_claims').insert({ user_id: who.id, claim: 'bad', category: 'not_a_category' })
+    expect(bad.error).not.toBeNull()
+  }, 120_000)
 })

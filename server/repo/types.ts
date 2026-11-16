@@ -250,8 +250,11 @@ export interface GapMatchRow extends GapMatchInput {
 }
 
 /** A typed contract only; the first scheduler is stateless. */
+export type ReplayItemKind = 'question' | 'pattern' | 'practice_item'
 export interface ReplayItemInput {
   itemId: string
+  /** What kind of thing is scheduled; the SQL practice schedule uses 'practice_item' (the default). */
+  kind?: ReplayItemKind
   dueAt: string
   intervalDays: number
   rung: number

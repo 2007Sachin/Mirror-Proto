@@ -48,6 +48,11 @@ describe('unauthenticated requests', () => {
     }
   })
 
+  it('a path no route handles is guarded too (default deny)', async () => {
+    expect((await app.request('/not-a-route-yet')).status).toBe(401)
+    expect((await app.request('/api/not-a-route-yet', { method: 'POST' })).status).toBe(401)
+  })
+
   it('a blank X-Test-User is no user', async () => {
     const res = await app.request('/interviews', { headers: { 'X-Test-User': '   ' } })
     expect(res.status).toBe(401)

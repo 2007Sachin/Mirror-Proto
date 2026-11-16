@@ -16,6 +16,7 @@ const storySchema = z.object({
   question: text(500).nullable(),
   sourceInterviewId: text(80).nullable(),
   sourceTurnId: text(80).nullable(),
+  source: z.enum(['manual', 'first_interview', 'interview']).optional(),
 })
 
 /** Plain CRUD for the story bank. Theme logic and suggestions belong to the stories feature. */

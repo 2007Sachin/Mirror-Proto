@@ -72,6 +72,7 @@ describe('stories', () => {
       user_id: U, title: 'T', situation: 's', task: 't', action: 'a', result: 'r', themes: ['a'], quote: 'q', question: 'qq', source: 'interview', source_interview_id: 'iv1', source_turn_id: 'tu1', archived_at: null,
     })
     expect(storyInsert(U, { ...input, sourceInterviewId: null, sourceTurnId: null }).source).toBe('manual')
+    expect(storyInsert(U, { ...input, sourceInterviewId: null, source: 'first_interview' }).source).toBe('first_interview')
   })
 
   it.each([
@@ -85,7 +86,7 @@ describe('stories', () => {
   it('reads nulls as empty text and keeps the stored quote, question and turn', () => {
     const r: Row<'mirror_stories'> = { id: 's1', user_id: U, title: 'T', situation: null, task: null, action: null, result: null, themes: [], quote: 'q', question: 'qq', source: 'interview', source_interview_id: 'iv1', source_turn_id: 'tu1', archived_at: null, created_at: T, updated_at: '2026-02-01T00:00:00.000Z' }
     expect(storyFromRow(U, r)).toEqual({
-      id: 's1', workspaceId: U, title: 'T', themes: [], situation: '', task: '', action: '', result: '', quote: 'q', question: 'qq', sourceInterviewId: 'iv1', sourceTurnId: 'tu1', createdAt: T, updatedAt: '2026-02-01T00:00:00.000Z',
+      id: 's1', workspaceId: U, title: 'T', themes: [], situation: '', task: '', action: '', result: '', quote: 'q', question: 'qq', sourceInterviewId: 'iv1', sourceTurnId: 'tu1', source: 'interview', createdAt: T, updatedAt: '2026-02-01T00:00:00.000Z',
     })
   })
 })

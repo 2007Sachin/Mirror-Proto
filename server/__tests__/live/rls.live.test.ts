@@ -11,7 +11,7 @@
  * Then, as B, for every table: select shows no A rows, update and delete change zero A rows, inserting with A's user_id
  * is rejected, and inserting a child (turn, reflection, answer attempt, gap match) that points at A's parent is rejected.
  * The anon client with no token is rejected on every table too.
- * A third throwaway user (C) then round-trips every column added by migration 0008 through the real repository, and every
+ * A third throwaway user (C) then round-trips every column added by migration 0009 through the real repository, and every
  * allowed value of the check-constrained columns is inserted once.
  * afterAll removes both users' rows (each with its own session) and then only the two users it created. The service key is
  * used for creating and deleting those two users and nothing else.
@@ -191,7 +191,7 @@ describe.skipIf(!LIVE)('live RLS: two users, twelve tables', () => {
     const { error } = await b.db.from('mirror_stories').insert({ user_id: randomUUID(), title: 'x', themes: [] })
     expect(error).not.toBeNull()
   })
-  it('round-trips every column of migration 0008 through the repository, as a third user', async () => {
+  it('round-trips every column of migration 0009 through the repository, as a third user', async () => {
     const admin = createClient(url, service, opts)
     c = await makeUser(admin, 'c')
     const parents: Parents = {}

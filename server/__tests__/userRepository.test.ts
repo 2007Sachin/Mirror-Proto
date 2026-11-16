@@ -205,7 +205,7 @@ describe('errors', () => {
   })
 })
 
-describe('screen metadata (migration 0008)', () => {
+describe('screen metadata (migration 0009)', () => {
   const QS = ['One here is?', 'Two here is?', 'Three here is?', 'Four here is?', 'Five here is?', 'Six here is?']
   const screen = { role: 'Analyst', openingQuestion: QS[0], askedQuestions: QS, kind: 'screen' as const, questionCap: 6, timeCapSeconds: 480, startedAt: '2026-01-01T00:00:00.000Z', targetId: 't1' }
 

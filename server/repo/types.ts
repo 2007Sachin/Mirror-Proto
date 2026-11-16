@@ -212,6 +212,8 @@ export interface StoryInput {
   question: string | null
   sourceInterviewId: string | null
   sourceTurnId: string | null
+  /** Origin; defaults to 'interview' when sourceInterviewId is set, else 'manual'. */
+  source?: 'manual' | 'first_interview' | 'interview'
 }
 export interface StoryRow extends StoryInput {
   id: string
@@ -270,6 +272,8 @@ export interface ReplayItemRow extends ReplayItemInput {
 export interface RepoExport {
   exportedAt: string
   workspace: string
+  /** The mirror_workspaces row itself (it stays after Delete all my data). */
+  workspaceRow: { slug: string; createdAt: string } | null
   profile: ProfileRow | null
   interviews: InterviewRow[]
   turns: TurnRow[]

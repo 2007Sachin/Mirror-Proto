@@ -46,7 +46,7 @@ function rankProbes(matches: { skill: string; weight: string; status: string; cl
 }
 
 /** Résumé claims, per-target matches and probe questions. Plain CRUD stays; extraction and matching sit on top. */
-export function registerMatchRoutes(api: Api, { provider }: RouteDeps): void {
+export function registerMatchRoutes(api: Api, { provider }: RouteDeps): (workspace: string) => void {
   // ponytail: in-process cache of the AI rewrite per set of draft questions; a restart simply asks again.
   const rewrites = new Map<string, { questions: string[] | null }>()
 
@@ -56,17 +56,22 @@ export function registerMatchRoutes(api: Api, { provider }: RouteDeps): void {
     const profile = await repo.getProfile(workspace)
     const resume = profile?.resumeText ? cleanResume(profile.resumeText) : ''
     if (!resume) {
-      return { matches: await repo.listGapMatches(workspace, id).catch(() => []), claims: [], probes: [], source: 'fallback' as const, aiAttempted: false, hasResume: false }
+      return { matches: await repo.listGapMatches(workspace, id).catch(() => []), claims: [], probes: [], source: 'fallback' as const, aiAttempted: false, hasResume: false, saved: true }
     }
     let claims = refresh ? [] : await repo.listResumeClaims(workspace).catch(() => [])
     let matches = refresh ? [] : await repo.listGapMatches(workspace, id).catch(() => [])
+    let saved = true
     if (claims.length === 0 || matches.length === 0) {
       const fresh = extractClaims(resume)
       const rows = matchClaims(target.skills, fresh)
       const at = new Date().toISOString()
-      // Not saved (Supabase is not ready for these stores)? Answer from memory-less rows; the next call computes again.
-      claims = await repo.replaceResumeClaims(workspace, fresh).catch(() => fresh.map(c => ({ ...c, id: `c:${c.quote.slice(0, 24)}`, workspaceId: workspace, createdAt: at })))
-      matches = await repo.replaceGapMatches(workspace, id, rows).catch(() => rows.map(m => ({ ...m, targetId: id, id: `m:${m.skill}`, workspaceId: workspace, createdAt: at })))
+      // Not saved (e.g. the store is not ready)? Answer from unsaved rows, say so (`saved: false`), log only the error code.
+      const unsaved = (e: unknown) => {
+        saved = false
+        console.error('match: not saved', (e as { code?: string } | null)?.code ?? 'unknown')
+      }
+      claims = await repo.replaceResumeClaims(workspace, fresh).catch(e => (unsaved(e), fresh.map(c => ({ ...c, id: `c:${c.quote.slice(0, 24)}`, workspaceId: workspace, createdAt: at }))))
+      matches = await repo.replaceGapMatches(workspace, id, rows).catch(e => (unsaved(e), rows.map(m => ({ ...m, targetId: id, id: `m:${m.skill}`, workspaceId: workspace, createdAt: at }))))
     }
     // Supabase does not store probe questions; derive them again for stored rows that have none.
     if (matches.some(m => m.probeQuestion === null && m.status !== 'covered')) {
@@ -95,7 +100,7 @@ export function registerMatchRoutes(api: Api, { provider }: RouteDeps): void {
     // The page shows each row's question; an accepted rewrite replaces the matching row's draft.
     const rewritten = new Map(probes.map(p => [p.skill, p.question]))
     const shown = source === 'ai' ? matches.map(m => (rewritten.has(m.skill) ? { ...m, probeQuestion: rewritten.get(m.skill)! } : m)) : matches
-    return { matches: shown, claims, probes, source, aiAttempted, hasResume: true }
+    return { matches: shown, claims, probes, source, aiAttempted, hasResume: true, saved }
   }
 
   api.get('/resume/claims', async c => c.json(await c.get('repo').listResumeClaims(c.get('workspace'))))
@@ -124,4 +129,6 @@ export function registerMatchRoutes(api: Api, { provider }: RouteDeps): void {
     const { matches } = matchesSchema.parse(await c.req.json().catch(() => ({})))
     return c.json({ matches: await c.get('repo').replaceGapMatches(workspace, id, matches) })
   })
+
+  return workspace => { for (const k of [...rewrites.keys()]) if (k.startsWith(`${workspace}:`)) rewrites.delete(k) }
 }

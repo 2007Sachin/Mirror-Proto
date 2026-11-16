@@ -8,7 +8,7 @@ import { j, makeEnv } from './helpers.js'
 
 const env = makeEnv({ supabaseUrl: 'http://supabase.test', supabaseAnonKey: 'anon', authGoogle: true })
 
-interface FakeOpts { user?: { id: string; email: string } | null; exchangeFails?: boolean; otpError?: { status: number } | null }
+interface FakeOpts { claimsFail?: boolean; user?: { id: string; email: string } | null; exchangeFails?: boolean; otpError?: { status: number } | null }
 
 /** A fake Supabase client: no network. It records calls and writes the cookies the real library would. */
 function fake(opts: FakeOpts = {}) {
@@ -17,6 +17,11 @@ function fake(opts: FakeOpts = {}) {
     const has = () => cookies.getAll().some(c => c.name === 'sb-test-auth-token' && c.value === 'good')
     return {
       auth: {
+        getClaims: async () => {
+          calls.push('getClaims')
+          if (opts.claimsFail) return { data: null, error: { message: 'unsupported' } }
+          return has() && opts.user ? { data: { claims: { sub: opts.user.id, email: opts.user.email } }, error: null } : { data: null, error: null }
+        },
         getUser: async () => {
           calls.push('getUser')
           return has() && opts.user ? { data: { user: opts.user }, error: null } : { data: { user: null }, error: { message: 'no' } }
@@ -94,6 +99,15 @@ describe('POST /auth/magic-link', () => {
     const { app } = setup()
     for (let i = 0; i < 5; i++) await post(app, '/auth/magic-link', { email: `u${i}@y.co` }, { 'x-forwarded-for': '2.2.2.2' })
     expect((await post(app, '/auth/magic-link', { email: 'new@y.co' }, { 'x-forwarded-for': '2.2.2.2' })).status).toBe(429)
+  })
+
+  it('ignores a spoofed X-Forwarded-For unless TRUST_PROXY=1', async () => {
+    const { app } = setup()
+    for (let i = 0; i < 5; i++) await post(app, '/auth/magic-link', { email: `s${i}@y.co` }, { 'x-forwarded-for': `3.3.3.${i}` })
+    expect((await post(app, '/auth/magic-link', { email: 'fresh@y.co' }, { 'x-forwarded-for': '8.8.8.8' })).status).toBe(429)
+    const { app: proxied } = setup({}, makeEnv({ ...env, trustProxy: true }))
+    for (let i = 0; i < 5; i++) await post(proxied, '/auth/magic-link', { email: `t${i}@y.co` }, { 'x-forwarded-for': '4.4.4.4' })
+    expect((await post(proxied, '/auth/magic-link', { email: 'other@y.co' }, { 'x-forwarded-for': '5.5.5.5' })).status).toBe(200)
   })
 })
 
@@ -196,24 +210,33 @@ describe('guarded routes with the real requireUser', () => {
 })
 
 describe('createSupabaseAuth', () => {
-  it('fromContext verifies with getUser before reading the token, and returns the token', async () => {
+  it('fromContext verifies with getClaims before reading the token, and returns the token', async () => {
     const { auth, calls } = setup()
     const { Hono } = await import('hono')
     const h = new Hono()
     h.get('/x', async c => c.json(await auth.fromContext(c)))
     const res = await h.request('/x', { headers: SESSION })
     expect(await j(res)).toEqual({ id: 'u1', email: 'a@b.co', accessToken: 'jwt-1' })
-    expect(calls).toEqual(['getUser', 'getSession'])
+    expect(calls).toEqual(['getClaims', 'getSession'])
     expect(await j(await h.request('/x', { headers: { cookie: 'sb-test-auth-token=forged' } }))).toBeNull()
   })
 
-  it('fromUpgrade is read-only and verifies via getUser', async () => {
+  it('falls back to getUser only when getClaims errors', async () => {
+    const { auth, calls } = setup({ claimsFail: true })
+    const req = (cookie: string) => ({ headers: { cookie } }) as never
+    expect(await auth.fromUpgrade(req('sb-test-auth-token=good'))).toEqual({ id: 'u1', email: 'a@b.co', accessToken: 'jwt-1' })
+    expect(await auth.fromUpgrade(req('sb-test-auth-token=forged'))).toBeNull()
+    expect(calls.filter(c => c === 'getUser')).toHaveLength(2)
+  })
+
+  it('fromUpgrade is read-only and verifies via getClaims', async () => {
     const { auth, calls } = setup()
     const req = (cookie?: string) => ({ headers: cookie ? { cookie } : {} }) as never
     expect(await auth.fromUpgrade(req('sb-test-auth-token=good'))).toEqual({ id: 'u1', email: 'a@b.co', accessToken: 'jwt-1' })
     expect(await auth.fromUpgrade(req('sb-test-auth-token=forged'))).toBeNull()
     expect(await auth.fromUpgrade(req())).toBeNull()
-    expect(calls.filter(c => c === 'getUser')).toHaveLength(3)
+    expect(calls.filter(c => c === 'getClaims')).toHaveLength(3)
+    expect(calls).not.toContain('getUser')
   })
 
   it('compose picks demo, supabase or nobody', async () => {

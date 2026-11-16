@@ -15,6 +15,8 @@ export function makeEnv(overrides: Partial<Env> = {}): Env {
     supabaseSecretKey: null,
     siteUrl: 'http://localhost:3000',
     demoMode: false,
+    trustProxy: false,
+    voiceLocalOnly: false,
     authGoogle: false,
     nimBaseUrl: 'https://integrate.api.nvidia.com/v1',
     nimApiKey: null,

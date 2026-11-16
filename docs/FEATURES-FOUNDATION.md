@@ -9,7 +9,7 @@ Rules for all features: no scores or percentages, quote only the learner's own w
 - The client follows `session.questionCap` (App state `questionCap`); never put a question count in UI copy.
 
 ## Database and `SCREEN_DB_READY`
-- Owner applies `supabase/migrations/0008_variable_length_interviews.sql` (idempotent), then sets `SCREEN_DB_READY=1`.
+- Owner applies `supabase/migrations/0009_variable_length_interviews.sql` (idempotent), then sets `SCREEN_DB_READY=1`.
 - Until then the Supabase repo keeps screen metadata in a server-side Map and clamps a screen to 4 questions. `GET /capabilities` reports `screenLongCalls` accordingly.
 
 ## New stores

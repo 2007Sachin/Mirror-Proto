@@ -48,6 +48,11 @@ describe('unauthenticated requests', () => {
     }
   })
 
+  it('a path no route handles is guarded too (default deny)', async () => {
+    expect((await app.request('/not-a-route-yet')).status).toBe(401)
+    expect((await app.request('/api/not-a-route-yet', { method: 'POST' })).status).toBe(401)
+  })
+
   it('a blank X-Test-User is no user', async () => {
     const res = await app.request('/interviews', { headers: { 'X-Test-User': '   ' } })
     expect(res.status).toBe(401)
@@ -69,7 +74,7 @@ describe('unauthenticated requests', () => {
     await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve))
     const port = (http.address() as AddressInfo).port
     const connect = async (headers?: Record<string, string>) => {
-      const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers })
+      const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/voice`, { headers: { origin: 'http://localhost:3000', ...headers } })
       const outcome = await new Promise<string>(resolve => {
         ws.on('open', () => resolve('open'))
         ws.on('unexpected-response', (_req, res) => resolve(`http ${res.statusCode}`))

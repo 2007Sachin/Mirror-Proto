@@ -42,6 +42,7 @@ export function MatchView({ data, onSave, onPractiseProbe }: {
   const vague = data.claims.filter(c => c.vague).slice(0, 5)
   return (
     <>
+      {data.saved === false && <p className="tg-muted" role="status">Not saved, try again.</p>}
       {data.matches.length === 0 && <p className="tg-muted">No skills were found in this job description, so there is nothing to line up.</p>}
       <ul className="mt-list">
         {data.matches.map(m => (

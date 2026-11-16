@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { userKey } from '../../../lib/data'
 import { sameResult, type QueryResult } from '../../../pages/target/sqlEngine'
 import { cancelSql, disposeSql, isStopped, runSql, warmSql } from '../worker/sqlRunner'
 import type { AttemptReport } from '../../types'
@@ -40,16 +41,16 @@ interface St {
   spoken?: boolean // optional so a snapshot saved before this option still loads
   qs: { id: string; kind: Kind }[]; ans: Record<string, Ans>; flags: string[]; seen: string[]; spent: Record<string, number>; idx: number
 }
-const KEY = 'mirror.sql.mock.v1'
+const KEY = 'sql.mock.v1'
 const blank = (): Ans => ({ draft: '', picked: null, sub: null, tries: 0, ok: false, first: false })
 
 function load(): St | null {
   try {
-    const s = JSON.parse(localStorage.getItem(KEY) ?? 'null') as St | null
+    const s = JSON.parse(localStorage.getItem(userKey(KEY) ?? '') ?? 'null') as St | null
     return s && s.v === 1 && Array.isArray(s.qs) && s.qs.length && Number.isFinite(s.deadline) && Number.isFinite(s.startedAt) ? s : null
   } catch { return null }
 }
-const save = (s: St | null) => { try { if (s) localStorage.setItem(KEY, JSON.stringify(s)); else localStorage.removeItem(KEY) } catch { /* storage blocked: the test still runs, it just cannot resume */ } }
+const save = (s: St | null) => { try { const k = userKey(KEY); if (!k) return; if (s) localStorage.setItem(k, JSON.stringify(s)); else localStorage.removeItem(k) } catch { /* storage blocked: the test still runs, it just cannot resume */ } }
 
 function ResultTable({ result }: { result: QueryResult }) {
   // ponytail: small copy of the drill's table (Drill.tsx does not export it); share it if a third screen needs it.

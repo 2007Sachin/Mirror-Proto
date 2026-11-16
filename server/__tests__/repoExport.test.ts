@@ -23,6 +23,7 @@ describe('memory exportAllData / deleteAllData', () => {
     await seed(repo, 'bob')
     const out = await repo.exportAllData('ann')
     expect(out.workspace).toBe('ann')
+    expect(out.workspaceRow?.slug).toBe('ann')
     expect(out.interviews).toHaveLength(1)
     for (const k of ['turns', 'targets', 'practiceAttempts', 'answerAttempts', 'stories', 'resumeClaims', 'gapMatches', 'replaySchedule'] as const) {
       expect(out[k], k).toHaveLength(1)

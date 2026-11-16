@@ -210,20 +210,9 @@ export function buildApp(deps: AppDeps): Hono {
   const api = new Hono()
   const guard = requireUser(auth, repoFor)
   api.use('*', originCheck(env)) // cookie auth: refuse cross-site writes
-  api.use('/interviews', guard)
-  api.use('/interviews/*', guard)
-  api.use('/onboarding/*', guard)
-  api.use('/profile', guard)
-  api.use('/coach-note', guard)
-  api.use('/targets', guard)
-  api.use('/targets/*', guard)
-  api.use('/practice/*', guard)
-  api.use('/replay/*', guard)
-  api.use('/stories', guard)
-  api.use('/stories/*', guard)
-  api.use('/resume/*', guard)
-  api.use('/data', guard)
-  api.use('/me/*', guard)
+  // Guarded by default: a new route is private unless it is listed here. (/auth/* is mounted on `app`, outside this group.)
+  const PUBLIC = /^(\/api)?\/(health|capabilities|integration-status)$/
+  api.use('*', (c, next) => (PUBLIC.test(c.req.path) ? next() : guard(c, next)))
   // Cap request sizes before anything is buffered: 6 MB for the PDF and the audio, 64 KB for JSON.
   const limit = (maxSize: number) => bodyLimit({ maxSize, onError: c => c.json({ error: 'payload_too_large' }, 413) })
   api.use('/onboarding/resume', limit(6 * 1024 * 1024))
@@ -754,12 +743,13 @@ export function buildApp(deps: AppDeps): Hono {
   const routeDeps = { provider, env }
   registerReplayRoutes(api, routeDeps)
   registerStoriesRoutes(api, routeDeps)
-  registerMatchRoutes(api, routeDeps)
+  const clearRewrites = registerMatchRoutes(api, routeDeps)
   registerAloudRoutes(api, routeDeps)
   registerScreenRoutes(api, routeDeps)
   // Deleting a user's data also drops their in-memory caches (keys start with `<workspace>:`).
   registerMeRoutes(api, routeDeps, workspace => {
     for (const cache of [idempotency, coachNotes]) for (const k of [...cache.keys()]) if (k.startsWith(`${workspace}:`)) cache.delete(k)
+    clearRewrites(workspace)
   })
 
   // Reset: clears every new store for the workspace.

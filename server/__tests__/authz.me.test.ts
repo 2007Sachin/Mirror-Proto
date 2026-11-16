@@ -35,6 +35,7 @@ describe('GET /me/export', () => {
     expect(res.headers.get('content-disposition')).toMatch(/^attachment; filename="mirror-export-\d{4}-\d{2}-\d{2}\.json"$/)
     const out = await j(res)
     expect(out.workspace).toBe('ann')
+    expect(out.workspaceRow).toMatchObject({ slug: 'ann' })
     expect(Number.isNaN(Date.parse(out.exportedAt))).toBe(false)
     expect(out.profile).not.toBeNull()
     for (const k of ARRAYS) if (k !== 'gapMatches') expect(out[k], k).not.toHaveLength(0)

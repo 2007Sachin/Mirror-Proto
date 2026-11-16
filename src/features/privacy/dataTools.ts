@@ -18,7 +18,7 @@ export async function exportMyData(): Promise<string> {
 }
 
 /** Everything this app keeps in the browser starts with "mirror." (drafts, practice progress, the open session). */
-function clearBrowserKeys(store: Storage): void {
+export function clearBrowserKeys(store: Storage): void {
   try {
     for (const k of Object.keys(store)) if (k.startsWith('mirror.')) store.removeItem(k)
   } catch { /* storage can be blocked */ }

@@ -1,3 +1,4 @@
+import { userKey } from '../../../lib/data'
 // Pure logic for "Your plan" and the starting-point check. No React.
 import { DIAG, GROUPS } from './diagnostic'
 import type { SqlLevelId } from '../curriculum'
@@ -62,15 +63,15 @@ export function diagnose(answers: Answer[], moduleOrder: string[]): Diagnosis {
   return { level, modules, missed: missedGroups.map(g => GROUPS[g].label), surprises: [...new Set(sure.map(q => GROUPS[q.group].label))] }
 }
 
-const KEY = 'mirror.sql.diag'
+const KEY = 'sql.diag'
 export interface Saved { level: SqlLevelId; modules: string[] }
 export function loadDiag(): Saved | null {
   try {
-    const v = JSON.parse(localStorage.getItem(KEY) ?? 'null')
+    const v = JSON.parse(localStorage.getItem(userKey(KEY) ?? '') ?? 'null')
     return v && ORDER.includes(v.level) && Array.isArray(v.modules) ? { level: v.level, modules: v.modules.filter((m: unknown) => typeof m === 'string') } : null
   } catch { return null }
 }
-export function saveDiag(s: Saved) { try { localStorage.setItem(KEY, JSON.stringify(s)) } catch { /* not remembered */ } }
+export function saveDiag(s: Saved) { try { const k = userKey(KEY); if (k) localStorage.setItem(k, JSON.stringify(s)) } catch { /* not remembered */ } }
 
 // ---- plan page ----
 /** Reverse of prerequisites: what each module opens up. */

@@ -51,6 +51,15 @@ describe('reviewSession', () => {
     expect(review.questions[0].worked.toLowerCase()).toContain('situation')
   })
 
+  it('compares filler words against answer length, not the raw total', () => {
+    const long = `um um ${'When our team had a deadline, I had to cut scope and I wrote the notes. '.repeat(12)}`
+    const short = 'um I wrote it.'
+    const older = session({ id: 's0', turns: [turn(0, long)] })
+    const newer = session({ turns: [turn(0, short)] })
+    expect(patternAcross(newer, older)).toMatch(/More filler words for the length/)
+    expect(patternAcross(older, newer)).toMatch(/Fewer filler words for the length/)
+  })
+
   it('names a repeating gap across two sessions', () => {
     const shaped = 'When our team had a deadline, I had to cut scope.'
     const older = session({ id: 's0', createdAt: '2026-10-01T00:00:00Z', turns: [turn(0, shaped)] })

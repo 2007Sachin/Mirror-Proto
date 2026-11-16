@@ -64,15 +64,26 @@ function openPart(session: InterviewSession): StarLine['key'] | null {
   return misses[top] > 0 ? top : null
 }
 
+/** Filler words against the length of the answers, so a shorter session is not treated as cleaner. */
+function fillerRate(session: InterviewSession): { fillers: number; words: number } {
+  return session.turns.reduce((sum, t) => {
+    const a = analyseAnswer(t.answer)
+    return { fillers: sum.fillers + a.fillerTotal, words: sum.words + a.words }
+  }, { fillers: 0, words: 0 })
+}
+
 /** How this session compares with the one before it. Null when there is no earlier session. */
 export function patternAcross(current: InterviewSession, previous: InterviewSession | null): string | null {
   if (!previous || !previous.turns.length || !current.turns.length) return null
-  const fillers = (s: InterviewSession) => s.turns.reduce((n, t) => n + analyseAnswer(t.answer).fillerTotal, 0)
   const lines: string[] = []
-  const now = fillers(current)
-  const then = fillers(previous)
-  if (now < then) lines.push('Fewer filler words than the session before.')
-  else if (now > then) lines.push('More filler words than the session before.')
+  const now = fillerRate(current)
+  const then = fillerRate(previous)
+  if (now.words > 0 && then.words > 0) {
+    const nowRate = now.fillers * then.words
+    const thenRate = then.fillers * now.words
+    if (nowRate < thenRate) lines.push('Fewer filler words for the length of these answers than the session before.')
+    else if (nowRate > thenRate) lines.push('More filler words for the length of these answers than the session before.')
+  }
   const gap = openPart(current)
   const prevGap = openPart(previous)
   if (gap && gap === prevGap) lines.push(`The ${LABEL[gap].toLowerCase()} is still open, as it was last time.`)

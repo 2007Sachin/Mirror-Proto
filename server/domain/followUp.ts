@@ -1,4 +1,7 @@
 import { totalFor, fallbackQuestionAt } from './questions.js'
+import { nextQuestion } from './director/director.js'
+import { buildRoomState } from './director/state.js'
+import type { Interviewer, RoomLog } from './director/types.js'
 import { ProviderFailure } from '../providers/nim.js'
 import { quotedFollowUp } from './fallbacks.js'
 import type { InterviewRow, Repository, TurnRow } from '../repo/types.js'
@@ -51,20 +54,61 @@ export async function nextFollowUpQuestion(
   return (await nextFollowUp(interview, turns, provider, profile)).question
 }
 
+// Model calls used per interview, for the Director's ceiling. In-process and bounded; a restart only resets the count.
+const callsByInterview = new Map<string, number>()
+const COUNTER_CAP = 500
+const defaultLog: RoomLog = line => {
+  if (process.env.NODE_ENV !== 'test') console.info(JSON.stringify(line))
+}
+
 // ponytail: a question already saved has no recorded source, so it reports 'ai'; store it on the interview if that matters.
+/** The next question: the Director picks and guards it (model when it answers in time, else an unasked bank question) and it is saved on the interview. */
 export async function persistFollowUp(
   repo: Repository,
   interview: InterviewRow,
   turns: TurnRow[],
   provider: ReflectionProvider | null,
+  log: RoomLog = defaultLog,
 ): Promise<{ question: string; source: Source }> {
   const total = totalFor(interview)
   if (turns.length >= total) return { question: interview.askedQuestions[total - 1], source: 'ai' }
   if (interview.askedQuestions.length > turns.length) return { question: interview.askedQuestions[turns.length], source: 'ai' }
-  const profile = interviewContext(await repo.getProfile(interview.workspaceId))
-  const next = await nextFollowUp(interview, turns, provider, profile)
-  const updated = await repo.appendAskedQuestion(interview.workspaceId, interview.id, next.question)
-  return { question: updated?.askedQuestions[turns.length] ?? next.question, source: next.source }
+  let question: string
+  let source: Source
+  if (turns.length === 0) {
+    question = fallbackQuestionAt(0)
+    source = 'fallback'
+  } else {
+    const profile = interviewContext(await repo.getProfile(interview.workspaceId))
+    const state = await buildRoomState(repo, interview.workspaceId, interview, turns, profile)
+    // The Room's call when the provider has it; else the older one-shot follow-up (same guard and fallback around it).
+    const room = provider?.generateNextQuestion
+    const legacy = provider?.generateFollowUp
+    const interviewer: Interviewer | null = room
+      ? input => room.call(provider, input)
+      : legacy
+        ? async input => ({
+            action: 'advance',
+            targetSkill: null,
+            question: await legacy.call(provider, {
+              role: interview.role,
+              industry: interview.industry,
+              profile,
+              turns: input.state.turns,
+              nextIndex: input.state.nextIndex,
+            }),
+          })
+        : null
+    const out = await nextQuestion(state, { interviewer, log, callsUsed: callsByInterview.get(interview.id) ?? 0 })
+    if (out.calls) {
+      if (callsByInterview.size >= COUNTER_CAP) callsByInterview.delete(callsByInterview.keys().next().value as string)
+      callsByInterview.set(interview.id, (callsByInterview.get(interview.id) ?? 0) + out.calls)
+    }
+    question = out.question
+    source = out.source === 'model' ? 'ai' : 'fallback'
+  }
+  const updated = await repo.appendAskedQuestion(interview.workspaceId, interview.id, question)
+  return { question: updated?.askedQuestions[turns.length] ?? question, source }
 }
 
 export async function persistFollowUpQuestion(

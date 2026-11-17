@@ -131,7 +131,7 @@ export function buildApp(deps: AppDeps): Hono {
   const provider: ReflectionProvider | null = rawProvider && {
     generateReflection: r => withDeadline(rawProvider.generateReflection(r), deadlineMs),
     generateFollowUp: rawProvider.generateFollowUp && (r => withDeadline(rawProvider.generateFollowUp!(r), deadlineMs)),
-    generateNextQuestion: rawProvider.generateNextQuestion && (r => withDeadline(rawProvider.generateNextQuestion!(r), deadlineMs)),
+    generateNextQuestion: rawProvider.generateNextQuestion && (i => withDeadline(rawProvider.generateNextQuestion!(i), env.interviewerDeadlineMs)),
     generateOnboarding: rawProvider.generateOnboarding && (r => withDeadline(rawProvider.generateOnboarding!(r), deadlineMs)),
   }
 

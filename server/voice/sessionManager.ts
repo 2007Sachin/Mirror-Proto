@@ -18,7 +18,17 @@ export interface VoiceSession {
   /** Set when the socket dropped; eligible for resume within the reconnect window. */
   tombstonedAt: number | null
   /** Opening prompt vs post-answer follow-up; playback_complete must not skip a question. */
-  pendingPlayback: 'none' | 'opening' | 'next'
+  pendingPlayback: 'none' | 'opening' | 'next' | 'line'
+  /** Nudge state for the current turn (see gateway armSilence). */
+  silenceTimer: ReturnType<typeof setTimeout> | null
+  nudgeCount: number
+  /** Last time words were added (or the question ended); the silence clock. */
+  lastPartialAt: number
+  partialWords: number
+  turnStartedAt: number
+  rambleOffered: boolean
+  /** Scripted variants already used in this call, so none repeats back to back. */
+  usedLines: Set<string>
 }
 
 export interface CreateSessionInput {
@@ -53,6 +63,13 @@ export class SessionManager {
       muted: false,
       tombstonedAt: null,
       pendingPlayback: 'none',
+      silenceTimer: null,
+      nudgeCount: 0,
+      lastPartialAt: 0,
+      partialWords: 0,
+      turnStartedAt: 0,
+      rambleOffered: false,
+      usedLines: new Set(),
     }
     this.sessions.set(id, session)
     return session

@@ -39,6 +39,11 @@ const envSchema = z
     SCREEN_DB_READY: z.string().optional(),
     INTERVIEWER_DEADLINE_MS: z.string().optional(),
     INTERVIEW_CALL_BUDGET: z.string().optional(),
+    VOICE_NUDGE: z.enum(['shadow', 'on', 'off']).optional(),
+    VOICE_NUDGE_SILENCE_MS: z.coerce.number().int().positive().optional(),
+    VOICE_NUDGE_SECOND_MS: z.coerce.number().int().positive().optional(),
+    VOICE_RAMBLE_MS: z.coerce.number().int().positive().optional(),
+    VOICE_RAMBLE_WORDS: z.coerce.number().int().positive().optional(),
   })
   .transform((env, ctx) => {
     const nimBaseRaw = env.NVIDIA_NIM_BASE_URL || env.NIM_BASE_URL || DEFAULT_NIM_BASE
@@ -111,6 +116,13 @@ const envSchema = z
       interviewerDeadlineMs: Math.min(2000, Math.max(500, Math.round(Number(present(env.INTERVIEWER_DEADLINE_MS)) || 1500))),
       /** Max model calls per interview (default 12). */
       interviewCallBudget: Math.max(1, Math.round(Number(present(env.INTERVIEW_CALL_BUDGET)) || 12)),
+      /** Live-call nudges: shadow logs only (default), on speaks them, off does nothing. */
+      voiceNudge: env.VOICE_NUDGE ?? 'shadow',
+      voiceNudgeSilenceMs: env.VOICE_NUDGE_SILENCE_MS ?? 10_000,
+      voiceNudgeFirstQuestionMs: Math.max(env.VOICE_NUDGE_SILENCE_MS ?? 10_000, 15_000),
+      voiceNudgeSecondMs: env.VOICE_NUDGE_SECOND_MS ?? 25_000,
+      voiceRambleMs: env.VOICE_RAMBLE_MS ?? 90_000,
+      voiceRambleWords: env.VOICE_RAMBLE_WORDS ?? 250,
     }
   })
 

@@ -34,6 +34,12 @@ export function makeEnv(overrides: Partial<Env> = {}): Env {
     screenDbReady: false,
     interviewerDeadlineMs: 1500,
     interviewCallBudget: 12,
+    voiceNudge: 'shadow',
+    voiceNudgeSilenceMs: 10_000,
+    voiceNudgeFirstQuestionMs: 15_000,
+    voiceNudgeSecondMs: 25_000,
+    voiceRambleMs: 90_000,
+    voiceRambleWords: 250,
     ...overrides,
   }
 }

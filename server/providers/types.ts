@@ -12,6 +12,12 @@ export const FollowUpOutputSchema = z.object({
   question: z.string().trim().min(8).max(500),
 })
 
+export const InterviewerOutputSchema = z.object({
+  action: z.enum(['probe', 'advance', 'gap']),
+  target_skill: z.string().nullable(),
+  question: z.string().trim().min(8).max(500),
+})
+
 export type ReflectionOutput = z.infer<typeof ReflectionOutputSchema>
 export type FollowUpOutput = z.infer<typeof FollowUpOutputSchema>
 

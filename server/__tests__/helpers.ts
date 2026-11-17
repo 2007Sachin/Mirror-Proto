@@ -32,6 +32,8 @@ export function makeEnv(overrides: Partial<Env> = {}): Env {
     sarvamLanguage: 'en-IN',
     sarvamSpeaker: 'shubh',
     screenDbReady: false,
+    interviewerDeadlineMs: 1500,
+    interviewCallBudget: 12,
     ...overrides,
   }
 }

@@ -37,6 +37,8 @@ const envSchema = z
     SARVAM_LANGUAGE: z.string().optional(),
     SARVAM_SPEAKER: z.string().optional(),
     SCREEN_DB_READY: z.string().optional(),
+    INTERVIEWER_DEADLINE_MS: z.string().optional(),
+    INTERVIEW_CALL_BUDGET: z.string().optional(),
   })
   .transform((env, ctx) => {
     const nimBaseRaw = env.NVIDIA_NIM_BASE_URL || env.NIM_BASE_URL || DEFAULT_NIM_BASE
@@ -105,6 +107,10 @@ const envSchema = z
       sarvamSpeaker: present(env.SARVAM_SPEAKER) ?? 'shubh',
       /** Migration 0008 is applied: screens may use variable length and the new columns. */
       screenDbReady: present(env.SCREEN_DB_READY) === '1',
+      /** The Room's Interviewer model call deadline, clamped to 500..2000 ms (default 1500). */
+      interviewerDeadlineMs: Math.min(2000, Math.max(500, Math.round(Number(present(env.INTERVIEWER_DEADLINE_MS)) || 1500))),
+      /** Max model calls per interview (default 12). */
+      interviewCallBudget: Math.max(1, Math.round(Number(present(env.INTERVIEW_CALL_BUDGET)) || 12)),
     }
   })
 

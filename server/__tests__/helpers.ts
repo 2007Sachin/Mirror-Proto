@@ -32,6 +32,12 @@ export function makeEnv(overrides: Partial<Env> = {}): Env {
     sarvamLanguage: 'en-IN',
     sarvamSpeaker: 'shubh',
     screenDbReady: false,
+    voiceNudge: 'shadow',
+    voiceNudgeSilenceMs: 10_000,
+    voiceNudgeFirstQuestionMs: 15_000,
+    voiceNudgeSecondMs: 25_000,
+    voiceRambleMs: 90_000,
+    voiceRambleWords: 250,
     ...overrides,
   }
 }

@@ -107,4 +107,31 @@ describe('useVoiceSession spoken interview loop', () => {
     expect(result.current.failureNotice()).toBe("Voice is not set up here, so let's type this one.")
     expect(FakeWebSocket.instances).toHaveLength(1)
   })
+
+  it('shows a nudge quietly, clears it on the next words, ignores unknown message types', async () => {
+    const { result } = renderHook(() => useVoiceSession())
+    await act(async () => {
+      const p = result.current.start('iv1')
+      await Promise.resolve()
+      await Promise.resolve()
+      FakeWebSocket.instances.at(-1)!.serverSend('session_ready', { sessionId: 's1', interviewState: {} })
+      await p
+    })
+    const ws = FakeWebSocket.instances.at(-1)!
+    act(() => ws.serverSend('nudge', { reason: 'silence_first', text: "Take your time, I'm here.", turnId: 's1:0' }, 's1:0'))
+    expect(result.current.nudgeText).toBe("Take your time, I'm here.")
+    act(() => ws.serverSend('state', { state: 'listening', turnId: 's1:0' }, 's1:0'))
+    expect(result.current.nudgeText).toBe("Take your time, I'm here.")
+    act(() => ws.serverSend('partial_transcript', { text: 'well' }, 's1:0'))
+    expect(result.current.nudgeText).toBe('')
+    act(() => ws.serverSend('ramble_hint', { reason: 'ramble', text: 'Shall we move on, or is there one more point?', turnId: 's1:0' }, 's1:0'))
+    expect(result.current.nudgeText).toContain('move on')
+    act(() => ws.serverSend('state', { state: 'processing_speech', turnId: 's1:0' }, 's1:0'))
+    expect(result.current.nudgeText).toBe('')
+    act(() => ws.serverSend('nudge', { text: 'x' }, 's1:0'))
+    act(() => ws.serverSend('question', { turnId: 's1:0', text: 'Q', questionIndex: 0 }, 's1:0'))
+    expect(result.current.nudgeText).toBe('')
+    act(() => ws.serverSend('some_future_type', { a: 1 }, 's1:0'))
+    expect(result.current.error).toBeNull()
+  })
 })

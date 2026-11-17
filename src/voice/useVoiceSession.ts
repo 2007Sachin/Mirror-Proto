@@ -30,6 +30,8 @@ export interface VoiceSessionApi {
   partialTranscript: string
   finalTranscript: string
   questionText: string
+  /** A calm line from the interviewer after a long silence; clears on the next words, question or answer. */
+  nudgeText: string
   error: VoiceError | null
   inputLevel: number
   outputLevel: number
@@ -62,6 +64,7 @@ export function useVoiceSession(options: {
   const [partialTranscript, setPartialTranscript] = useState('')
   const [finalTranscript, setFinalTranscript] = useState('')
   const [questionText, setQuestionText] = useState('')
+  const [nudgeText, setNudgeText] = useState('')
   const [error, setError] = useState<VoiceError | null>(null)
   const [inputLevel, setInputLevel] = useState(0)
   const [outputLevel, setOutputLevel] = useState(0)
@@ -112,6 +115,7 @@ export function useVoiceSession(options: {
     setPartialTranscript('')
     setFinalTranscript('')
     setQuestionText('')
+    setNudgeText('')
     setError(null)
     setInputLevel(0)
     setOutputLevel(0)
@@ -160,7 +164,12 @@ export function useVoiceSession(options: {
     client.on(MSG.PARTIAL_TRANSCRIPT, payload => {
       const { text } = payload as { text: string }
       setPartialTranscript(text) // UI only — never submitted.
+      setNudgeText('')
     })
+
+    const onNudge = (payload: unknown) => setNudgeText((payload as { text?: string }).text ?? '')
+    client.on(MSG.NUDGE, onNudge)
+    client.on(MSG.RAMBLE_HINT, onNudge)
 
     client.on(MSG.FINAL_TRANSCRIPT, payload => {
       const { text } = payload as { text: string; confidence?: number }
@@ -179,6 +188,9 @@ export function useVoiceSession(options: {
       playbackCompletedRef.current.delete(turnId)
       finalizedTurnsRef.current.delete(turnId)
       setQuestionText(text)
+      setNudgeText('')
+      // A repeated question reuses its turn: let the learner finish it again.
+      finalizeSentRef.current.delete(turnId)
       setFinalTranscript('')
       setPartialTranscript('')
       optionsRef.current.onQuestion?.(text, questionIndex)
@@ -224,6 +236,8 @@ export function useVoiceSession(options: {
     client.on(MSG.STATE, payload => {
       const { state } = payload as { state: VoiceState }
       syncState(state)
+      // A nudge stays through its own speech and the return to listening; any other change clears it.
+      if (state !== 'speaking' && state !== 'listening') setNudgeText('')
       if (state === 'completed') {
         // The interview is over: release mic, socket and speaker before notes are written.
         stoppedByUserRef.current = true
@@ -357,6 +371,7 @@ export function useVoiceSession(options: {
     partialTranscript,
     finalTranscript,
     questionText,
+    nudgeText,
     error,
     inputLevel,
     outputLevel,
@@ -371,7 +386,7 @@ export function useVoiceSession(options: {
     commitSpokenAnswer,
     failureNotice,
   }), [
-    voiceState, orbState, partialTranscript, finalTranscript, questionText, error,
+    voiceState, orbState, partialTranscript, finalTranscript, questionText, nudgeText, error,
     inputLevel, outputLevel, isMuted, active, start, stop, retry, interrupt, mute, continueByTyping, commitSpokenAnswer, failureNotice,
   ])
 }

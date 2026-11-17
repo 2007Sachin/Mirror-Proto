@@ -340,6 +340,7 @@ export default function Interview(p: InterviewProps) {
 
           <div className="iv-status" role="status">
             {statusText && <p>{statusText}</p>}
+            {voice.nudgeText && <p className="iv-nudge" aria-live="polite">{voice.nudgeText}</p>}
             {p.canRetry && <button type="button" className="ml-btn ml-btn--sm" onClick={p.onRetry} disabled={p.busy}>Try again</button>}
           </div>
         </main>

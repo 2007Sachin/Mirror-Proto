@@ -37,6 +37,11 @@ const envSchema = z
     SARVAM_LANGUAGE: z.string().optional(),
     SARVAM_SPEAKER: z.string().optional(),
     SCREEN_DB_READY: z.string().optional(),
+    VOICE_NUDGE: z.enum(['shadow', 'on', 'off']).optional(),
+    VOICE_NUDGE_SILENCE_MS: z.coerce.number().int().positive().optional(),
+    VOICE_NUDGE_SECOND_MS: z.coerce.number().int().positive().optional(),
+    VOICE_RAMBLE_MS: z.coerce.number().int().positive().optional(),
+    VOICE_RAMBLE_WORDS: z.coerce.number().int().positive().optional(),
   })
   .transform((env, ctx) => {
     const nimBaseRaw = env.NVIDIA_NIM_BASE_URL || env.NIM_BASE_URL || DEFAULT_NIM_BASE
@@ -105,6 +110,13 @@ const envSchema = z
       sarvamSpeaker: present(env.SARVAM_SPEAKER) ?? 'shubh',
       /** Migration 0008 is applied: screens may use variable length and the new columns. */
       screenDbReady: present(env.SCREEN_DB_READY) === '1',
+      /** Live-call nudges: shadow logs only (default), on speaks them, off does nothing. */
+      voiceNudge: env.VOICE_NUDGE ?? 'shadow',
+      voiceNudgeSilenceMs: env.VOICE_NUDGE_SILENCE_MS ?? 10_000,
+      voiceNudgeFirstQuestionMs: Math.max(env.VOICE_NUDGE_SILENCE_MS ?? 10_000, 15_000),
+      voiceNudgeSecondMs: env.VOICE_NUDGE_SECOND_MS ?? 25_000,
+      voiceRambleMs: env.VOICE_RAMBLE_MS ?? 90_000,
+      voiceRambleWords: env.VOICE_RAMBLE_WORDS ?? 250,
     }
   })
 

@@ -3,6 +3,7 @@ import './sessions.css'
 import { api, type InterviewSession, type InterviewSummary } from '../lib/api'
 import { reviewSession, type SessionReview } from '../features/sessions/review'
 import FallbackNote from '../components/FallbackNote'
+import FollowedTap from '../features/room/FollowedTap'
 
 const PAGE = 20
 const when = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
@@ -120,6 +121,7 @@ export default function Sessions({ openId, refreshKey, onPractise, onSaveStory }
                     <h2>Overview</h2>
                     <p>{review.overview}</p>
                     {shown.reflection && <FallbackNote source={shown.reflection.source} />}
+                    {shown.id === openId && shown.turns.some(t => t.transcriptSource === 'voice') && <FollowedTap interviewId={shown.id} />}
                   </header>
                   <section aria-labelledby="sess-q">
                     <h2 id="sess-q">Each question</h2>

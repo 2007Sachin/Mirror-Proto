@@ -34,6 +34,7 @@ import { registerAloudRoutes } from './routes/aloud.js'
 import { registerScreenRoutes } from './routes/screen.js'
 import { registerAuthRoutes } from './routes/auth.js'
 import { registerMeRoutes } from './routes/me.js'
+import { registerRoomFeedbackRoutes } from './routes/roomFeedback.js'
 import { buildScreeningQuestions, screenTimeUp } from './domain/screening.js'
 
 export interface AppDeps {
@@ -772,6 +773,7 @@ export function buildApp(deps: AppDeps): Hono {
   const clearRewrites = registerMatchRoutes(api, routeDeps)
   registerAloudRoutes(api, routeDeps)
   registerScreenRoutes(api, routeDeps)
+  registerRoomFeedbackRoutes(api)
   // Deleting a user's data also drops their in-memory caches (keys start with `<workspace>:`).
   registerMeRoutes(api, routeDeps, workspace => {
     for (const cache of [idempotency, coachNotes]) for (const k of [...cache.keys()]) if (k.startsWith(`${workspace}:`)) cache.delete(k)

@@ -8,7 +8,7 @@ The live interview call, staged. Source of the rulings: `docs/roast-room/2026-11
 - **Interviewer call** (`ReflectionProvider.generateNextQuestion`, `server/providers/nim.ts`). One model call per turn, given the full transcript, the asked-history, the candidates and the signals of the last answer. It only chooses among the candidates or probes the last answer: `{ action: probe | advance | gap, target_skill?, question }`. Deadline `INTERVIEWER_DEADLINE_MS`; a miss, a schema miss or a repeat (one retry) falls back to an unasked bank question, with no `You said:` prefix.
 - **Events** (`server/voice/`). A per-turn silence timer on the voice session: a nudge after a long silence, a second line later, a ramble offer, and "repeat that" (string match on the final transcript). Spoken through the existing `tts_start`/`tts_end` path. Interrupt and mute always win; the server never finalises a turn itself.
 - **Observer: specified, not built.** `RoomState.notes` is always `[]`. See the gate below.
-- **Logs.** One `room_turn` line per turn (`source`, `latencyMs`, `action`, `blockedRepeat`, `calls`), `nudge_shadow` lines in shadow mode, and one `room_feedback` line per after-call tap. Nothing stored; durable columns would need a migration.
+- **Logs.** One `room_turn` line per turn (`source`, `latencyMs`, `action`, `blockedRepeat`, `calls`), `nudge_shadow` lines in shadow mode (`nudge_fired` once nudges are on), a `nudge_continue` line when the candidate speaks within 3 s of a nudge (or of the moment a shadow nudge would have fired), and one `room_feedback` line per after-call tap. Nothing stored; durable columns would need a migration.
 
 ## Environment variables
 
@@ -40,7 +40,7 @@ One nudge per question. Six seconds of silence mid-answer never counts.
 - **Repeat rate**: share of questions already asked in an earlier interview or earlier in the same one. Target 0.
 - **Bank vs model**: from `room_turn` lines. A high bank share means the model is slow, failing or rate limited.
 - **Model calls per interview**: from `room_turn` lines. Ceiling 12.
-- **Shadow nudges followed by speech within 3 s**: the talked-over proxy. The script reads `nudge_shadow` lines with a `spokeAfterMs` number; match that field to the gateway line if it differs.
+- **Nudges followed by speech within 3 s**: the talked-over proxy (and, in shadow mode, the false-fire rate). The script counts `nudge_shadow` and `nudge_fired` lines as nudges and `nudge_continue` lines as talk-overs; the gateway writes all three.
 - **After-call tap**: yes and not really counts from `room_feedback` lines.
 - The real test (Graham): an unprompted second session within 10 days.
 

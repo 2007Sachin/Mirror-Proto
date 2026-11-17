@@ -56,7 +56,7 @@ export interface LogStats {
   tapYes: number; tapNo: number
 }
 
-/** ponytail: `nudge_shadow` is read as {event, interviewId, spokeAfterMs?}; talked over = the candidate spoke within 3000 ms. Match this to the gateway's real line when it lands. */
+/** Nudges are `nudge_shadow` (logged only) or `nudge_fired`; `nudge_continue` means the candidate spoke within 3000 ms of one (a talk-over, or a false fire in shadow mode). */
 export function parseLog(text: string): LogStats {
   const s: LogStats = { turns: 0, model: 0, bank: 0, callsByInterview: {}, nudges: 0, talkedOver: 0, tapYes: 0, tapNo: 0 }
   for (const line of text.split(/\r?\n/)) {
@@ -70,9 +70,10 @@ export function parseLog(text: string): LogStats {
       else s.bank++
       const id = String(o.interviewId ?? '')
       s.callsByInterview[id] = (s.callsByInterview[id] ?? 0) + (Number(o.calls) || 0)
-    } else if (o.event === 'nudge_shadow') {
+    } else if (o.event === 'nudge_shadow' || o.event === 'nudge_fired') {
       s.nudges++
-      if (typeof o.spokeAfterMs === 'number' && o.spokeAfterMs <= 3000) s.talkedOver++
+    } else if (o.event === 'nudge_continue') {
+      s.talkedOver++ // the candidate spoke within 3 s of a nudge (or of the moment a shadow nudge would have fired)
     } else if (o.event === 'room_feedback') {
       if (o.followed === true) s.tapYes++
       else if (o.followed === false) s.tapNo++

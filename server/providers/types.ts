@@ -13,8 +13,9 @@ export const FollowUpOutputSchema = z.object({
 })
 
 export const InterviewerOutputSchema = z.object({
-  action: z.enum(['probe', 'advance', 'gap']),
-  target_skill: z.string().nullable(),
+  // A model that returns only a question still works: it counts as 'advance' with no target skill.
+  action: z.enum(['probe', 'advance', 'gap']).default('advance'),
+  target_skill: z.string().nullable().default(null),
   question: z.string().trim().min(8).max(500),
 })
 

@@ -201,6 +201,24 @@ describe('live-call nudges', () => {
     expect(b.lastState()).toBe('listening')
   })
 
+  it('logs nudge_continue when the candidate speaks within 3 s of a (shadow) nudge, and not when they answer later', async () => {
+    const s = await boot({ voiceNudge: 'shadow' })
+    await listening(s)
+    await s.tick(16_000) // the shadow nudge would fire here
+    s.ctl.emit('one two three')
+    const line = s.logs.find(l => l.includes('nudge_continue'))
+    expect(line).toBeTruthy()
+    expect(JSON.parse(line!)).toMatchObject({ event: 'nudge_continue', turnId: s.session().currentTurnId })
+    expect(JSON.parse(line!).afterMs).toBeLessThanOrEqual(3000)
+    vi.useRealTimers()
+    const late = await boot({ voiceNudge: 'shadow' })
+    await listening(late)
+    await late.tick(16_000)
+    await late.tick(5_000) // speaks well after the nudge
+    late.ctl.emit('one two three')
+    expect(late.logs.some(l => l.includes('nudge_continue'))).toBe(false)
+  })
+
   it('shadow mode only logs; off does nothing', async () => {
     const s = await boot({ voiceNudge: 'shadow' })
     await listening(s)

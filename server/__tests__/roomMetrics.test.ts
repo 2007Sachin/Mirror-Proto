@@ -25,8 +25,9 @@ describe('parseLog and report', () => {
   const log = [
     '12:00 {"event":"room_turn","interviewId":"i1","source":"model","calls":1}',
     '{"event":"room_turn","interviewId":"i1","source":"bank","calls":2}',
-    '{"event":"nudge_shadow","interviewId":"i1","spokeAfterMs":1200}',
-    '{"event":"nudge_shadow","interviewId":"i1"}',
+    '{"event":"nudge_shadow","turnId":"t1","reason":"silence_first","silenceMs":10000}',
+    '{"event":"nudge_continue","turnId":"t1","afterMs":1200}',
+    '{"event":"nudge_fired","turnId":"t2","reason":"silence_first","silenceMs":10000}',
     '{"event":"room_feedback","followed":true}',
     'not json {',
   ].join('\n')

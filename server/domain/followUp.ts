@@ -57,6 +57,13 @@ export async function nextFollowUpQuestion(
 // Model calls used per interview, for the Director's ceiling. In-process and bounded; a restart only resets the count.
 const callsByInterview = new Map<string, number>()
 const COUNTER_CAP = 500
+
+/** The Room's deadline and call ceiling (INTERVIEWER_DEADLINE_MS, INTERVIEW_CALL_BUDGET). Set once by buildApp; REST and voice share it. */
+const roomConfig: { deadlineMs?: number; callBudget?: number } = {}
+export function configureRoom(opts: { deadlineMs?: number; callBudget?: number }): void {
+  roomConfig.deadlineMs = opts.deadlineMs
+  roomConfig.callBudget = opts.callBudget
+}
 const defaultLog: RoomLog = line => {
   if (process.env.NODE_ENV !== 'test') console.info(JSON.stringify(line))
 }
@@ -99,7 +106,7 @@ export async function persistFollowUp(
             }),
           })
         : null
-    const out = await nextQuestion(state, { interviewer, log, callsUsed: callsByInterview.get(interview.id) ?? 0 })
+    const out = await nextQuestion(state, { interviewer, log, deadlineMs: roomConfig.deadlineMs, callBudget: roomConfig.callBudget, callsUsed: callsByInterview.get(interview.id) ?? 0 })
     if (out.calls) {
       if (callsByInterview.size >= COUNTER_CAP) callsByInterview.delete(callsByInterview.keys().next().value as string)
       callsByInterview.set(interview.id, (callsByInterview.get(interview.id) ?? 0) + out.calls)

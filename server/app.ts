@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import type { Env } from './config.js'
 import { isNimConfigured, isSarvamConfigured, isSupabaseConfigured } from './config.js'
 import { FALLBACK_QUESTIONS, totalFor } from './domain/questions.js'
-import { interviewContext, nextFollowUp, persistFollowUp as persistFollowUpDomain } from './domain/followUp.js'
+import { configureRoom, interviewContext, nextFollowUp, persistFollowUp as persistFollowUpDomain } from './domain/followUp.js'
 import { fallbackNotes, focusLabel } from './domain/fallbacks.js'
 import { addTurnSchema, createInterviewSchema } from './domain/schemas.js'
 import { extractResumeText, onboardingStepSchema, profileSchema, runOnboardingStep, MAX_RESUME_BYTES } from './domain/onboarding.js'
@@ -155,6 +155,7 @@ export function buildApp(deps: AppDeps): Hono {
   }
 
   /** Never fails on the model: a slow or broken provider gives a catalogue question with source 'fallback'. */
+  configureRoom({ deadlineMs: Math.min(env.interviewerDeadlineMs, deadlineMs), callBudget: env.interviewCallBudget })
   const persistFollowUp = (repo: Repository, interview: InterviewRow, turns: TurnRow[]) => persistFollowUpDomain(repo, interview, turns, provider)
 
   /** Question 1 starts from their story or focus when The First Interview gave us one; else the catalog opener. */

@@ -192,6 +192,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
     if (kind === 'ramble') session.rambleOffered = true
     else session.nudgeCount += 1
     const turnId = session.currentTurnId
+    session.lastNudgeAt = Date.now()
     if (nudgeMode !== 'on') {
       log(JSON.stringify({ event: 'nudge_shadow', reason, turnId, silenceMs }))
       return scheduleSilence(ctx, session)
@@ -214,6 +215,10 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
         if (words > session.partialWords) {
           session.partialWords = words
           session.lastPartialAt = Date.now()
+          if (session.lastNudgeAt !== null && session.lastPartialAt - session.lastNudgeAt <= 3000) {
+            log(JSON.stringify({ event: 'nudge_continue', turnId: session.currentTurnId, afterMs: session.lastPartialAt - session.lastNudgeAt }))
+          }
+          session.lastNudgeAt = null
           scheduleSilence(ctx, session)
         }
       }

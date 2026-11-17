@@ -27,6 +27,8 @@ export interface VoiceSession {
   partialWords: number
   turnStartedAt: number
   rambleOffered: boolean
+  /** When the last nudge fired (or would have, in shadow mode); speech within 3 s of it is logged as a talk-over. */
+  lastNudgeAt: number | null
   /** Scripted variants already used in this call, so none repeats back to back. */
   usedLines: Set<string>
 }
@@ -69,6 +71,7 @@ export class SessionManager {
       partialWords: 0,
       turnStartedAt: 0,
       rambleOffered: false,
+      lastNudgeAt: null,
       usedLines: new Set(),
     }
     this.sessions.set(id, session)

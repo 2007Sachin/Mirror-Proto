@@ -94,15 +94,15 @@ describe('notes fallback', () => {
 })
 
 describe('slow or failing model on each call', () => {
-  it('a turn gets the catalogue question, led by their words, flagged as fallback', async () => {
+  it('a turn gets an unasked bank question, with no quote in front, flagged as fallback', async () => {
     const { app } = makeApp({ provider: failing })
     const { id } = await j<{ id: string }>(await post(app, '/interviews', { role: 'Data Analyst' }))
     const res = await post(app, `/interviews/${id}/turns`, { questionIndex: 0, answer: answers[0] })
     expect(res.status).toBe(201)
     const body = await j(res)
     expect(body.source).toBe('fallback')
-    expect(body.nextQuestion).toContain(FALLBACK_QUESTIONS[1])
-    expect(body.nextQuestion).toContain('I rebuilt the weekly report.')
+    expect(body.nextQuestion).toBe(FALLBACK_QUESTIONS[1])
+    expect(body.nextQuestion).not.toContain('You said')
   })
 
   it('a hanging provider still answers within the deadline', async () => {

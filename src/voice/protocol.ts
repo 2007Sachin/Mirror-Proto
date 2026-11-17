@@ -54,6 +54,9 @@ export const MSG = {
   CLOSE_SERVER: 'close',
   /** No speech-to-text provider on this server: the learner types instead. */
   VOICE_UNAVAILABLE: 'voice_unavailable',
+  /** Additive: a calm spoken line after a long silence, or an offer to move on. */
+  NUDGE: 'nudge',
+  RAMBLE_HINT: 'ramble_hint',
 } as const
 
 export const VOICE_UNAVAILABLE_NOTICE = "Voice is not set up here, so let's type this one."

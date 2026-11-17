@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import type { Env } from './config.js'
 import { isNimConfigured, isSarvamConfigured, isSupabaseConfigured } from './config.js'
 import { FALLBACK_QUESTIONS, totalFor } from './domain/questions.js'
-import { interviewContext, nextFollowUp, persistFollowUp as persistFollowUpDomain } from './domain/followUp.js'
+import { configureRoom, interviewContext, nextFollowUp, persistFollowUp as persistFollowUpDomain } from './domain/followUp.js'
 import { fallbackNotes, focusLabel } from './domain/fallbacks.js'
 import { addTurnSchema, createInterviewSchema } from './domain/schemas.js'
 import { extractResumeText, onboardingStepSchema, profileSchema, runOnboardingStep, MAX_RESUME_BYTES } from './domain/onboarding.js'
@@ -34,6 +34,7 @@ import { registerAloudRoutes } from './routes/aloud.js'
 import { registerScreenRoutes } from './routes/screen.js'
 import { registerAuthRoutes } from './routes/auth.js'
 import { registerMeRoutes } from './routes/me.js'
+import { registerRoomFeedbackRoutes } from './routes/roomFeedback.js'
 import { buildScreeningQuestions, screenTimeUp } from './domain/screening.js'
 
 export interface AppDeps {
@@ -121,7 +122,7 @@ function serializeReflection(reflection: ReflectionRow) {
 export function buildApp(deps: AppDeps): Hono {
   const { env, auth, repoFor } = deps
   const deadlineMs = deps.aiDeadlineMs ?? 8_000
-  const rawProvider =
+  const rawProvider: ReflectionProvider | null =
     deps.provider !== undefined
       ? deps.provider
       : isNimConfigured(env)
@@ -131,6 +132,7 @@ export function buildApp(deps: AppDeps): Hono {
   const provider: ReflectionProvider | null = rawProvider && {
     generateReflection: r => withDeadline(rawProvider.generateReflection(r), deadlineMs),
     generateFollowUp: rawProvider.generateFollowUp && (r => withDeadline(rawProvider.generateFollowUp!(r), deadlineMs)),
+    generateNextQuestion: rawProvider.generateNextQuestion && (i => withDeadline(rawProvider.generateNextQuestion!(i), env.interviewerDeadlineMs)),
     generateOnboarding: rawProvider.generateOnboarding && (r => withDeadline(rawProvider.generateOnboarding!(r), deadlineMs)),
   }
 
@@ -153,6 +155,7 @@ export function buildApp(deps: AppDeps): Hono {
   }
 
   /** Never fails on the model: a slow or broken provider gives a catalogue question with source 'fallback'. */
+  configureRoom({ deadlineMs: Math.min(env.interviewerDeadlineMs, deadlineMs), callBudget: env.interviewCallBudget })
   const persistFollowUp = (repo: Repository, interview: InterviewRow, turns: TurnRow[]) => persistFollowUpDomain(repo, interview, turns, provider)
 
   /** Question 1 starts from their story or focus when The First Interview gave us one; else the catalog opener. */
@@ -772,6 +775,7 @@ export function buildApp(deps: AppDeps): Hono {
   const clearRewrites = registerMatchRoutes(api, routeDeps)
   registerAloudRoutes(api, routeDeps)
   registerScreenRoutes(api, routeDeps)
+  registerRoomFeedbackRoutes(api)
   // Deleting a user's data also drops their in-memory caches (keys start with `<workspace>:`).
   registerMeRoutes(api, routeDeps, workspace => {
     for (const cache of [idempotency, coachNotes]) for (const k of [...cache.keys()]) if (k.startsWith(`${workspace}:`)) cache.delete(k)

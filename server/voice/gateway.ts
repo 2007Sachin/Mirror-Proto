@@ -16,6 +16,7 @@ import { isNimConfigured, isSarvamConfigured } from '../config.js'
 import { createNimClient } from '../providers/nim.js'
 import type { ReflectionProvider } from '../providers/types.js'
 import { interviewProgress, submitVoiceTurn } from './interviewBridge.js'
+import { isRepeatRequest, pickLine } from './nudgeLines.js'
 
 export type LogFn = (msg: string) => void
 
@@ -29,6 +30,11 @@ export interface VoiceGatewayDeps {
   provider?: ReflectionProvider | null
   log?: LogFn
 }
+
+/** A nudge never lands within this long of the candidate's last new words. */
+const RECENT_WORDS_MS = 2000
+
+const wordCount = (t: string) => t.trim().split(/\s+/).filter(Boolean).length
 
 const LOCALHOST_ADDR = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1'])
 
@@ -115,11 +121,87 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
     log(`voice close code=${code} session=${session?.id ?? 'none'}`)
     sendJson(ctx, 'close', session?.id ?? null, session?.currentTurnId ?? null, { code, reason })
     ctx.closed = true
+    if (session) clearSilence(session)
     try {
       ctx.ws.close(1000, code)
     } catch {
       /* already closed */
     }
+  }
+
+  const nudgeMode = deps.env.voiceNudge
+
+  function clearSilence(session: VoiceSession) {
+    if (session.silenceTimer) clearTimeout(session.silenceTimer)
+    session.silenceTimer = null
+  }
+
+  /** Start the silence clock for a turn (question just ended). The server never finalizes a turn itself. */
+  function armSilence(ctx: ConnectionCtx, session: VoiceSession, resetTurn: boolean) {
+    if (nudgeMode === 'off') return
+    if (resetTurn) {
+      const now = Date.now()
+      session.lastPartialAt = now
+      session.turnStartedAt = now
+      session.partialWords = 0
+      session.nudgeCount = 0
+      session.rambleOffered = false
+    }
+    scheduleSilence(ctx, session)
+  }
+
+  function scheduleSilence(ctx: ConnectionCtx, session: VoiceSession) {
+    clearSilence(session)
+    if (nudgeMode === 'off' || ctx.closed || ctx.session !== session || session.muted || session.machine.current !== 'listening') return
+    const due: number[] = []
+    if (session.nudgeCount === 0) {
+      due.push(session.lastPartialAt + (session.questionIndex === 0 ? deps.env.voiceNudgeFirstQuestionMs : deps.env.voiceNudgeSilenceMs))
+    } else if (session.nudgeCount === 1) {
+      due.push(session.lastPartialAt + deps.env.voiceNudgeSecondMs)
+    }
+    if (!session.rambleOffered && session.partialWords > 0) {
+      due.push(session.partialWords >= deps.env.voiceRambleWords ? 0 : session.turnStartedAt + deps.env.voiceRambleMs)
+    }
+    if (due.length === 0) return
+    const at = Math.max(Math.min(...due), session.lastPartialAt + RECENT_WORDS_MS)
+    session.silenceTimer = setTimeout(() => onSilenceTick(ctx, session), Math.max(0, at - Date.now()))
+    session.silenceTimer.unref?.()
+  }
+
+  function onSilenceTick(ctx: ConnectionCtx, session: VoiceSession) {
+    session.silenceTimer = null
+    if (ctx.closed || ctx.session !== session || session.muted || session.machine.current !== 'listening') return
+    const now = Date.now()
+    const quietFor = now - session.lastPartialAt
+    if (quietFor < RECENT_WORDS_MS) return scheduleSilence(ctx, session)
+    const rambleDue =
+      !session.rambleOffered &&
+      session.partialWords > 0 &&
+      (session.partialWords >= deps.env.voiceRambleWords || now - session.turnStartedAt >= deps.env.voiceRambleMs)
+    if (rambleDue) return fireNudge(ctx, session, 'ramble', 'ramble', quietFor)
+    if (session.nudgeCount === 0 && quietFor >= (session.questionIndex === 0 ? deps.env.voiceNudgeFirstQuestionMs : deps.env.voiceNudgeSilenceMs)) {
+      return fireNudge(ctx, session, 'silence_first', 'first', quietFor)
+    }
+    if (session.nudgeCount === 1 && quietFor >= deps.env.voiceNudgeSecondMs) {
+      return fireNudge(ctx, session, 'silence_second', 'second', quietFor)
+    }
+    scheduleSilence(ctx, session)
+  }
+
+  function fireNudge(ctx: ConnectionCtx, session: VoiceSession, reason: string, kind: 'first' | 'second' | 'ramble', silenceMs: number) {
+    if (kind === 'ramble') session.rambleOffered = true
+    else session.nudgeCount += 1
+    const turnId = session.currentTurnId
+    session.lastNudgeAt = Date.now()
+    if (nudgeMode !== 'on') {
+      log(JSON.stringify({ event: 'nudge_shadow', reason, turnId, silenceMs }))
+      return scheduleSilence(ctx, session)
+    }
+    log(JSON.stringify({ event: 'nudge_fired', reason, turnId, silenceMs }))
+    const text = pickLine(kind, session.usedLines)
+    void speakQuestion(ctx, session, text, turnId, 'line', {
+      announce: { type: kind === 'ramble' ? 'ramble_hint' : 'nudge', payload: { reason, text, turnId } },
+    })
   }
 
   function ensureSttStream(ctx: ConnectionCtx, session: VoiceSession): SttStream {
@@ -129,6 +211,16 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
       // Partials never advance state; emit only while still capturing.
       if (ctx.session === session && session.machine.current === 'listening' && !ctx.closed) {
         sendJson(ctx, 'partial_transcript', session.id, session.currentTurnId, { text })
+        const words = wordCount(text)
+        if (words > session.partialWords) {
+          session.partialWords = words
+          session.lastPartialAt = Date.now()
+          if (session.lastNudgeAt !== null && session.lastPartialAt - session.lastNudgeAt <= 3000) {
+            log(JSON.stringify({ event: 'nudge_continue', turnId: session.currentTurnId, afterMs: session.lastPartialAt - session.lastNudgeAt }))
+          }
+          session.lastNudgeAt = null
+          scheduleSilence(ctx, session)
+        }
       }
     })
     stream.onError(() => {
@@ -142,29 +234,40 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
       sendError(ctx, session, 'stt_error', 'speech recognition failed', true)
       session.machine.transition('listening', session.currentTurnId)
       sendJson(ctx, 'state', session.id, session.currentTurnId, { state: 'listening', turnId: session.currentTurnId })
+      armSilence(ctx, session, true)
       if (ctx.sttStream?.isClosed()) ctx.sttStream = null
     })
     ctx.sttStream = stream
     return stream
   }
 
-  function resetCapture(ctx: ConnectionCtx, session: VoiceSession) {
+  function resetCapture(ctx: ConnectionCtx, session: VoiceSession, resetTurn = true) {
     if (ctx.sttStream?.isClosed()) ctx.sttStream = null
     ctx.turnAudioBytes = 0
     ctx.turnAudioRejected = false
     session.machine.transition('listening', session.currentTurnId)
+    armSilence(ctx, session, resetTurn)
   }
 
-  async function speakQuestion(ctx: ConnectionCtx, session: VoiceSession, text: string, turnId: string, kind: 'opening' | 'next') {
+  async function speakQuestion(
+    ctx: ConnectionCtx,
+    session: VoiceSession,
+    text: string,
+    turnId: string,
+    kind: 'opening' | 'next' | 'line',
+    opts: { announce?: { type: ServerMessageType; payload: unknown }; spokenPrefix?: string } = {},
+  ) {
     session.pendingPlayback = kind
+    clearSilence(session)
     session.machine.transition('speaking', turnId)
     sendJson(ctx, 'state', session.id, turnId, { state: 'speaking', turnId })
-    sendJson(ctx, 'question', session.id, turnId, { turnId, text, questionIndex: session.questionIndex })
+    if (opts.announce) sendJson(ctx, opts.announce.type, session.id, turnId, opts.announce.payload)
+    else sendJson(ctx, 'question', session.id, turnId, { turnId, text, questionIndex: session.questionIndex })
     sendJson(ctx, 'tts_start', session.id, turnId, { turnId })
     const abort = { aborted: false }
     ctx.ttsAbort = abort
     try {
-      for await (const chunk of tts.synthesizeStream(text, { language: 'en-IN', speed: 1 })) {
+      for await (const chunk of tts.synthesizeStream(opts.spokenPrefix ? `${opts.spokenPrefix} ${text}` : text, { language: 'en-IN', speed: 1 })) {
         if (abort.aborted || ctx.closed || ctx.session !== session) return
         ctx.ws.send(chunk)
       }
@@ -211,6 +314,19 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
       // Do not cache empty rejects — the same turnId is reused so the client can speak again.
       resetCapture(ctx, session)
       return
+    }
+    if (isRepeatRequest(transcript)) {
+      // Not an answer: save nothing, keep the question index, say the question again.
+      const progress = await interviewProgress(ctx.repo, session.workspace, session.interviewId)
+      const question = progress?.currentQuestion
+      if (question && !ctx.closed && ctx.session === session) {
+        ctx.turnAudioBytes = 0
+        ctx.turnAudioRejected = false
+        session.machine.transition('thinking', turnId)
+        sendJson(ctx, 'state', session.id, turnId, { state: 'thinking', turnId })
+        await speakQuestion(ctx, session, question, turnId, 'next', { spokenPrefix: pickLine('repeat', session.usedLines) })
+        return
+      }
     }
     sendJson(ctx, 'final_transcript', session.id, turnId, { text: transcript, confidence: undefined })
     session.machine.transition('thinking', turnId)
@@ -265,9 +381,10 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
       sendError(ctx, session, 'stale_turn', 'turn is not awaiting playback completion', true)
       return
     }
+    const wasLine = session.pendingPlayback === 'line'
     session.pendingPlayback = 'none'
     sessionManager.touch(session)
-    resetCapture(ctx, session)
+    resetCapture(ctx, session, !wasLine)
     sendJson(ctx, 'state', session.id, session.currentTurnId, { state: session.machine.current, turnId: session.currentTurnId })
     void ensureSttStream(ctx, session).whenReady().catch(() => undefined)
   }
@@ -433,6 +550,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
           return
         }
         if (session.machine.current !== 'listening') return
+        clearSilence(session)
         session.machine.transition('processing_speech', turnId)
         sendJson(ctx, 'state', session.id, turnId, { state: 'processing_speech', turnId })
         void ensureSttStream(ctx, session).whenReady().catch(() => undefined)
@@ -457,11 +575,24 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
           sendJson(ctx, 'state', session.id, session.currentTurnId, { state: 'listening', turnId: session.currentTurnId })
           session.machine.transition('listening', session.currentTurnId)
         }
+        clearSilence(session)
         return
       }
       case 'mute': {
         if (!session) return
         session.muted = (parsed.payload as { muted: boolean }).muted
+        clearSilence(session)
+        if (session.muted) {
+          if (session.machine.current === 'speaking' && session.pendingPlayback === 'line') {
+            ctx.ttsAbort.aborted = true
+            session.pendingPlayback = 'none'
+            sendJson(ctx, 'state', session.id, session.currentTurnId, { state: 'listening', turnId: session.currentTurnId })
+            session.machine.transition('listening', session.currentTurnId)
+          }
+        } else if (session.machine.current === 'listening') {
+          session.lastPartialAt = Date.now()
+          scheduleSilence(ctx, session)
+        }
         return
       }
       case 'ping': {
@@ -511,6 +642,7 @@ export function createVoiceGateway(deps: VoiceGatewayDeps): VoiceGateway {
     ws.on('close', () => {
       ctx.closed = true
       ctx.ttsAbort.aborted = true
+      if (ctx.session) clearSilence(ctx.session)
       ctx.sttStream?.abort()
       ctx.sttStream = null
       if (ctx.session && ctx.session.machine.current !== 'completed') {

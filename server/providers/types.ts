@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { InterviewerInput, InterviewerResult } from '../domain/director/types.js'
 
 /** What stood out (verbatim quotes), the gap still open, one concrete suggestion. No scores. */
 export const ReflectionOutputSchema = z.object({
@@ -8,6 +9,13 @@ export const ReflectionOutputSchema = z.object({
 })
 
 export const FollowUpOutputSchema = z.object({
+  question: z.string().trim().min(8).max(500),
+})
+
+export const InterviewerOutputSchema = z.object({
+  // A model that returns only a question still works: it counts as 'advance' with no target skill.
+  action: z.enum(['probe', 'advance', 'gap']).default('advance'),
+  target_skill: z.string().nullable().default(null),
   question: z.string().trim().min(8).max(500),
 })
 
@@ -114,5 +122,7 @@ export interface FollowUpRequest {
 export interface ReflectionProvider {
   generateReflection(request: ProviderRequest): Promise<ReflectionOutput>
   generateFollowUp?(request: FollowUpRequest): Promise<string>
+  /** The Room's one live Interviewer call (chooses among the Director's candidates or probes the last answer). Absent: the bank answers. */
+  generateNextQuestion?(input: InterviewerInput): Promise<InterviewerResult>
   generateOnboarding?(request: OnboardingRequest): Promise<Record<string, string>>
 }

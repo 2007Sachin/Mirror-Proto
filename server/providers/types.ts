@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { InterviewerInput, InterviewerResult } from '../domain/director/types.js'
 
 /** What stood out (verbatim quotes), the gap still open, one concrete suggestion. No scores. */
 export const ReflectionOutputSchema = z.object({
@@ -114,5 +115,7 @@ export interface FollowUpRequest {
 export interface ReflectionProvider {
   generateReflection(request: ProviderRequest): Promise<ReflectionOutput>
   generateFollowUp?(request: FollowUpRequest): Promise<string>
+  /** The Room's one live Interviewer call (chooses among the Director's candidates or probes the last answer). Absent: the bank answers. */
+  generateNextQuestion?(input: InterviewerInput): Promise<InterviewerResult>
   generateOnboarding?(request: OnboardingRequest): Promise<Record<string, string>>
 }

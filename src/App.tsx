@@ -82,6 +82,7 @@ export default function App() {
   const [targetId, setTargetId] = useState<string | null>(null)
   const [role, setRole] = useState('')
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [profileStatus, setProfileStatus] = useState<'loading' | 'none' | 'ready' | 'error'>('loading')
   const [practiceItem, setPracticeItem] = useState<string | null>(null)
   const [answers, setAnswers] = useState<Answer[]>([])
   const [answer, setAnswer] = useState('')
@@ -365,9 +366,17 @@ export default function App() {
       .then(p => {
         if (profileFresh.current) return
         setProfile(p); setRole(p.role); setVoiceMode(p.mode === 'voice')
+        setProfileStatus('ready')
         setView(v => (v === 'firstInterview' ? 'workspace' : v)) // clicked Start before this arrived
       })
-      .catch(() => undefined) // 404 = not onboarded yet
+      .catch(err => {
+        if (profileFresh.current) return
+        if (err instanceof ApiError && err.status === 404) {
+          setProfileStatus('none')
+        } else {
+          setProfileStatus('error')
+        }
+      })
   }, [authed])
 
   useEffect(() => {
@@ -412,7 +421,7 @@ export default function App() {
       .catch(err => setFlowState(classifyApiError(err)))
   }, [view, sessionId])
 
-  if (view === 'home') return <Landing onTry={() => go(profile ? 'workspace' : 'firstInterview')} />
+  if (view === 'home') return <Landing onTry={() => go(profileStatus === 'none' ? 'firstInterview' : profileStatus === 'loading' ? 'workspace' : profileStatus === 'error' ? 'workspace' : profile ? 'workspace' : 'firstInterview')} />
 
   if (!authed) {
     const failed = new URLSearchParams(window.location.search).get('auth') === 'failed'

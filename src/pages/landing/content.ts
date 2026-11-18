@@ -6,19 +6,81 @@
 export const NAV = {
   brand: 'MIRROR',
   links: [
+    { label: 'Features', href: '#features' },
     { label: 'How it works', href: '#how' },
     { label: 'Privacy', href: '#private' },
+    { label: 'FAQ', href: '#faq' },
   ],
   cta: 'Request access',
 } as const
 
 export const HERO = {
-  eyebrow: 'Interview practice for data roles',
+  eyebrow: 'Interview practice for data and analytics roles',
   /** Two sentences, set as two lines: the loop, then the feeling. */
   title: ['Practise for the job you actually want.', 'Nobody is keeping score.'],
-  sub: 'Paste the job description. MIRROR shows where your résumé is thin, asks about it, and lets you say it again.',
+  sub: 'Paste the job description. MIRROR shows which skills your résumé backs and which it does not, asks you about the gaps by voice or in text, and lets you say every answer again.',
   primary: 'Try a sample question',
   secondary: 'Request access',
+} as const
+
+/** Plain facts under the hero. No numbers, no logos. */
+export const TRUST = ['Not scored', 'No audio kept by MIRROR', 'Built from your job', 'Speak or type'] as const
+
+/** The real app screens (public/landing/*.webp, captured from the running app with synthetic sample data). */
+export const SCREENS = {
+  briefing: { src: '/landing/briefing.webp', alt: 'The MIRROR Briefing: a greeting, one next step with a single button, and a coming-up card showing which skills the résumé backs, backs in part, and does not show yet.' },
+  target: { src: '/landing/target.webp', alt: 'A Target page for a Senior Data Analyst role: the rounds to expect (SQL, Python, tools, behavioural) with a practise button for each, and a button to rehearse a screening call.' },
+  room: { src: '/landing/room.webp', alt: 'The MIRROR interview room: a glowing orb, the question in large type, and a side panel to speak or type an answer.' },
+  session: { src: '/landing/session.webp', alt: 'A saved session: for each question, what worked, what to strengthen, and which of situation, task, action and result are in the answer.' },
+  stories: { src: '/landing/stories.webp', alt: 'The Stories page: themes you can already tell, themes still open, a box to find a story for a question, and saved stories.' },
+  practice: { src: '/landing/practice.webp', alt: 'The Practice page: four tracks, SQL, Python, Stats and A/B testing, and a case simulator.' },
+} as const
+
+export const HOW = {
+  title: 'How it works',
+  steps: [
+    { title: 'Paste the job', body: 'Add the job description for the role you want. MIRROR reads what it asks for: the skills, the rounds, the kind of questions to expect.', screen: 'target' },
+    { title: 'See your gaps', body: 'Your résumé is matched against the job. You see which skills it backs, which it backs in part, and which it does not show yet.', screen: 'briefing' },
+    { title: 'Practise out loud', body: 'Answer in the interview room, by voice or in text. Questions follow what you said and the gaps you have, and a question does not come back.', screen: 'room' },
+    { title: 'Say it again', body: 'Open a session to see what worked and what to strengthen, say an answer again, and keep the good ones as stories.', screen: 'session' },
+  ],
+} as const
+
+export const FEATURES = {
+  title: 'What is inside',
+  intro: 'Everything below is in the app today. These are real screens, with sample data.',
+  items: [
+    {
+      id: 'briefing', kicker: 'Briefing', title: 'One next step, chosen for you.', screen: 'briefing',
+      body: 'Open MIRROR and it tells you what is worth doing today, in a sentence: an interview in nine days, a gap to close, a replay that is due.',
+      bullets: ['One main button. Nothing competes with it.', 'Skills your résumé backs, backs in part, or does not show yet, as plain names.', 'Replays that come back sooner as the interview gets close.'],
+    },
+    {
+      id: 'targets', kicker: 'Targets', title: 'Start from the job, not from a list.', screen: 'target',
+      body: 'Paste a job description and MIRROR reads it. You see the rounds to expect and where to start.',
+      bullets: ['The rounds the role is likely to have: SQL, Python, tools and behavioural.', 'A short screening call, rehearsed from this job, with no hints.', 'Set the interview date and Briefing counts down to it.'],
+    },
+    {
+      id: 'room', kicker: 'Interview room', title: 'A room that listens.', screen: 'room',
+      body: 'Speak or type, in a calm full-screen room. Captions and a chat panel are there when you want them.',
+      bullets: ['Questions follow what you said and the job you are after.', 'A question you have already been asked does not come back.', "MIRROR doesn't keep your audio."],
+    },
+    {
+      id: 'sessions', kicker: 'Sessions', title: 'Say it again and see what changed.', screen: 'session',
+      body: 'Every session is saved as a full read, question by question.',
+      bullets: ['What worked and what to strengthen, in plain words.', 'Situation, task, action and result: which are in your answer and which are still open.', 'Save a good answer as a story with one tap.'],
+    },
+    {
+      id: 'stories', kicker: 'Stories', title: 'Stories you can retell.', screen: 'stories',
+      body: 'A bank of real moments, in your own words, matched to what jobs ask.',
+      bullets: ['Themes you can already tell, and the ones still open.', 'Paste a question and get the story that fits it.', 'A hint when the role you want needs a theme you do not have yet.'],
+    },
+    {
+      id: 'practice', kicker: 'Practice', title: 'Hands-on practice for data roles.', screen: 'practice',
+      body: 'Short exercises you run right in the browser. Every answer is saved and feeds your Briefing.',
+      bullets: ['SQL: write real queries against a small shop and signup database, from joins to funnels.', 'Python: small functions checked against tests, in plain Python.', 'Stats and A/B testing, and a case simulator with a messy brief.'],
+    },
+  ],
 } as const
 
 export const MOMENT = {
@@ -127,6 +189,8 @@ export const FAQ = [
   ['Will I be given a score?', CLAIMS[1]],
   ['Who can see what I say?', CLAIMS[2]],
   ['Can I delete it?', CLAIMS[3]],
+  ['What can I practise besides interviews?', 'SQL, Python, stats and A/B testing, and a case simulator, all in the browser.'],
+  ['Is it only for data roles?', 'It is built for data and analytics roles today.'],
   ['Is it free?', 'There is no price yet. The beta is invite-only.'],
 ] as const
 

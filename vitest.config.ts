@@ -6,7 +6,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     // The Today tests read these two stylesheets as text (focus, tap targets, 390 px rules).
-    css: { include: [/pages[\\/]today\.css/, /src[\\/]landing\.css/] },
+    css: { include: [/pages[\\/]today\.css/, /src[\\/]landing\.css/, /landing[\\/]home\.css/] },
     include: ['server/**/*.test.ts', 'src/**/*.test.{ts,tsx}'],
   },
 })

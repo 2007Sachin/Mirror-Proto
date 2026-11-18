@@ -8,8 +8,15 @@ Source: `docs/roast-room/2026-11-17-landing-moat/verdict.md` (GO with conditions
 - Primary button "Try a sample question", secondary "Request access".
 - No comparison table, no competitor named. No testimonials, counts, logos, pricing, outcome promises, score, percentage or streak. The live pause reactions are not claimed (shadow mode).
 
-## Structure
-Hero with button pair, the night-before moment, `#how` (three steps), what a session looks like, `#sample`, not scored, `#private`, question list versus built from your job, where we are, FAQ, close. All words live in `src/pages/landing/content.ts`; styles are scoped under `.mh` in `src/pages/landing/home.css`.
+## Look and structure (v2)
+The first version (paper and serif) was rejected: it did not look like the app. The page now reuses the shared design system in `src/landing.css` (`.mirror-landing` tokens, `ml-btn`, `ml-glass`, Inter, the soft blue/teal field, dark mode) and the app's `LiveOrb` as the hero's signature. `src/pages/landing/home.css` holds only page layout under `.mh`.
+Order: glass nav, hero (H1, sub, two buttons, trust chips, real Briefing screenshot with the orb), `#how` (four steps with cropped screenshots), `#features` (six alternating blocks), `#sample`, `#private` (not scored plus the five claims), versus, stage, `#faq`, close band, footer. All words live in `src/pages/landing/content.ts`.
+
+## Screenshots
+`public/landing/*.webp` (1440x900) come from the demo app with synthetic data (Contoso Analytics, "Demo account"). To refresh: run the app against the demo API, open each screen, capture at 1440x900, save as webp under the same name. Known gap: `room.webp` currently shows the Briefing, not the interview room; recapture it.
+
+## Fonts
+The app-wide `index.html` loads Inter from Google Fonts. Unchanged by this page; flagged because it is a third-party request the page itself does not add.
 
 ## The sample, and why it is a sample
 `#sample` plays fixed data from `SAMPLE`: pick one of three starting answers, press "Say it again", see the better sentence and the "What changed" lines. It is tagged "sample" and labelled "Sample, not your data. Nothing you tap here leaves this page." No network call is made (the tests stub `fetch` and fail if it is called). It never implies a live model, so it has no cost and no abuse surface.

@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import Landing from './Landing'
 import css from './landing/home.css?raw'
-import { CLAIMS, FAQ, NOT_SCORED, SAMPLE } from './landing/content'
+import { CLAIMS, FAQ, FEATURES, NOT_SCORED, SAMPLE, TRUST } from './landing/content'
 
 const fetchSpy = vi.fn()
 beforeAll(() => {
@@ -18,7 +18,7 @@ beforeEach(() => { fetchSpy.mockReset(); vi.stubGlobal('fetch', fetchSpy) })
 afterEach(() => { cleanup(); expect(fetchSpy).not.toHaveBeenCalled() })
 
 const setup = () => { const onTry = vi.fn(); const r = render(<Landing onTry={onTry} />); return { onTry, ...r } }
-const hero = (c: HTMLElement) => (c.querySelector('h1') as HTMLElement).closest('section, header') as HTMLElement
+const hero = (c: HTMLElement) => (c.querySelector('h1') as HTMLElement).closest('section') as HTMLElement
 const access = () => screen.getAllByRole('button', { name: /request access/i }).concat(screen.queryAllByRole('link', { name: /request access/i }))
 // Prose that legitimately holds a flagged word: the NOT_SCORED sentence and the FAQ price answer.
 const prose = (c: HTMLElement) => (c.textContent ?? '').replace(NOT_SCORED.body, '').replace('There is no price yet. The beta is invite-only.', '')
@@ -27,7 +27,7 @@ describe('Landing: buttons', () => {
   it('hero has exactly one filled primary, "Try a sample question", which scrolls and does not call onTry', () => {
     const { container, onTry } = setup()
     const h = hero(container)
-    expect(h.querySelectorAll('.mh-btn:not(.mh-btn-ghost):not(.mh-btn-sm)')).toHaveLength(1)
+    expect(h.querySelectorAll('.ml-btn:not(.ml-btn--quiet):not(.ml-btn--sm)')).toHaveLength(1)
     fireEvent.click(within(h).getByRole('button', { name: 'Try a sample question' }))
     expect(onTry).not.toHaveBeenCalled()
     expect(Element.prototype.scrollIntoView).toHaveBeenCalled()
@@ -81,10 +81,13 @@ describe('Landing: wording', () => {
     const { container } = setup()
     const p = document.getElementById('private') as HTMLElement
     let rest = p.textContent ?? ''
+    const items = [...p.querySelectorAll('li')].map(li => li.textContent)
+    expect(items).toEqual([...CLAIMS])
+    expect(container.querySelectorAll('li').length).toBeGreaterThan(0)
     for (const c of CLAIMS) { expect(rest).toContain(c); rest = rest.replace(c, '') }
-    rest = rest.replace(p.querySelector('h2')?.textContent ?? '', '')
+    rest = rest.replace(NOT_SCORED.body, '').replace(p.querySelector('h2')?.textContent ?? '', '')
     expect(rest).not.toMatch(/audio|delet|employer|recruiter|shar(e|ing)/i)
-    const allowed = [...CLAIMS, ...FAQ.flat()]
+    const allowed = [...CLAIMS, ...FAQ.flat(), ...TRUST]
     const sentences = [...container.querySelectorAll('p,li,summary,h1,h2,h3,dt,dd,button')]
       .flatMap(e => (e.textContent ?? '').split(/(?<=[.!?])\s+/))
       .map(s => s.trim()).filter(Boolean)
@@ -109,7 +112,26 @@ describe('Landing: structure', () => {
       expect(id, 'section without aria-labelledby').toBeTruthy()
       expect((document.getElementById(id!)?.textContent ?? '').trim()).not.toBe('')
     }
-    for (const id of ['sample', 'how', 'private']) expect(document.getElementById(id)).toBeTruthy()
+    for (const id of ['features', 'how', 'sample', 'private', 'faq']) expect(document.getElementById(id)).toBeTruthy()
+  })
+})
+
+describe('Landing: features and images', () => {
+  it('shows all six features with their bullets and every img has alt, size and lazy loading below the hero', () => {
+    const { container } = setup()
+    const f = document.getElementById('features') as HTMLElement
+    expect(FEATURES.items).toHaveLength(6)
+    for (const it of FEATURES.items) {
+      expect(within(f).getByText(it.title)).toBeTruthy()
+      for (const b of it.bullets) expect(f.textContent).toContain(b)
+    }
+    const imgs = [...container.querySelectorAll('img')]
+    expect(imgs.length).toBeGreaterThanOrEqual(11)
+    for (const i of imgs) {
+      expect((i.getAttribute('alt') ?? '').trim()).not.toBe('')
+      expect(i.getAttribute('width') && i.getAttribute('height')).toBeTruthy()
+    }
+    for (const i of f.querySelectorAll('img')) expect(i.getAttribute('loading')).toBe('lazy')
   })
 })
 
@@ -120,6 +142,7 @@ describe('home.css', () => {
     expect(css).toMatch(/@media\s*\(max-width:\s*(6|7)\d\dpx\)/) // the phone layout starts at 760 px and covers 390 px
     expect(css).toMatch(/prefers-reduced-motion/)
     expect(css).toMatch(/prefers-color-scheme:\s*dark/)
+    expect(css).not.toMatch(/serif|--paper|radial-gradient\(rgb/)
   })
   it('is scoped under .mh and loads nothing external', () => {
     const body = css.replace(/\/\*[\s\S]*?\*\//g, '')

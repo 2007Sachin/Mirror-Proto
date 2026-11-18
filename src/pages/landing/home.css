@@ -14,8 +14,8 @@
 .mh-links a { display: inline-flex; align-items: center; min-height: 44px; }
 
 /* Hero */
-.mh-hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 48px; align-items: center; padding-block: 56px 48px; }
-.mh-hero h1 { font-size: clamp(38px, 5.6vw, 64px); font-weight: 800; }
+.mh-hero { display: grid; grid-template-columns: 0.9fr 1.25fr; gap: 40px; align-items: center; padding-block: 56px 48px; }
+.mh-hero h1 { font-size: clamp(34px, 4.4vw, 54px); font-weight: 800; }
 .mh-hero h1 .mh-line { display: block; }
 .mh-hero h1 .mh-line + .mh-line { color: var(--accent); }
 .mh-hero .ml-sub { margin-bottom: 26px; }

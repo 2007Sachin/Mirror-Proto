@@ -31,6 +31,11 @@ export const allowlist: AllowEntry[] = [
     reason: 'Teaching text. A SQL exercise may ask about a login streak or a column named score. That is the subject of the question, not a grade for the candidate.',
   },
   {
+    where: /^screen:Landing$/,
+    pattern: /a grade, a percentage or a streak/,
+    reason: 'The "Not scored, on purpose" paragraph names the three things MIRROR never shows, to promise their absence. Not a displayed figure.',
+  },
+  {
     where: /^(screen:Landing|screen:Privacy|privacy page)$/,
     pattern: /\bscores?\b/i,
     reason: 'The landing and the privacy page use the word only to promise that interview answers are not graded.',

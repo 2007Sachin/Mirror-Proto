@@ -72,17 +72,17 @@
 .mh-hero-vis { border-left: 2px solid var(--accent); padding: .5rem 0 .5rem 1.5rem; }
 
 /* Re-forming sentence */
-.rf { min-height: 9rem; }
-.rf-line, .rf-before, .rf-after { font-family: var(--serif); font-size: clamp(1.25rem, 2.6vw, 1.65rem); line-height: 1.4; margin: 0 0 1rem; }
-.rf-before { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--rule); }
-.rf-after { color: var(--ink); }
-.rf-w { display: inline-block; white-space: pre; transition: opacity .3s; }
-.rf-new { animation: rf-in .5s ease both; color: var(--accent); }
-@keyframes rf-in { from { opacity: 0; transform: translateY(.35em); } to { opacity: 1; transform: none; } }
-.rf-changed { border-top: 1px solid var(--rule); padding-top: .75rem; }
-.rf-changed h3 { font-size: .8rem; font-family: inherit; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: .4rem; }
-.rf-changed ul { margin: 0; padding-left: 1.1rem; }
-.rf-changed li::marker { color: var(--accent); }
+.mh-rf { min-height: 9rem; }
+.mh-rf-line, .mh-rf-before, .mh-rf-after { font-family: var(--serif); font-size: clamp(1.25rem, 2.6vw, 1.65rem); line-height: 1.4; margin: 0 0 1rem; }
+.mh-rf-before { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--rule); }
+.mh-rf-after { color: var(--ink); }
+.mh-rf-w { display: inline-block; white-space: pre; transition: opacity .3s; }
+.mh-rf-new { animation: mh-rf-in .5s ease both; color: var(--accent); }
+@keyframes mh-rf-in { from { opacity: 0; transform: translateY(.35em); } to { opacity: 1; transform: none; } }
+.mh-rf-changed { border-top: 1px solid var(--rule); padding-top: .75rem; }
+.mh-rf-changed h3 { font-size: .8rem; font-family: inherit; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: .4rem; }
+.mh-rf-changed ul { margin: 0; padding-left: 1.1rem; }
+.mh-rf-changed li::marker { color: var(--accent); }
 
 .mh-steps { list-style: none; margin: 2rem 0 0; padding: 0; counter-reset: s; }
 .mh-steps li { counter-increment: s; display: grid; grid-template-columns: 3rem 1fr; padding: 1.25rem 0; border-top: 1px solid var(--rule); }

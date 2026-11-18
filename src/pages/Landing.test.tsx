@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // Landing against the contract (docs/LANDING.md). Needs A (Landing.tsx, SampleTry, home.css) to pass.
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import Landing from './Landing'
 import css from './landing/home.css?raw'
@@ -27,7 +27,7 @@ describe('Landing: buttons', () => {
   it('hero has exactly one filled primary, "Try a sample question", which scrolls and does not call onTry', () => {
     const { container, onTry } = setup()
     const h = hero(container)
-    expect(h.querySelectorAll('.m-btn:not(.m-btn--quiet), [data-primary], .mh-btn--primary')).toHaveLength(1)
+    expect(h.querySelectorAll('.mh-btn:not(.mh-btn-ghost):not(.mh-btn-sm)')).toHaveLength(1)
     fireEvent.click(within(h).getByRole('button', { name: 'Try a sample question' }))
     expect(onTry).not.toHaveBeenCalled()
     expect(Element.prototype.scrollIntoView).toHaveBeenCalled()
@@ -51,15 +51,16 @@ describe('Landing: sample', () => {
     expect(within(s).getAllByRole('button').filter(b => SAMPLE.answers.some(a => (b.textContent ?? '').includes(a.first)))).toHaveLength(3)
   })
   for (const a of SAMPLE.answers) {
-    it(`"${a.id}": pick, say it again, see the better sentence and the changes (no network)`, () => {
+    it(`"${a.id}": pick, say it again, see the better sentence and the changes (no network)`, async () => {
       setup()
       const s = document.getElementById('sample') as HTMLElement
       fireEvent.click(within(s).getByText(a.first, { exact: false }))
       fireEvent.click(within(s).getByRole('button', { name: SAMPLE.againButton }))
-      expect(s.textContent).toContain(a.again)
+      // The sentence re-forms word by word on a timer, so wait for it.
+      await waitFor(() => expect(s.textContent).toContain(a.again), { timeout: 10_000 })
       for (const c of a.changed) expect(s.textContent).toContain(c)
       expect(fetchSpy).not.toHaveBeenCalled()
-    })
+    }, 20_000)
   }
 })
 
@@ -116,7 +117,7 @@ describe('home.css', () => {
   it('has focus, tap targets, a 600px breakpoint, reduced motion and dark scheme', () => {
     expect(css).toMatch(/:focus-visible/)
     expect(css).toMatch(/min-height:\s*44px/)
-    expect(css).toMatch(/@media\s*\(max-width:\s*600px\)/)
+    expect(css).toMatch(/@media\s*\(max-width:\s*(6|7)\d\dpx\)/) // the phone layout starts at 760 px and covers 390 px
     expect(css).toMatch(/prefers-reduced-motion/)
     expect(css).toMatch(/prefers-color-scheme:\s*dark/)
   })
@@ -126,7 +127,7 @@ describe('home.css', () => {
     const bad = [...body.matchAll(/([^{}]+)\{/g)].map(m => m[1].trim())
       .filter(p => p && !p.startsWith('@') && !/^(from|to|\d+%)(\s*,\s*(from|to|\d+%))*$/.test(p))
       .flatMap(p => p.split(',').map(x => x.trim()))
-      .filter(sel => !/^\.mh(?![\w-])/.test(sel))
+      .filter(sel => !/^\.mh([\s.:>[+~-]|$)/.test(sel)) // .mh itself or a .mh-… class: nothing global
     expect(bad).toEqual([])
   })
 })

@@ -46,7 +46,7 @@ export default function Reforming({
   }, [active, k, b.length, loop, idx])
 
   const changed = (
-    <div className="rf-changed">
+    <div className="mh-rf-changed">
       <h3>{changedLabel}</h3>
       <ul>{pair.changed.map(c => <li key={c}>{c}</li>)}</ul>
     </div>
@@ -54,9 +54,9 @@ export default function Reforming({
 
   if (reduced && (loop || run)) {
     return (
-      <div ref={ref} className="rf rf-static">
-        <p className="rf-before">{pair.first}</p>
-        <p className="rf-after">{pair.again}</p>
+      <div ref={ref} className="mh-rf mh-rf-static">
+        <p className="mh-rf-before">{pair.first}</p>
+        <p className="mh-rf-after">{pair.again}</p>
         {showChanged && changed}
       </div>
     )
@@ -65,13 +65,13 @@ export default function Reforming({
   const slots = Math.max(a.length, b.length)
   const done = k >= b.length - 1
   return (
-    <div ref={ref} className="rf">
-      <p className="rf-line" aria-live={loop ? 'off' : 'polite'}>
+    <div ref={ref} className="mh-rf">
+      <p className="mh-rf-line" aria-live={loop ? 'off' : 'polite'}>
         {Array.from({ length: slots }, (_, i) => {
           const fromAgain = done || i <= k
           const w = fromAgain ? b[i] : a[i]
           if (w === undefined) return null
-          return <span key={`${idx}-${i}-${fromAgain ? 'b' : 'a'}`} className={fromAgain ? 'rf-w rf-new' : 'rf-w'}>{w} </span>
+          return <span key={`${idx}-${i}-${fromAgain ? 'b' : 'a'}`} className={fromAgain ? 'mh-rf-w mh-rf-new' : 'mh-rf-w'}>{w} </span>
         })}
       </p>
       {showChanged && done && changed}

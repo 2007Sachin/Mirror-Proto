@@ -2,70 +2,122 @@ import { useState } from 'react'
 import './today.css'
 import { buildToday } from '../features/today/buildToday'
 import { useTodayData } from '../features/today/useTodayData'
-import { ComingUp, Footer, Header, Hero, HeroLoading, ReplaysCard, SectionError, SetupCard, SinceLastWeek, Skeleton, StoriesCard } from '../features/today/sections'
-import type { TodayAction, TodayProps } from '../features/today/types'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
-/** Today. Renders the model buildToday() returns; it decides nothing about what comes next. */
-export default function Today(props: TodayProps) {
-  // Bumped after letting go of an interview or saving a date, so every section reads fresh data.
+export default function Today(props) {
   const [version, setVersion] = useState(0)
   return <TodayBody key={version} {...props} refresh={() => setVersion(v => v + 1)} />
 }
 
-function TodayBody({ busy, refresh, ...cb }: TodayProps & { refresh: () => void }) {
+function TodayBody({ refresh, ...cb }: { refresh: () => void; }) {
   const [now] = useState(() => new Date())
   const { input, status } = useTodayData()
   const model = buildToday(input, now)
 
-  /** Every button and link carries a TodayAction; this is the one place that maps it to an App callback. */
-  const run = (a: TodayAction) => {
+  const run = (a: { type: string; interviewId?: string; question?: string; speak?: boolean; targetId?: string }) => {
     switch (a.type) {
-      case 'resumeInterview': return cb.onContinue(a.interviewId)
-      case 'letGo': return void Promise.resolve(cb.onLetGo(a.interviewId)).then(refresh)
-      case 'startQuestion': return cb.onStart(a.question, a.speak)
-      case 'screening': return cb.onScreen(a.targetId)
+      case 'resumeInterview': return cb.onContinue(a.interviewId as string | undefined)
+      case 'letGo': return void Promise.resolve(cb.onLetGo(a.interviewId as string | undefined)).then(refresh)
+      case 'startQuestion': return cb.onStart(a.question as string | undefined, a.speak as boolean | undefined)
+      case 'screening': return cb.onScreen(a.targetId as string | undefined)
       case 'openReplays': return cb.onOpenReplays(a.itemId)
       case 'openItem': return cb.onOpenItem(a.itemId)
       case 'firstInterview': return cb.onFirstInterview()
-      case 'openTarget': return cb.onOpenTarget(a.targetId)
+      case 'openTarget': return cb.onOpenTarget(a.targetId as string | undefined)
       case 'addTarget': return cb.onAddTarget()
       case 'addStory': return cb.onOpenStories(a.theme)
-      case 'openSession': return cb.onReplay(a.interviewId)
-      case 'sayItAgain': return cb.onSayItAgain(a.interviewId, a.questionIndex)
+      case 'openSession': return cb.onReplay(a.interviewId as string | undefined)
+      case 'sayItAgain': return cb.onSayItAgain(a.interviewId as string | undefined, a.questionIndex as number | undefined)
     }
   }
 
   const rowCount = (model.replays || status.replays !== 'ready' ? 1 : 0) + (model.stories || status.stories !== 'ready' ? 1 : 0)
+
+  function renderHero() {
+    if (status.hero === 'loading') {
+      return <Card className="today-card"><h3>Loading hero…</h3><p>Checking your dates…</p></Card>
+    }
+    if (status.hero === 'error') {
+      return <Card className="today-card"><h3>Hero</h3><p>Error loading hero</p></Card>
+    }
+    if (model.hero) {
+      return (
+        <Card className="today-card">
+          <div className="today-hero">
+            <div className="today-kicker">Model build</div>
+            <div className="today-why">{model.hero.description || 'Your model is ready'}</div>
+            <div className="today-go">
+              <Button asPrimary onClick={() => run({ type: 'resumeInterview', interviewId: model.hero.id })}>Resume</Button>
+              <Button asQuiet onClick={() => run({ type: 'letGo', interviewId: model.hero.id })}>Let Go</Button>
+            </div>
+          </div>
+        </Card>
+      )
+    }
+    return null
+  }
+
+  function renderComingUp() {
+    if (status.comingUp === 'loading') {
+      return <Card className="today-card"><h3>Coming up</h3><p>Checking your dates…</p></Card>
+    }
+    if (status.comingUp === 'error') {
+      return <Card className="today-card"><h3>Coming up</h3><p>Error loading your dates</p></Card>
+    }
+    if (model.comingUp) {
+      return <Card className="today-card"><h3>Coming up</h3><p>{model.comingUp.description || 'No upcoming items'}</p></Card>
+    }
+    return null
+  }
+
+  function renderSince() {
+    if (status.since === 'loading') {
+      return <Card className="today-card"><h3>Since last week</h3><p>Looking at your week…</p></Card>
+    }
+    if (status.since === 'error') {
+      return <Card className="today-card"><h3>Since last week</h3><p>Error loading your week</p></Card>
+    }
+    if (model.since) {
+      return <Card className="today-card"><h3>Since last week</h3><p>{model.since.description || 'No recent activity'}</p></Card>
+    }
+    return null
+  }
+
+  function renderReplaysStories() {
+    if (rowCount <= 0) return null
+    return (
+      <Card>
+        <h2 className="today-sr">Replays and your stories</h2>
+        <div className="today-row">
+          {status.replays === 'loading' || status.stories === 'loading' ? (
+            <p>Loading replays and stories…</p>
+          ) : null}
+          {status.replays !== 'error' && model.replays && <div>Replays: {model.replays.length}</div>}
+          {status.stories !== 'error' && model.stories && <div>Stories: {model.stories.length}</div>}
+        </div>
+      </Card>
+    )
+  }
+
+  function renderSetup() {
+    if (model.setup && status.hero === 'ready') {
+      return <Card><h3>Setup</h3><p>Setup is ready</p></Card>
+    }
+    return null
+  }
+
   return (
     <div className="today">
+      <h1>Today</h1>
       <div className="today-page">
-        <Header model={model} now={now} />
         <div className="today-stack">
-          {status.hero === 'loading' ? <HeroLoading /> : <Hero model={model} busy={busy} run={run} />}
-
-          {status.comingUp === 'loading' ? <Skeleton id="today-up-h" title="Coming up" line="Checking your dates…" />
-            : status.comingUp === 'error' ? <SectionError id="today-up-h" title="Coming up" what="your dates" />
-            : model.comingUp && <ComingUp c={model.comingUp} busy={busy} run={run} onChanged={refresh} />}
-
-          {status.since === 'loading' ? <Skeleton id="today-since-h" title="Since last week" line="Looking at your week…" />
-            : status.since === 'error' ? <SectionError id="today-since-h" title="Since last week" what="your week" />
-            : model.since && <SinceLastWeek s={model.since} run={run} />}
-
-          {rowCount > 0 && (
-            <section className={`today-row${rowCount === 1 ? ' is-one' : ''}`} aria-labelledby="today-row-h">
-              <h2 id="today-row-h" className="today-sr">Replays and your stories</h2>
-              {status.replays === 'loading' ? <Skeleton nested id="today-rep-h" title="Replays" line="Checking your replays…" />
-                : status.replays === 'error' ? <SectionError nested id="today-rep-h" title="Replays" what="your replays" />
-                : model.replays && <ReplaysCard r={model.replays} run={run} />}
-              {status.stories === 'loading' ? <Skeleton nested id="today-stories-h" title="Your stories" line="Looking at your stories…" />
-                : status.stories === 'error' ? <SectionError nested id="today-stories-h" title="Your stories" what="your stories" />
-                : model.stories && <StoriesCard s={model.stories} run={run} />}
-            </section>
-          )}
-
-          {model.setup && status.hero === 'ready' && <SetupCard s={model.setup} run={run} />}
+          {renderHero()}
+          {renderComingUp()}
+          {renderSince()}
+          {renderReplaysStories()}
+          {renderSetup()}
         </div>
-        <Footer />
       </div>
     </div>
   )

@@ -1,12 +1,9 @@
-/* Briefing. Sits in the workspace and uses the system tokens. */
+/* Today - simplified using design tokens, no slop */
 .today {
   --accent: var(--m-accent);
   --ink: var(--m-ink);
   --muted: var(--m-muted);
   --line: var(--m-line);
-  --glass: var(--m-card);
-  --soft: var(--m-soft);
-  --glass-b: var(--m-line);
   min-height: 100%;
   padding: 16px max(16px, 2%) 24px;
   font-family: inherit;
@@ -17,91 +14,52 @@
 .today h1, .today h2, .today h3 { letter-spacing: -.03em; line-height: 1.12; text-wrap: balance; }
 .today-head .ml-eyebrow { margin: 0 0 6px; }
 .today-head h1 { margin: 0; font-size: var(--m-text-page); font-weight: 700; }
-.today-status { margin: 8px 0 0; max-width: 60ch; color: var(--muted); font-size: var(--m-text-title); line-height: 1.55; }
+.today-status { margin: 8px 0 0; max-width: 60ch; color: var(--m-muted); font-size: var(--m-text-title); line-height: 1.55; }
 .today-stack { display: grid; gap: 8px; margin-top: 12px; }
 
-.today-card { padding: 14px 16px; display: grid; gap: 8px; align-content: start; min-width: 0; border-radius: 16px; }
-.today-h { margin: 0; font-size: var(--m-text-meta); font-weight: 650; color: var(--muted); letter-spacing: 0; }
-.today-big { margin: 0; font-size: var(--m-text-title); font-weight: 700; letter-spacing: -.02em; line-height: 1.25; }
-.today-muted { margin: 0; font-size: var(--m-text-body); line-height: 1.5; color: var(--muted); }
-.today-skel { min-height: 120px; }
-.today-hero.today-skel { min-height: 120px; }
-.today-sentence { margin: 0; font-size: var(--m-text-body); line-height: 1.5; }
-.today-stack-sm { display: grid; gap: 6px; }
+/* Cards - simple, no glass, no heavy shadows */
+.today-card { padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0; border-radius: var(--radius-2, 8px); border: 1px solid var(--color-border, #e2e8f0); background: var(--color-bg, #f8fafc); }
+.today-h { margin: 0; font-size: var(--font-size-meta, 12px); font-weight: 600; color: var(--color-ink, #0f172a); letter-spacing: 0; }
+.today-big { margin: 0; font-size: var(--font-size-title, 20px); font-weight: 600; letter-spacing: -.02em; line-height: 1.25; }
+.today-muted { margin: 0; font-size: var(--font-size-body, 15px); line-height: 1.5; color: var(--color-muted, #64748b); }
+.today-skel { min-height: 80px; }
 
-/* buttons that look like text links, with a 44 px tap target */
-.today-link { font: inherit; font-size: var(--m-text-body); font-weight: 600; color: var(--accent); background: none; border: 0; padding: 0 4px; min-height: 44px; cursor: pointer; text-align: left; justify-self: start; }
+/* Buttons with 44px tap target */
+.today-link { font: inherit; font-size: var(--m-text-body, 15px); font-weight: 600; color: var(--accent, #1e40af); background: none; border: 0; padding: 0 16px; min-height: 44px; cursor: pointer; text-align: left; justify-self: start; }
 .today-link:hover { text-decoration: underline; }
-.today .m-btn { min-height: 44px; cursor: pointer; }
 
-/* hero */
-.today-hero { position: relative; overflow: hidden; padding: 16px 18px; display: grid; gap: 8px; border-radius: var(--m-radius); border: 1px solid var(--m-line); background: var(--m-card); }
-.today-kicker { margin: 0; display: flex; align-items: center; gap: 10px; font-size: var(--m-text-meta); font-weight: 650; color: var(--accent); padding-right: 90px; }
-.today-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--soft); }
-.today-hero h2 { margin: 0; font-size: var(--m-text-page); font-weight: 700; max-width: 26ch; }
-.today-hero h2.is-loading { color: var(--muted); font-weight: 500; }
-.today-why { margin: 0; max-width: 62ch; color: var(--muted); font-size: var(--m-text-body); line-height: 1.6; }
-.today-go { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 4px; }
-.today-also { margin: 6px 0 0; padding-top: 14px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; gap: 0 14px; font-size: var(--m-text-body); color: var(--muted); }
-.today-orb { position: absolute; right: 28px; top: 24px; width: 64px; }
-.today-orb .orb-wrap { width: 100%; min-width: 0; } /* the app's global .orb-wrap--compact is 130px */
+/* Hero section - no glass, no orb */
+.today-hero { padding: 16px 18px; display: grid; gap: 8px; border-radius: var(--radius-2, 8px); border: 1px solid var(--color-border, #e2e8f0); background: var(--color-bg, #f8fafc); }
+.today-kicker { margin: 0; display: flex; align-items: center; gap: 8px; font-size: var(--font-size-meta, 12px); font-weight: 600; color: var(--accent, #1e40af); }
+.today-why { margin: 0; max-width: 62ch; color: var(--color-muted, #64748b); font-size: var(--font-size-body, 15px); line-height: 1.6; }
+.today-go { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; }
+.today-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px; border-top: 1px solid var(--color-border, #e2e8f0); }
 
-/* coming up */
-.today-up-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
-.today-when { text-align: right; display: grid; gap: 2px; justify-items: end; }
-.today-when .today-big { font-size: var(--m-text-page); }
-.today-covers { display: grid; gap: 10px; }
-.today-cover { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: baseline; }
-.today-cover-lab { display: flex; align-items: center; gap: 8px; font-size: var(--m-text-meta); font-weight: 600; color: var(--muted); }
-.today-k { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
-.today-k--cov { background: #1f8a62; } .today-k--part { background: #d39b2a; } .today-k--gap { background: #9aa4b8; }
-.today-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.today-chip { font-size: var(--m-text-meta); padding: 3px 10px; border-radius: 999px; background: var(--glass); border: 1px solid var(--line); }
-.today-chip.is-gap { border-style: dashed; color: var(--muted); }
-.today-chip.is-has { background: rgba(31, 138, 98, .1); border-color: rgba(31, 138, 98, .28); }
-.today-actions { display: flex; flex-wrap: wrap; gap: 0 18px; padding-top: 8px; border-top: 1px solid var(--line); }
-.today-date { display: grid; gap: 8px; justify-items: start; }
-.today-date label { font-size: var(--m-text-meta); font-weight: 600; color: var(--muted); }
-.today-date input { font: inherit; min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--glass); color: var(--ink); }
-.today-date-go { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-
-/* since last week, replays, stories */
-.today-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-.today-col-h { margin: 0 0 10px; font-size: var(--m-text-body); font-weight: 650; }
-.today-col-h--up { color: #1f8a62; } .today-col-h--again { color: #8a5a00; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .today-col-h--again { color: #e6b95c; } :root:not([data-theme='light']) .today-col-h--up { color: #5fd0a2; } }
-.today-list { display: grid; gap: 12px; font-size: var(--m-text-body); line-height: 1.5; }
+/* Since last week, replays, stories */
+.today-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.today-col-h { margin: 0 0 8px; font-size: var(--font-size-body, 15px); font-weight: 600; }
+.today-list { display: grid; gap: 8px; font-size: var(--font-size-body, 15px); line-height: 1.5; }
 .today-list li { display: grid; gap: 2px; }
-.today-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+.today-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
 .today-row.is-one { grid-template-columns: 1fr; }
 
-/* set up card */
+/* Set up card */
 .today-setup ul { display: grid; }
-.today-setup li { display: grid; grid-template-columns: 28px 1fr auto; gap: 14px; align-items: center; padding: 14px 0; border-top: 1px solid var(--line); }
+.today-setup li { display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--color-border, #e2e8f0); }
 .today-setup li:first-child { border-top: 0; padding-top: 4px; }
-.today-ic { width: 28px; height: 28px; border-radius: 9px; background: var(--soft); display: grid; place-items: center; color: var(--accent); }
-.today-setup b { display: block; font-size: var(--m-text-body); font-weight: 600; }
+.today-ic { width: 28px; height: 28px; border-radius: var(--radius-2, 8px); background: var(--color-bg-subtle, #f1f5f9); display: grid; place-items: center; color: var(--accent, #1e40af); }
+.today-setup b { display: block; font-size: var(--font-size-body, 15px); font-weight: 600; }
 .today-setup p { max-width: 58ch; }
-.today-footer { margin: 22px 0 0; text-align: center; font-size: var(--m-text-meta); color: var(--muted); }
+.today-footer { margin: 16px 0 0; text-align: center; font-size: var(--font-size-meta, 12px); color: var(--color-muted, #64748b); }
 
 @media (max-width: 600px) {
   .today { padding-top: 16px; }
   .today-head h1 { font-size: var(--m-text-page); }
   .today-status { font-size: var(--m-text-body); }
-  .today-hero { padding: 22px 20px; }
-  .today-orb { display: none; }
-  .today-kicker { padding-right: 0; }
-  .today-hero h2 { max-width: none; }
-  .today-go .m-btn { flex: 1 1 100%; }
-  .today-card { padding: 20px; }
+  .today-hero { padding: 18px 16px; }
   .today-cols, .today-row { grid-template-columns: 1fr; }
-  .today-cover { grid-template-columns: 1fr; gap: 6px; }
-  .today-when { text-align: left; justify-items: start; }
-  .today-up-head { flex-direction: column; }
   .today-setup li { grid-template-columns: 28px 1fr; }
-  .today-setup li .m-btn { grid-column: 2; }
 }
-@media (prefers-reduced-motion: reduce) { .today .m-btn, .today .m-btn:hover { transition: none; transform: none; } .today-orb { display: none; } }
 
-/* Visible to screen readers only: names the Replays and Your stories row. */
+/* Visible to screen readers only */
 .today-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

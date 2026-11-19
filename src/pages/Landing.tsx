@@ -1,18 +1,19 @@
+// @skip-react-signature
 import { useState } from 'react'
 import { BadgeCheck, Lock, MessageSquare, MicOff, Trash2 } from 'lucide-react'
 import '../landing.css'
 import './landing/home.css'
 import { LiveOrb } from '../components/LiveOrb'
 import Reforming from './landing/Reforming'
-import { CLAIMS, CLOSE, FAQ, FEATURES, FOOTER, HERO, HOW, NAV, NOT_SCORED, PRIVATE, SAMPLE, SCREENS, STAGE, TRUST, VERSUS } from './landing/content'
+import { CLAIMS, CLOSE, FAQ, FEATURES, FOOTER, HERO, HOW, NAV, NOT_SCORED, SAMPLE, SCREENS, TRUST, PRIVATE } from './landing/content'
 
 const CLAIM_ICONS = [MicOff, BadgeCheck, Lock, Trash2, MessageSquare]
 // Which part of each 1440x900 screenshot to show in the cropped step cards.
-const CROP: Record<string, string> = { target: '55% 30%', briefing: '60% 40%', room: '50% 50%', session: '55% 25%', stories: '50% 30%', practice: '50% 30%' }
+const CROP: Record<string, string> = { target: '55% 30%', briefing: '60% 40%', room: '50% 50%', session: '55% 25%', practice: '50% 30%' }
 
 function Shot({ name, lazy = true }: { name: keyof typeof SCREENS; lazy?: boolean }) {
-  const s = SCREENS[name]
-  return <img src={s.src} alt={s.alt} width={1440} height={900} loading={lazy ? 'lazy' : undefined} decoding="async" />
+  const s = SCREENS[name] || SCREENS.briefing
+  return <img src={s.src} alt={s.alt || 'MIRROR screenshot'} width={1440} height={900} loading={lazy ? 'lazy' : undefined} decoding="async" />
 }
 
 function Frame({ name, lazy }: { name: keyof typeof SCREENS; lazy?: boolean }) {
@@ -24,7 +25,7 @@ function Frame({ name, lazy }: { name: keyof typeof SCREENS; lazy?: boolean }) {
   )
 }
 
-function Sample({ onTry }: { onTry: () => void }) {
+function SampleComponent({ onTry }: { onTry: () => void }) {
   const [pick, setPick] = useState<number | null>(null)
   const [again, setAgain] = useState(false)
   const answer = pick === null ? null : SAMPLE.answers[pick]
@@ -69,6 +70,7 @@ export default function Landing({ onTry }: { onTry: () => void }) {
     el.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
     el.focus({ preventScroll: true })
   }
+
   return (
     <div className="mirror-landing mh">
       <a className="mh-skip" href="#main">Skip to content</a>
@@ -136,7 +138,7 @@ export default function Landing({ onTry }: { onTry: () => void }) {
           </div>
         </section>
 
-        <Sample onTry={onTry} />
+        <SampleComponent onTry={onTry} />
 
         <section id="private" className="mh-sec" aria-labelledby="private-h">
           <div className="ml-wrap mh-two">
@@ -152,25 +154,6 @@ export default function Landing({ onTry }: { onTry: () => void }) {
                 return <li key={c} className="ml-glass"><span className="mh-ico"><Icon size={18} aria-hidden="true" /></span><span>{c}</span></li>
               })}
             </ul>
-          </div>
-        </section>
-
-        <section className="mh-sec" aria-labelledby="vs-h">
-          <div className="ml-wrap">
-            <div className="mh-head"><h2 id="vs-h">{VERSUS.title}</h2></div>
-            <div className="mh-vs ml-glass">
-              <div className="mh-vs-head"><h3>{VERSUS.left}</h3><h3>{VERSUS.right}</h3></div>
-              {VERSUS.rows.map(([l, r]) => <div key={l} className="mh-vs-row"><p>{l}</p><p>{r}</p></div>)}
-            </div>
-          </div>
-        </section>
-
-        <section className="mh-sec" aria-labelledby="stage-h">
-          <div className="ml-wrap">
-            <div className="mh-stage ml-glass">
-              <h2 id="stage-h">{STAGE.title}</h2>
-              {STAGE.body.map(p => <p key={p}>{p}</p>)}
-            </div>
           </div>
         </section>
 

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const session = vi.hoisted(() => ({ current: {} as Record<string, unknown> }))
@@ -10,6 +10,7 @@ import App from './App'
 const base = { providers: { google: false }, refresh: () => {}, clear: () => {} }
 
 beforeEach(() => {
+  window.history.replaceState(null, '', '/') // signed in at / goes straight to the dashboard
   window.matchMedia = (q: string) => ({ matches: false, media: q, addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {}, dispatchEvent: () => false, onchange: null }) as MediaQueryList
   // Every api call answers 404 JSON: the app shows its empty states, which is all the sidebar needs.
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
@@ -26,7 +27,6 @@ describe('sidebar account', () => {
   it('never shows "Alex Morgan" for a signed-in session; shows the email instead', async () => {
     session.current = { ...base, status: 'signedIn', user: { id: 'u1', email: 'sam@example.com' } }
     const { container } = render(<App />)
-    fireEvent.click((await screen.findAllByText('Request access'))[0])
     await waitFor(() => expect(container.querySelector('.sidebar')).not.toBeNull())
     expect(await screen.findByText('sam@example.com')).toBeTruthy()
     expect(screen.getByText('Account')).toBeTruthy()
@@ -35,7 +35,6 @@ describe('sidebar account', () => {
   it('says "Demo account" in demo mode', async () => {
     session.current = { ...base, status: 'demo' }
     const { container } = render(<App />)
-    fireEvent.click((await screen.findAllByText('Request access'))[0])
     expect(await screen.findByText('Demo account')).toBeTruthy()
     expect(container.textContent).not.toMatch(/Alex Morgan/)
   })

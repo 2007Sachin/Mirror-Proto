@@ -67,8 +67,19 @@ const SESSION_STORAGE_KEY = 'mirror.phase1.sessionId'
 function Brand({ onClick }: { onClick: () => void }) {
   return <button className="brand" onClick={onClick} aria-label="MIRROR home"><span className="brand-mark"><i /><i /></span><span>MIRROR</span></button>
 }
+// Pages that can be opened straight from the address bar. Interview, report and screen need a live session id, so they open the dashboard.
+const URL_VIEWS: Record<string, View> = {
+  '': 'home', workspace: 'workspace', targets: 'targets', practice: 'practice', reports: 'reports',
+  stories: 'stories', profile: 'profile', settings: 'settings', privacy: 'privacy', firstInterview: 'firstInterview',
+}
+function viewFromPath(pathname: string): View {
+  const key = pathname.replace(/^\/+|\/+$/g, '')
+  if (key in URL_VIEWS) return URL_VIEWS[key]
+  return key ? 'workspace' : 'home'
+}
+
 export default function App() {
-  const [view, setView] = useState<View>('home')
+  const [view, setView] = useState<View>(() => viewFromPath(window.location.pathname))
   // Auth: who is signed in. The landing is public; every other view needs a session (or the local demo).
   const session = useSession()
   const authed = session.status === 'signedIn' || session.status === 'demo'
@@ -88,7 +99,6 @@ export default function App() {
   const [role, setRole] = useState('')
   const [profile, setProfile] = useState<Profile | null>(null)
   const [profileStatus, setProfileStatus] = useState<'loading' | 'none' | 'ready' | 'error'>('loading')
-// URL-based view routing: read from and sync with browser history
 
 const viewToUrl = (view: View): string => {
   const mapping: Record<View, string> = {
@@ -113,9 +123,7 @@ const viewToUrl = (view: View): string => {
 // Listen for popstate to update view on back/forward
 useEffect(() => {
   const handler = (e: PopStateEvent) => {
-    if (e.state && e.state.mirrorView !== undefined) {
-      setView(e.state.mirrorView as View)
-    }
+    setView(e.state && e.state.mirrorView !== undefined ? e.state.mirrorView as View : viewFromPath(window.location.pathname))
   }
   window.addEventListener('popstate', handler)
   return () => window.removeEventListener('popstate', handler)
@@ -417,8 +425,7 @@ useEffect(() => {
   }
 
   const profileFresh = useRef(false) // set when The First Interview finishes here, so a slow fetch can't overwrite it
-  useEffect(() => {
-    if (!authed) return
+  const loadProfile = () => {
     api.getProfile()
       .then(p => {
         if (profileFresh.current) return
@@ -428,21 +435,25 @@ useEffect(() => {
       })
       .catch(err => {
         if (profileFresh.current) return
-        if (err instanceof ApiError && err.status === 404) {
-          setProfileStatus('none')
-        } else {
-          setProfileStatus('error')
-        }
+        // Only a 404 means there is no profile yet; any other failure is an error with a retry, never onboarding.
+        setProfileStatus(err instanceof ApiError && err.status === 404 ? 'none' : 'error')
       })
-        if (err instanceof ApiError && err.status === 404) {
-          setProfileStatus('none')
-        } else if (err instanceof ApiError) {
-          setProfileStatus('error')
-        } else {
-          setProfileStatus('error')
-        }
-      }) // differentiate 404 from other errors
+  }
+  useEffect(() => {
+    if (!authed) return
+    loadProfile()
   }, [authed])
+
+  // A signed-in visitor never sees the public landing: / opens the dashboard.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (authed && view === 'home') { window.history.replaceState({ mirrorView: 'workspace' }, '', '/workspace'); setView('workspace') }
+  }, [authed, view])
+  // Only "none" shows onboarding.
+  useEffect(() => {
+    if (authed && view === 'workspace' && profileStatus === 'none' && !profileFresh.current) go('firstInterview')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, view, profileStatus])
 
   useEffect(() => {
     document.title = 'MIRROR — You know what you did'
@@ -487,20 +498,6 @@ useEffect(() => {
   }, [view, sessionId])
 
   if (view === 'home') return <Landing onTry={() => go(profileStatus === 'none' ? 'firstInterview' : profileStatus === 'loading' ? 'workspace' : profileStatus === 'error' ? 'workspace' : profile ? 'workspace' : 'firstInterview')} />
-  if (view === 'home') {
-    const onTry = () => {
-      if (profileStatus === 'none') {
-        go('firstInterview') // show onboarding
-      } else if (profileStatus === 'loading') {
-        go('workspace') // quiet skeleton
-      } else if (profileStatus === 'error') {
-        go('workspace') // retry path
-      } else {
-        go(profile ? 'workspace' : 'firstInterview')
-      }
-    }
-    return <Landing onTry={onTry} />
-  }
 
   if (!authed) {
     const failed = new URLSearchParams(window.location.search).get('auth') === 'failed'
@@ -563,7 +560,9 @@ useEffect(() => {
       : <><span>D</span><div><b>Demo account</b><small>Not saved to an account</small></div></>}</button></div></aside>
     {mobileNav && <button className="nav-scrim" aria-label="Close navigation" onClick={() => setMobileNav(false)} />}
     <main className="workspace-main"><header className="workspace-header"><button className="mobile-menu" onClick={() => setMobileNav(true)}><Menu size={21} /></button><div /><div className="header-actions">{session.status === 'demo' && <span className="demo-badge"><Circle size={7} fill="currentColor" /> DEMO</span>}<AccountMenu email={session.status === 'signedIn' ? session.user.email : null} onSignOut={() => void signOut()} /></div></header>
-      {view === 'workspace' && (TODAY_V1
+      {view === 'workspace' && profileStatus === 'loading' && <div className="workspace-skeleton" role="status" aria-busy="true" aria-label="Loading your workspace"><span /><span /><span /></div>}
+      {view === 'workspace' && profileStatus === 'error' && <div className="workspace-error" role="alert"><p>We could not load your profile.</p><button className="m-btn" onClick={() => { setProfileStatus('loading'); loadProfile() }}>Try again</button></div>}
+      {view === 'workspace' && (profileStatus === 'ready' || profileStatus === 'none') && (TODAY_V1
         ? <Overview profile={profile} busy={busy} onStart={(question, speak) => { setVoiceMode(speak); void startInterview(role, question, speak) }} onContinue={resumeInterview} onLetGo={letGo} onScreen={id => void startScreening(id)} onOpenStories={openStories} onReplay={id => { setSessionId(id); go('report') }} onOpenItem={id => { setPracticeItem(id); go('practice') }} />
         : <Today
           busy={busy}

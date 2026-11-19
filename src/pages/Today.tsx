@@ -6,13 +6,12 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
 export default function Today() {
-  const [version, setVersion] = useState(0)
-  return <TodayBody key={version} refresh={() => setVersion(v => v + 1)} />
+  return <TodayBody key={0} />
 }
 
-function TodayBody({ refresh }: { refresh: () => void; }) {
+function TodayBody() {
   const [now] = useState(() => new Date())
-  const { input, status } = useTodayData()
+  const { input } = useTodayData()
   const model = buildToday(input, now)
 
   function run(action: string) {

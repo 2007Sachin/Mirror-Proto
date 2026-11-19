@@ -77,11 +77,58 @@ export default function App() {
     session.clear()
     // Only each person's own SQL progress (mirror.data.v1.<id>.sql.*) stays for their next sign-in; every other mirror.* key goes.
     clearBrowserKeys(localStorage, KEEP_ON_SIGN_OUT); clearBrowserKeys(sessionStorage)
-    window.location.assign('/') // a fresh page drops every in-memory copy of this user's data
+    // signed-in user: return to dashboard; unsigned: landing page
+    if (session.status === 'signedIn' || session.status === 'demo') {
+      window.history.pushState({}, '', '/workspace')
+    } else {
+      window.location.assign('/')
+    }
   }
   const [targetId, setTargetId] = useState<string | null>(null)
   const [role, setRole] = useState('')
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [profileStatus, setProfileStatus] = useState<'loading' | 'none' | 'ready' | 'error'>('loading')
+// URL-based view routing: read from and sync with browser history
+
+const viewToUrl = (view: View): string => {
+  const mapping: Record<View, string> = {
+    'home': '',
+    'firstInterview': 'firstInterview',
+    'workspace': 'workspace',
+    'targets': 'targets',
+    'practice': 'practice',
+    'interview': 'interview',
+    'reports': 'reports',
+    'screen': 'screen',
+    'report': 'report',
+    'stories': 'stories',
+    'profile': 'profile',
+    'settings': 'settings',
+    'privacy': 'privacy',
+  }
+  return mapping[view]
+}
+
+// Sync view to URL when navigation occurs (in go function)
+// Listen for popstate to update view on back/forward
+useEffect(() => {
+  const handler = (e: PopStateEvent) => {
+    if (e.state && e.state.mirrorView !== undefined) {
+      setView(e.state.mirrorView as View)
+    }
+  }
+  window.addEventListener('popstate', handler)
+  return () => window.removeEventListener('popstate', handler)
+}, [view])
+
+// Ensure we also sync on beforeunload
+useEffect(() => {
+  const handler = () => {
+    localStorage.setItem('mirror:view-sync', JSON.stringify(view))
+  }
+  window.addEventListener('beforeunload', handler)
+  return () => window.removeEventListener('beforeunload', handler)
+}, [view])
   const [practiceItem, setPracticeItem] = useState<string | null>(null)
   const [answers, setAnswers] = useState<Answer[]>([])
   const [answer, setAnswer] = useState('')
@@ -149,7 +196,18 @@ export default function App() {
   const openStories = (question?: string) => { setStoryQuestion(question ?? null); go('stories') }
   const addStory = (theme: string | null) => { setStoryTheme(theme ?? ''); go('stories') }
   // A finished screening call goes to its debrief instead of the plain notes page.
-  const go = (next: View) => { setView(next === 'report' && screenRef.current ? 'screen' : next); setScreen(c => (next === 'interview' || next === 'report' ? c : null)); setMobileNav(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const go = (next: View) => {
+    const isReportToScreen = next === 'report' && screenRef.current
+    setView(isReportToScreen ? 'screen' : next)
+    setScreen(c => (next === 'interview' || next === 'report' ? c : null))
+    setMobileNav(false)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // Sync view to URL
+    const url = viewToUrl(isReportToScreen ? 'screen' : next)
+    const newUrl = url ? `/${url}` : '/'
+    window.history.pushState({ mirrorView: isReportToScreen ? 'screen' : next }, '', newUrl)
+    localStorage.setItem('mirror:view-sync', JSON.stringify(view))
+  }
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2600) }
   const startInterview = async (roleName = role, openingQuestion?: string, voiceOn = voiceMode) => {
     if (busy) return
@@ -367,7 +425,15 @@ export default function App() {
         setProfile(p); setRole(p.role); setVoiceMode(p.mode === 'voice')
         setView(v => (v === 'firstInterview' ? 'workspace' : v)) // clicked Start before this arrived
       })
-      .catch(() => undefined) // 404 = not onboarded yet
+      .catch(err => {
+        if (err instanceof ApiError && err.status === 404) {
+          setProfileStatus('none')
+        } else if (err instanceof ApiError) {
+          setProfileStatus('error')
+        } else {
+          setProfileStatus('error')
+        }
+      }) // differentiate 404 from other errors
   }, [authed])
 
   useEffect(() => {
@@ -412,7 +478,20 @@ export default function App() {
       .catch(err => setFlowState(classifyApiError(err)))
   }, [view, sessionId])
 
-  if (view === 'home') return <Landing onTry={() => go(profile ? 'workspace' : 'firstInterview')} />
+  if (view === 'home') {
+    const onTry = () => {
+      if (profileStatus === 'none') {
+        go('firstInterview') // show onboarding
+      } else if (profileStatus === 'loading') {
+        go('workspace') // quiet skeleton
+      } else if (profileStatus === 'error') {
+        go('workspace') // retry path
+      } else {
+        go(profile ? 'workspace' : 'firstInterview')
+      }
+    }
+    return <Landing onTry={onTry} />
+  }
 
   if (!authed) {
     const failed = new URLSearchParams(window.location.search).get('auth') === 'failed'

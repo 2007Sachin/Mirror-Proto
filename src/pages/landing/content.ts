@@ -52,6 +52,7 @@ export const FEATURES = {
   items: [
     {
       id: 'briefing', kicker: 'Briefing', title: 'One next step, chosen for you.',
+      screen: 'briefing',
       body: 'Open MIRROR and it tells you what is worth doing today, in a sentence: an interview in nine days, a gap to close, a replay that is due.',
       bullets: ['One main button. Nothing competes with it.', 'Skills your résumé backs, backs in part, or does not show yet, as plain names.', 'Replays that come back sooner as the interview gets close.'],
     },

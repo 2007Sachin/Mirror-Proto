@@ -423,9 +423,17 @@ useEffect(() => {
       .then(p => {
         if (profileFresh.current) return
         setProfile(p); setRole(p.role); setVoiceMode(p.mode === 'voice')
+        setProfileStatus('ready')
         setView(v => (v === 'firstInterview' ? 'workspace' : v)) // clicked Start before this arrived
       })
       .catch(err => {
+        if (profileFresh.current) return
+        if (err instanceof ApiError && err.status === 404) {
+          setProfileStatus('none')
+        } else {
+          setProfileStatus('error')
+        }
+      })
         if (err instanceof ApiError && err.status === 404) {
           setProfileStatus('none')
         } else if (err instanceof ApiError) {
@@ -478,6 +486,7 @@ useEffect(() => {
       .catch(err => setFlowState(classifyApiError(err)))
   }, [view, sessionId])
 
+  if (view === 'home') return <Landing onTry={() => go(profileStatus === 'none' ? 'firstInterview' : profileStatus === 'loading' ? 'workspace' : profileStatus === 'error' ? 'workspace' : profile ? 'workspace' : 'firstInterview')} />
   if (view === 'home') {
     const onTry = () => {
       if (profileStatus === 'none') {

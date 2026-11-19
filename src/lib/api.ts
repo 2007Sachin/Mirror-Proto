@@ -134,23 +134,17 @@ export interface SqlTurnBody {
 
 /** The one fetch wrapper: session cookie, JSON in and out, ApiError on a non-2xx. A 401 on a data call tells the app to show sign-in. */
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  // Try the request, catching 401 for silent re-auth
   try {
     return await doRequest<T>(path, init)
   } catch (err: unknown) {
-    if (err instanceof ApiError && err.status === 401 && !path.startsWith('/auth/')) {
-      // Silent re-auth attempt
-      try {
-        const newSession = await authApi.getSession()
-        if (newSession.session) {
-          // Refresh succeeded, retry the original request
-          return await doRequest<T>(path, init)
-        }
-      } catch {
-        // Refresh failed, fall through to original error handling
-      }
-    }
-    // Re-throw the original error
+    if (!(err instanceof ApiError) || err.status !== 401 || path.startsWith('/auth/')) throw err
+    // A 401 may only be an expired token: ask the server for the session once, and retry the call if it is still ours.
+    try {
+      const { session } = await authApi.getSession()
+      if (session) return await doRequest<T>(path, init)
+    } catch { /* refresh failed: fall through to sign-out */ }
+    // Only now is the user really signed out.
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('mirror:unauthenticated'))
     throw err
   }
 }
@@ -167,7 +161,6 @@ async function doRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const body = await res.json().catch(() => null)
   if (!res.ok) {
     const message = body && typeof body === 'object' && 'error' in body ? String((body as { error: unknown }).error) : `request_failed_${res.status}`
-    if (res.status === 401 && !path.startsWith('/auth/') && typeof window !== 'undefined') window.dispatchEvent(new Event('mirror:unauthenticated'))
     throw new ApiError(res.status, message, body)
   }
   return body as T

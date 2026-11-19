@@ -1,0 +1,105 @@
+/* MIRROR Design Tokens — single source of truth for type, colour, spacing, radii, shadows, motion */
+/* Auto-inherits light/dark via prefers-color-scheme media queries */
+
+/* --- Font Family --- */
+--font-family-sans: system-ui, -apple-system, "Segoe UI", Ubuntu, sans-serif;
+
+/* --- Font Weight Scale --- */
+--font-weight-body: 400;
+--font-weight-heading: 500;
+--font-weight-semibold: 600;
+
+/* --- Font Size Scale (relative to base 16px) --- */
+--font-size-xs: 12px;    /* 0.75rem */
+--font-size-sm: 14px;    /* 0.875rem */
+--font-size-base: 16px;  /* 1rem */
+--font-size-lg: 20px;    /* 1.25rem */
+--font-size-xl: 24px;    /* 1.5rem */
+--font-size-2xl: 30px;   /* 1.875rem */
+--font-size-3xl: 36px;   /* 2.25rem */
+
+/* --- Line Height --- */
+--line-height-base: 1.6;
+--line-height-heading: 1.1;
+
+/* --- Letter Spacing --- */
+--letter-spacing-tight: -.03em;
+--letter-spacing-upright: .02em;
+--letter-spacing-caps: .06em;
+
+/* --- Colours (Light) --- */
+--color-bg: #f8fafc;
+--color-bg-subtle: #f1f5f9;
+--color-ink: #0f172a;
+--color-muted: #64748b;
+--color-accent: #1e40af;
+--color-accent-ink: #fff;
+--color-border: #e2e8f0;
+--color-ring: #3b82f6;
+--color-success: #10b981;
+--color-error: #ef4444;
+
+/* --- Colours (Dark) --- */
+@media (prefers-color-scheme: dark) {
+  --color-bg: #0f172a;
+  --color-bg-subtle: #1e293b;
+  --color-ink: #f8fafc;
+  --color-muted: #94a3b8;
+  --color-accent: #60a5fa;
+  --color-accent-ink: #0f172a;
+  --color-border: #334155;
+  --color-ring: #93c5fd;
+}
+
+/* --- Spacing Scale (4px base unit) --- */
+--space-0: 0;
+--space-1: 4px;   /* 0.25rem */
+--space-2: 8px;   /* 0.5rem */
+--space-3: 12px;  /* 0.75rem */
+--space-4: 16px;  /* 1rem */
+--space-5: 20px;  /* 1.25rem */
+--space-6: 24px;  /* 1.5rem */
+--space-7: 28px;  /* 1.75rem */
+--space-8: 32px;  /* 2rem */
+--space-12: 48px; /* 3rem */
+--space-16: 64px; /* 4rem */
+
+/* --- Border Radius Scale --- */
+--radius-0: 0;
+--radius-1: 4px;  /* small inputs, chips */
+--radius-2: 8px;  /* default buttons, inputs */
+--radius-3: 12px; /* cards, modals */
+--radius-4: 16px; /* orb, large cards */
+--radius-5: 20px; /* avatars */
+--radius-full: 999px; /* pill buttons */
+
+/* --- Shadow Scale --- */
+--shadow-1: 0 1px 2px rgba(0, 0, 0, 0.05);
+--shadow-2: 0 1px 3px rgba(0, 0, 0, 0.1);
+--shadow-3: 0 4px 6px rgba(0, 0, 0, 0.1);
+--shadow-4: 0 10px 20px rgba(0, 0, 0, 0.1);
+--shadow-5: 0 25px 50px rgba(0, 0, 0, 0.25);
+
+/* --- Motion / Ease --- */
+--ease-default: cubic-bezier(.22, 1, .36, 1);
+--ease-fast: cubic-bezier(.4, 0, .2, 1);
+--ease-slow: cubic-bezier(.25, .46, .45, .94);
+
+/* --- Transition Durations --- */
+--transition-fast: 150ms;
+--transition-normal: 250ms;
+--transition-slow: 350ms;
+
+/* --- Reduced Motion --- */
+@media (prefers-reduced-motion: reduce) {
+  --transition-normal: 0ms;
+  --transition-fast: 0ms;
+  --transition-slow: 0ms;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0ms !important;
+  }
+}

@@ -1,0 +1,55 @@
+/* Button component styles using design tokens */
+.button {
+  font: inherit;
+  font-size: var(--m-text-body, 15px);
+  font-weight: 600;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: var(--radius-2, 8px);
+  border: 1px solid transparent;
+  background: var(--color-accent, #1e40af);
+  color: var(--color-accent-ink, #fff);
+  cursor: pointer;
+  transition: var(--transition-fast, 150ms);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2, 8px);
+  letter-spacing: var(--letter-spacing-upright, .02em);
+}
+
+.button--primary {
+  background: var(--color-accent, #1e40af);
+  color: var(--color-accent-ink, #fff);
+}
+
+.button--primary:hover {
+  opacity: 0.9;
+}
+
+.button--quiet {
+  background: var(--color-bg-subtle, #f1f5f9);
+  color: var(--color-ink, #0f172a);
+  border: 1px solid var(--color-border, #e2e8f0);
+}
+
+.button--quiet:hover {
+  background: var(--color-bg, #f8fafc);
+}
+
+.button--disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-ring, #3b82f6);
+  outline-offset: 2px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+}

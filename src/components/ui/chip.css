@@ -1,0 +1,62 @@
+/* Chip component styles using design tokens */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1, 4px) var(--space-2, 8px);
+  font: inherit;
+  font-size: var(--font-size-meta, 12px);
+  font-weight: 500;
+  border-radius: var(--radius-full, 999px);
+  gap: var(--space-1, 4px);
+  cursor: pointer;
+  transition: var(--transition-fast, 150ms);
+}
+
+.chip--small {
+  font-size: var(--font-size-xs, 12px);
+  padding: var(--space-0, 0) var(--space-1, 4px);
+}
+
+.chip--small .chip--filled,
+.chip--small .chip--outlined {
+  border-radius: var(--radius-1, 4px);
+}
+
+/* Variants */
+.chip--filled {
+  background: var(--color-accent, #1e40af);
+  color: var(--color-accent-ink, #fff);
+}
+
+.chip--outlined {
+  background: transparent;
+  color: var(--color-accent, #1e40af);
+  border: 1px solid var(--color-accent, #1e40af);
+}
+
+.chip--close {
+  padding: var(--space-0, 0);
+  background: transparent;
+  color: var(--color-muted, #64748b);
+}
+
+.chip--close:hover {
+  color: var(--color-error, #ef4444);
+}
+
+.chip:hover:not(.chip--filled) {
+  background: var(--color-soft, #e2e8f0);
+}
+
+/* Focus style */
+.chip:focus-visible {
+  outline: 2px solid var(--color-ring, #3b82f6);
+  outline-offset: 2px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .chip {
+    transition: none;
+  }
+}

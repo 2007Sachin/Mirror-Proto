@@ -2,113 +2,70 @@ import { useState } from 'react'
 import './today.css'
 import { buildToday } from '../features/today/buildToday'
 import { useTodayData } from '../features/today/useTodayData'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { ComingUp, Footer, Header, Hero, HeroLoading, ReplaysCard, SectionError, SetupCard, SinceLastWeek, Skeleton, StoriesCard } from '../features/today/sections'
+import type { TodayAction, TodayProps } from '../features/today/types'
 
-export default function Today() {
-  return <TodayBody key={0} />
+/** Today. Renders the model buildToday() returns; it decides nothing about what comes next. */
+export default function Today(props: TodayProps) {
+  // Bumped after letting go of an interview or saving a date, so every section reads fresh data.
+  const [version, setVersion] = useState(0)
+  return <TodayBody key={version} {...props} refresh={() => setVersion(v => v + 1)} />
 }
 
-function TodayBody() {
+function TodayBody({ busy, refresh, ...cb }: TodayProps & { refresh: () => void }) {
   const [now] = useState(() => new Date())
-  const { input } = useTodayData()
+  const { input, status } = useTodayData()
   const model = buildToday(input, now)
 
-  function run(action: string) {
-    // Map actions to console logs for now
-    console.log('Action:', action)
-  }
-
-  const rowCount = (model.replays?.due?.length ? 1 : 0) + (model.stories?.have?.length ? 1 : 0)
-
-  function renderHero() {
-    if (!model.hero) {
-      return <Card className="today-card"><h3>No hero</h3><p>Model is loading…</p></Card>
+  /** Every button and link carries a TodayAction; this is the one place that maps it to an App callback. */
+  const run = (a: TodayAction) => {
+    switch (a.type) {
+      case 'resumeInterview': return cb.onContinue(a.interviewId)
+      case 'letGo': return void Promise.resolve(cb.onLetGo(a.interviewId)).then(refresh)
+      case 'startQuestion': return cb.onStart(a.question, a.speak)
+      case 'screening': return cb.onScreen(a.targetId)
+      case 'openReplays': return cb.onOpenReplays(a.itemId)
+      case 'openItem': return cb.onOpenItem(a.itemId)
+      case 'firstInterview': return cb.onFirstInterview()
+      case 'openTarget': return cb.onOpenTarget(a.targetId)
+      case 'addTarget': return cb.onAddTarget()
+      case 'addStory': return cb.onOpenStories(a.theme)
+      case 'openSession': return cb.onReplay(a.interviewId)
+      case 'sayItAgain': return cb.onSayItAgain(a.interviewId, a.questionIndex)
     }
-    const hero = model.hero
-    return (
-      <Card className="today-card">
-        <div className="today-hero">
-          <div className="today-kicker">Model build</div>
-          <div className="today-why">{hero.why}</div>
-          <div className="today-go">
-            <Button onClick={() => run('resumeInterview')}>Resume</Button>
-            <Button onClick={() => run('letGo')}>Let Go</Button>
-          </div>
-        </div>
-      </Card>
-    )
   }
 
-  function renderComingUp() {
-    if (!model.comingUp) {
-      return <Card className="today-card"><h3>Coming up</h3><p>No coming up data</p></Card>
-    }
-    const c = model.comingUp
-    return (
-      <Card className="today-card">
-        <h3>Coming up</h3>
-        <p>{c.countdown || 'No upcoming items'}</p>
-      </Card>
-    )
-  }
-
-  function renderSince() {
-    if (!model.since) {
-      return <Card className="today-card"><h3>Since last week</h3><p>No since data</p></Card>
-    }
-    const s = model.since
-    return (
-      <Card className="today-card">
-        <h3>Since last week</h3>
-        <p>{s.stronger?.[0]?.headline || 'No activity'}</p>
-      </Card>
-    )
-  }
-
-  function renderReplaysStories() {
-    if (rowCount <= 0) return null
-    return (
-      <Card>
-        <h2 className="today-sr">Replays and your stories</h2>
-        <div className="today-row">
-          {model.replays?.due && model.replays.due.length > 0 ? (
-            <p>Replays due: {model.replays.due.length}</p>
-          ) : null}
-          {model.replays?.upcoming && model.replays.upcoming.length > 0 ? (
-            <p>Upcoming: {model.replays.upcoming.length}</p>
-          ) : null}
-          {model.stories && model.stories.have && model.stories.have.length > 0 ? (
-            <p>Stories: {model.stories.have.length}</p>
-          ) : null}
-        </div>
-      </Card>
-    )
-  }
-
-  function renderSetup() {
-    if (!model.setup) {
-      return null
-    }
-    return (
-      <Card>
-        <h3>Setup</h3>
-        <p>{model.setup.heading}</p>
-      </Card>
-    )
-  }
-
+  const rowCount = (model.replays || status.replays !== 'ready' ? 1 : 0) + (model.stories || status.stories !== 'ready' ? 1 : 0)
   return (
     <div className="today">
-      <h1>Today</h1>
       <div className="today-page">
+        <Header model={model} now={now} />
         <div className="today-stack">
-          {renderHero()}
-          {renderComingUp()}
-          {renderSince()}
-          {renderReplaysStories()}
-          {renderSetup()}
+          {status.hero === 'loading' ? <HeroLoading /> : <Hero model={model} busy={busy} run={run} />}
+
+          {status.comingUp === 'loading' ? <Skeleton id="today-up-h" title="Coming up" line="Checking your dates…" />
+            : status.comingUp === 'error' ? <SectionError id="today-up-h" title="Coming up" what="your dates" />
+            : model.comingUp && <ComingUp c={model.comingUp} busy={busy} run={run} onChanged={refresh} />}
+
+          {status.since === 'loading' ? <Skeleton id="today-since-h" title="Since last week" line="Looking at your week…" />
+            : status.since === 'error' ? <SectionError id="today-since-h" title="Since last week" what="your week" />
+            : model.since && <SinceLastWeek s={model.since} run={run} />}
+
+          {rowCount > 0 && (
+            <section className={`today-row${rowCount === 1 ? ' is-one' : ''}`} aria-labelledby="today-row-h">
+              <h2 id="today-row-h" className="today-sr">Replays and your stories</h2>
+              {status.replays === 'loading' ? <Skeleton nested id="today-rep-h" title="Replays" line="Checking your replays…" />
+                : status.replays === 'error' ? <SectionError nested id="today-rep-h" title="Replays" what="your replays" />
+                : model.replays && <ReplaysCard r={model.replays} run={run} />}
+              {status.stories === 'loading' ? <Skeleton nested id="today-stories-h" title="Your stories" line="Looking at your stories…" />
+                : status.stories === 'error' ? <SectionError nested id="today-stories-h" title="Your stories" what="your stories" />
+                : model.stories && <StoriesCard s={model.stories} run={run} />}
+            </section>
+          )}
+
+          {model.setup && status.hero === 'ready' && <SetupCard s={model.setup} run={run} />}
         </div>
+        <Footer />
       </div>
     </div>
   )

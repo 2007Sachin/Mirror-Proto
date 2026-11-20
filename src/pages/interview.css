@@ -17,7 +17,7 @@
 .iv-pop { position: absolute; right: 0; top: calc(100% + 4px); z-index: 10; width: 240px; padding: 10px 12px; animation: iv-in .15s ease; }
 .iv-pop-t { font-size: var(--m-text-body); color: var(--ink); margin-bottom: 6px; }
 .iv-pop dl { display: grid; gap: 4px; }
-.iv-pop dl > div { display: flex; align-items; gap: 6px; }
+.iv-pop dl > div { display: flex; align-items: center; gap: 6px; }
 .iv-pop dt { min-width: 36px; }
 .iv-pop dd { font-size: var(--m-text-body); color: var(--muted); }
 .iv-pop kbd { display: inline-block; min-width: 24px; padding: 1px 6px; text-align: center; border: 1px solid var(--line); border-radius: 6px; background: var(--glass); color: var(--ink); font: var(--m-text-body); }

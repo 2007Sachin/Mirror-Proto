@@ -1,72 +1,21 @@
-import React, { useState } from 'react'
+import * as React from "react"
 
-/** Shared Input component using design tokens.
- * - 44px tap target min-height
- * - Visible focus-visible outline
- * - Proper label handling
- */
-export interface InputProps {
-  /** Input label text */
-  label: string
-  /** Input type */
-  type?: 'text' | 'email' | 'password' | 'number' | 'date'
-  /** Initial value */
-  defaultValue?: string
-  /** Controlled value */
-  value?: string
-  /** On change handler */
-  onChange?: (value: string) => void
-  /** Whether the input is required */
-  required?: boolean
-  /** Whether the input is disabled */
-  disabled?: boolean
-  /** Placeholder text */
-  placeholder?: string
-  /** Additional className */
-  className?: string
-}
+import { cn } from "@/lib/utils"
 
-/** Input - a shared component using design tokens.
- * - 44px tap target min-height
- * - Visible focus-visible outline
- * - Label above input layout
- * - Required/styling via classes
- */
-export function Input({
-  label,
-  type = 'text',
-  defaultValue,
-  value,
-  onChange,
-  required,
-  disabled,
-  placeholder,
-  className
-}: InputProps) {
-  const [valueInternal, setValueInternal] = useState(defaultValue || '')
-  const realValue = value !== undefined ? value : valueInternal
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const val = e.target.value
-    setValueInternal(val)
-    onChange?.(val)
-  }
-
+function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
-    <div className={`input ${className}`}>
-      <label className="input__label" htmlFor={`input-${label}`}>
-        {label}
-      </label>
-      <input
-        id={`input-${label}`}
-        type={type}
-        placeholder={placeholder}
-        value={realValue}
-        onChange={handleChange}
-        disabled={disabled}
-        required={required}
-        className="input__field"
-      />
-    </div>
+    <input
+      type={type}
+      data-slot="input"
+      className={cn(
+        "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+        className
+      )}
+      {...props}
+    />
   )
 }
+
+export { Input }

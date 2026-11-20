@@ -9,6 +9,7 @@ import App from './App'
 
 const base = { providers: { google: false }, refresh: () => {}, clear: () => {} }
 const signedIn = { ...base, status: 'signedIn', user: { id: 'u1', email: 'sam@example.com' } }
+const demo = { ...base, status: 'demo' }
 const signedOut = { ...base, status: 'signedOut' }
 const profile = { role: 'Data Analyst', story: 's', pressureQuestion: 'q', pressureAnswer: 'a', summary: 's', focus: 'f', firstQuestion: 'q?', resumeText: null, resumeName: null, mode: 'text' }
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
@@ -32,6 +33,15 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 const active = (c: HTMLElement) => c.querySelector('.sidebar nav button.active')?.textContent
 
 describe('URL routing', () => {
+  it('shows the website at / in the local demo, which is not an account', async () => {
+    session.current = demo
+    window.history.replaceState(null, '', '/')
+    render(<App />)
+    await waitFor(() => expect(screen.getAllByRole('heading', { level: 1 }).length).toBe(1))
+    expect(window.location.pathname).toBe('/')
+    expect(document.querySelector('.sidebar')).toBeNull()
+  })
+
   it('opens the page named in the path', async () => {
     session.current = signedIn
     window.history.replaceState(null, '', '/targets')

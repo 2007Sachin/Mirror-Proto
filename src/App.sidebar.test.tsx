@@ -34,6 +34,7 @@ describe('sidebar account', () => {
   })
   it('says "Demo account" in demo mode', async () => {
     session.current = { ...base, status: 'demo' }
+    window.history.replaceState(null, '', '/workspace')
     const { container } = render(<App />)
     expect(await screen.findByText('Demo account')).toBeTruthy()
     expect(container.textContent).not.toMatch(/Alex Morgan/)

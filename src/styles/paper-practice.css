@@ -381,3 +381,12 @@
 .workspace-app .m-q > .m-btn { justify-self: start; }
 .workspace-app .stories-page .m-quiet:has(+ .m-chips) { font-family: var(--p-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
 .workspace-app .m-grid-cards > li { display: grid; }
+
+/* Calm pass: no all-caps labels, no card shadows, lighter headings */
+.workspace-app :where(h1, h2, h3, .eyebrow, .badge, .chip, [class*="eyebrow"], [class*="badge"], [class*="chip"], [class*="kicker"]),
+.mirror-landing :where(.eyebrow, .ml-chip, [class*="eyebrow"], [class*="chip"], [class*="kicker"]) {
+  text-transform: none;
+  letter-spacing: 0;
+}
+.workspace-app h1, .workspace-app h2, .mirror-landing h1, .mirror-landing h2 { font-weight: 500; }
+.workspace-app :where([class*="card"], .settings-section) { box-shadow: none; }

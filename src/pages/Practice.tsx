@@ -96,7 +96,7 @@ export default function Practice({ initialItemId = null, onInitialConsumed, onCh
         <header className="pr-top">
           <p className="ml-eyebrow">Practice</p>
           <h1>{mod ? mod.title : 'Hands-on practice'}</h1>
-          <p className="pr-lede">{mod ? mod.blurb : 'Short exercises you run right here. Every answer is saved and feeds Today.'}</p>
+          <p className="pr-lede">{mod ? mod.blurb : 'Short exercises you run right here. Every answer is saved and feeds your Briefing.'}</p>
         </header>
 
         {summaryFailed && (

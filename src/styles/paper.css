@@ -24,7 +24,7 @@
   --p-blue-ink: #0b4fd1;
   --p-btn: #272727;
   --p-btn-ink: #fff;
-  --p-card-shadow: 0 1px 0 rgba(255, 255, 255, .8) inset, 0 1px 2px rgba(20, 20, 30, .06), 0 14px 32px -12px rgba(20, 20, 30, .18);
+  --p-card-shadow: 0 1px 2px rgba(20, 20, 30, .05);
   --p-ease: cubic-bezier(.2, .8, .2, 1);
 }
 @media (prefers-color-scheme: dark) {
@@ -42,7 +42,7 @@
     --p-blue-ink: #8db6ff;
     --p-btn: #f2f4f7;
     --p-btn-ink: #111315;
-    --p-card-shadow: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 1px 2px rgba(0, 0, 0, .4), 0 16px 36px -12px rgba(0, 0, 0, .6);
+    --p-card-shadow: 0 1px 2px rgba(0, 0, 0, .3);
   }
 }
 
@@ -320,9 +320,6 @@ html:has(.mirror-landing), html:has(.mirror-landing) body { background: var(--p-
 .workspace-app .switch i { position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: var(--p-surface); box-shadow: 0 1px 3px rgba(20, 20, 30, .3); transition: transform .2s var(--p-ease); }
 .workspace-app .switch.on { background: var(--p-btn); border-color: var(--p-btn); }
 .workspace-app .switch.on i { transform: translateX(18px); }
-.workspace-app .tech-plan { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
-.workspace-app .tech-plan > span { display: grid; gap: 2px; padding: 14px 16px; border: 1px solid var(--p-line); border-radius: 12px; background: var(--p-chip); font-weight: 500; }
-.workspace-app .tech-plan small { font: 500 11px var(--p-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--p-ink-3); }
 .workspace-app .pv-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .workspace-app .pv-actions .m-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; width: auto; }
 .workspace-app .pv-link { background: none; border: 0; padding: 0; color: var(--p-blue-ink); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font: inherit; }

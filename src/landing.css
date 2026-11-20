@@ -1,21 +1,31 @@
 /* MIRROR landing - clean design with design tokens, no slop */
 .mirror-landing {
-  --bg: var(--m-bg);
-  --ink: var(--m-ink);
-  --muted: var(--m-muted);
-  --accent: var(--m-accent);
-  --accent-ink: var(--m-accent-ink);
-  --glass: var(--m-card);
-  --glass-b: var(--m-line);
-  --line: var(--m-line);
-  --soft: var(--m-soft);
-  --clear: var(--m-clear);
-  --circled: var(--m-circled);
-  --circled-ink: var(--m-circled-ink);
-  --shadow: var(--m-shadow);
-  --ease: var(--m-ease);
+  --bg: #f4f7ff;
+  --ink: #0b1226;
+  --muted: #566079;
+  --accent: #1862d9;
+  --accent-ink: #fff;
+  --glass: rgba(255, 255, 255, .6);
+  --glass-b: rgba(20, 40, 110, .12);
+  --line: rgba(20, 40, 110, .12);
+  --soft: rgba(24, 98, 217, .10);
+  --clear: rgba(24, 98, 217, .18);
+  --circled: rgba(232, 160, 40, .28);
+  --circled-ink: #8a5a00;
+  --shadow: 0 18px 50px rgba(40, 70, 160, .12);
+  --ease: cubic-bezier(.22, 1, .36, 1);
   --page: 1100px;
   --gutter: 24px;
+  --m-text-meta: 12px;
+  --m-text-body: 15px;
+  --m-text-body-sm: 13px;
+  --m-text-page: 28px;
+  --m-text-heading: 40px;
+  --m-text-weight: 600;
+  --m-logo-font: 18px;
+  --m-logo-font-sm: 16px;
+  --m-link-font: 14px;
+  --m-line-height: 1.5;
   position: relative;
   isolation: isolate;
   min-height: 100vh;
@@ -27,22 +37,22 @@
 }
 @media (prefers-color-scheme: dark) {
   .mirror-landing {
-    --bg: var(--m-bg-dark);
-    --ink: var(--m-ink-dark);
-    --muted: var(--m-muted-dark);
-    --accent: var(--m-accent-dark);
-    --accent-ink: var(--m-accent-ink-dark);
-    --glass: var(--m-card-dark);
-    --glass-b: var(--m-line-dark);
-    --line: var(--m-line-dark);
-    --soft: var(--m-soft-dark);
-    --clear: var(--m-clear-dark);
-    --circled: var(--m-circled-dark);
-    --circled-ink: var(--m-circled-ink-dark);
-    --shadow: var(--m-shadow-dark);
+    --bg: #080b1a;
+    --ink: #eef2ff;
+    --muted: #a0a9c4;
+    --accent: #6aa6ff;
+    --accent-ink: #06122b;
+    --glass: rgba(30, 38, 76, .55);
+    --glass-b: rgba(160, 180, 255, .14);
+    --line: rgba(160, 180, 255, .14);
+    --soft: rgba(106, 166, 255, .16);
+    --clear: rgba(106, 166, 255, .28);
+    --circled: rgba(255, 190, 90, .26);
+    --circled-ink: #ffd08a;
+    --shadow: 0 18px 50px rgba(0, 0, 10, .5);
     color-scheme: dark;
   }
-  html:has(.mirror-landing), html:has(.mirror-landing) body { background: var(--m-bg-dark); }
+  html:has(.mirror-landing), html:has(.mirror-landing) body { background: #080b1a; }
 }
 .mirror-landing::before { content: none; }
 .mirror-landing * { box-sizing: border-box; }
@@ -81,7 +91,7 @@ html:has(.mirror-landing) { scroll-padding-top: 88px; scroll-behavior: smooth; }
 
 /* Hero */
 .ml-hero { display: grid; grid-template-columns: 1fr; gap: 24px; align-items: center; padding-block: 32px 24px; }
-.ml-hero h1 { font-size: var(m-text-heading); }
+.ml-hero h1 { font-size: var(--m-text-heading); }
 .ml-hero h1 span { color: var(--accent); }
 .ml-sub { font-size: var(--m-text-body); color: var(--muted); margin: 12px 0; max-width: 480px; }
 .ml-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }

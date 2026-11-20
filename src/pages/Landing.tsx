@@ -95,8 +95,27 @@ export default function Landing({ onTry }: { onTry: () => void }) {
             </div>
             <ul className="mh-chips">{TRUST.map(t => <li key={t} className="ml-chip">{t}</li>)}</ul>
           </div>
+          <aside className="p-obj p-obj--a" aria-hidden="true">
+            <small>From the job description</small>
+            <b>Stakeholder communication</b>
+            <span>Your résumé backs this in part. One story would close the gap.</span>
+          </aside>
+          <aside className="p-obj p-obj--b" aria-hidden="true">
+            <small>Question · spoken</small>
+            <b>Tell me about a project you are proud of.</b>
+            <span>Say it, hear it back, say it again.</span>
+          </aside>
+          <aside className="p-obj p-obj--pill" aria-hidden="true">
+            <small>Listening</small>
+            <span className="p-bars"><i /><i /><i /><i /><i /></span>
+            <span className="p-pill-text" style={{ margin: 0, color: 'inherit' }}>no audio kept</span>
+          </aside>
+          <aside className="p-obj p-obj--c" aria-hidden="true">
+            <small>Your résumé</small>
+            <b>SQL, backed.</b>
+            <span>Dashboards: not shown yet.</span>
+          </aside>
           <div className="mh-vis">
-            <div className="mh-orb ml-orb" data-state="idle"><LiveOrb state="idle" /></div>
             <Frame name="briefing" lazy={false} />
           </div>
         </section>

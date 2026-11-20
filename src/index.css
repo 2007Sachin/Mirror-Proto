@@ -90,8 +90,8 @@ body {
 /* Remove Google Fonts dependency - using system fonts above */
 
 /* Focus visible */
-button, a, textarea, select:focus-visible {
-  outline: 2px solid rgba(187, 215, 247, .75);
+button:focus-visible, a:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--p-blue, #1062fe);
   outline-offset: 4px;
 }
 

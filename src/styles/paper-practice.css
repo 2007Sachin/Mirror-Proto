@@ -1,0 +1,383 @@
+/* Paper Instrument: practice drills, targets and report screens.
+   GENERATED selectors are prefixed with .workspace-app so they beat lazily loaded drill stylesheets. */
+/* Paper Instrument: practice drills, targets and report screens. */
+
+/* ---------- Shared vocabulary (scoped to this layer's screens) ---------- */
+.workspace-app .practice, .workspace-app .targets, .workspace-app .sql-round, .workspace-app .sessions, .workspace-app .stories-page, .workspace-app .csd, .workspace-app .sqd, .workspace-app .sp {
+  --mono-label: 500 11px/1.3 var(--p-mono);
+  --mono-track: .08em;
+  --circled: color-mix(in srgb, #e8a028 22%, var(--p-surface));
+  --circled-ink: #8a5a00;
+}
+@media (prefers-color-scheme: dark) {
+.workspace-app .practice, .workspace-app .targets, .workspace-app .sql-round, .workspace-app .sessions, .workspace-app .stories-page, .workspace-app .csd, .workspace-app .sqd, .workspace-app .sp { --circled-ink: #ffd08a; --circled: color-mix(in srgb, #e8a028 24%, var(--p-surface)); }
+}
+.workspace-app .ml-eyebrow, .workspace-app .practice .ml-eyebrow, .workspace-app .targets .ml-eyebrow, .workspace-app .sql-round .ml-eyebrow, .workspace-app .csd .ml-eyebrow {
+  font-family: var(--p-mono); font-size: 11.5px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--p-ink-3);
+}
+.workspace-app .practice h1, .workspace-app .practice h2, .workspace-app .targets h1, .workspace-app .targets h2, .workspace-app .targets h3, .workspace-app .sql-round h1, .workspace-app .sql-round h2, .workspace-app .csd h1, .workspace-app .sessions h2, .workspace-app .sessions h3, .workspace-app .stories-page h2, .workspace-app .stories-page h3 {
+  font-family: var(--p-sans); font-weight: 500; letter-spacing: -.035em;
+}
+.workspace-app .sql-top h1, .workspace-app .csd h1 { font-weight: 500; }
+.workspace-app .sql-side h2 { font-weight: 500; }
+.workspace-app .practice p, .workspace-app .targets p, .workspace-app .sessions p, .workspace-app .stories-page p { color: var(--p-ink-2); }
+.workspace-app .pr-lede, .workspace-app .sp-lede, .workspace-app .sp-meta, .workspace-app .sqd-note, .workspace-app .sqd-crumb { color: var(--p-ink-3); }
+
+/* mono small labels */
+.workspace-app .sqd h2, .workspace-app .sqd-lbl, .workspace-app .sqd-tag, .workspace-app .sqd-crumb, .workspace-app .sqd-names, .workspace-app .pr-ladder, .workspace-app .pr-min, .workspace-app .pr-state, .workspace-app .tg-weight, .workspace-app .tg-count, .workspace-app .sql-progress, .workspace-app .sp-crumbs, .workspace-app .sp-sum dt, .workspace-app .jm-sheet dt, .workspace-app .jm-count, .workspace-app .jm-level small, .workspace-app .sp-prob .sp-lv, .workspace-app .sp-prob .sp-mn {
+  font-family: var(--p-mono); letter-spacing: .04em;
+}
+.workspace-app .sqd h2, .workspace-app .sqd-lbl, .workspace-app .sp-sum dt, .workspace-app .jm-sheet dt { font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--p-ink-3); }
+.workspace-app .pr-ladder { font-size: 11px; color: var(--p-ink-3); }
+.workspace-app .pr-min, .workspace-app .pr-state { font-size: 12px; color: var(--p-ink-3); }
+.workspace-app .pr-state.is-done { color: var(--p-blue-ink); }
+.workspace-app .sqd-tag { background: var(--p-chip); border: 1px solid var(--p-line); color: var(--p-ink-2); font-size: 11px; }
+
+/* mono code areas */
+.workspace-app .sqd-editor, .workspace-app .sqd-code, .workspace-app .sqd-cols code, .workspace-app .sqd-names, .workspace-app .sqd-schema ul, .workspace-app .sql-editor textarea, .workspace-app .sql-schema ul, .workspace-app .csd-editor textarea, .workspace-app .csd-code, .workspace-app .csd-schema ul, .workspace-app .py-editor, .workspace-app .py-detail, .workspace-app .py-round pre, .workspace-app .stt-work ul, .workspace-app .dg-sql, .workspace-app .vz-code, .workspace-app .mk-clock, .workspace-app .cs-mono, .workspace-app .cs-sql, .workspace-app .cc-opt kbd, .workspace-app .qx-title code, .workspace-app .qx-picks code, .workspace-app .tg-form textarea.mono {
+  font-family: var(--p-mono);
+}
+.workspace-app .pyd textarea, .workspace-app .csd textarea, .workspace-app .sql-editor textarea, .workspace-app .sqd-editor { font-family: var(--p-mono); font-size: 13.5px; line-height: 1.65; }
+
+/* paper wells: replace translucent white (breaks in dark) with surface */
+.workspace-app .sql-editor textarea, .workspace-app .sql-reply, .workspace-app .csd-editor textarea, .workspace-app .csd-code, .workspace-app .csd-opt, .workspace-app .csd-note-box, .workspace-app .stt-opt, .workspace-app .py-round pre, .workspace-app .sqd-think, .workspace-app .sqd-num, .workspace-app .sqd-code, .workspace-app .sqd-table-wrap, .workspace-app .mk-fields input, .workspace-app .mk-res .sqd-code, .workspace-app .vz-at, .workspace-app .vz-tbl, .workspace-app .vz-code, .workspace-app .vz-btn, .workspace-app .vz-opt, .workspace-app .cs-panel, .workspace-app .cs-rows, .workspace-app .cs-node, .workspace-app .cs-t, .workspace-app .cs-acct, .workspace-app .cs-frame {
+  background: var(--p-surface); border-color: var(--p-line-strong); color: var(--p-ink);
+}
+.workspace-app .sqd-out, .workspace-app .vz-field { background: var(--p-chip); }
+.workspace-app .vz-card rect { fill: var(--p-surface); }
+.workspace-app .sqd-drawer-panel { background: var(--p-surface); color: var(--p-ink); border-left: 1px solid var(--p-line); box-shadow: var(--p-card-shadow); }
+.workspace-app .mk-confirm { background: color-mix(in srgb, var(--p-bg) 82%, transparent); }
+.workspace-app .sqd-drawer { background: rgba(10, 10, 14, .35); }
+.workspace-app .sql-editor textarea:focus-visible, .workspace-app .csd-editor textarea:focus-visible, .workspace-app .sqd-editor:focus-visible, .workspace-app .sqd-think:focus-visible, .workspace-app .sql-reply:focus-visible, .workspace-app .csd-note-box:focus-visible { outline: 2px solid var(--p-blue); outline-offset: 1px; border-color: var(--p-blue); }
+
+/* tables */
+.workspace-app .sql-table-wrap, .workspace-app .sqd-table-wrap, .workspace-app .csd-table-wrap, .workspace-app .py-table-wrap { border-radius: 10px; border: 1px solid var(--p-line); background: var(--p-surface); }
+.workspace-app .sql-results table, .workspace-app .sqd table, .workspace-app .csd table { font-family: var(--p-mono); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.workspace-app .sql-results th, .workspace-app .sqd th, .workspace-app .csd th { background: var(--p-chip); color: var(--p-ink-3); font-weight: 500; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; }
+.workspace-app .sql-results td, .workspace-app .sqd td, .workspace-app .csd td { color: var(--p-ink); }
+.workspace-app .sql-results td i, .workspace-app .sqd td i { color: var(--p-ink-3); }
+.workspace-app .sql-results th, .workspace-app .sql-results td, .workspace-app .sqd th, .workspace-app .sqd td, .workspace-app .csd th, .workspace-app .csd td { border-bottom-color: var(--p-line); }
+.workspace-app .sql-results tbody tr:hover td, .workspace-app .sqd tbody tr:hover td { background: var(--p-hover); }
+
+/* panels */
+.workspace-app .sqd-top, .workspace-app .sqd-brief, .workspace-app .sqd-work, .workspace-app .sqd-out, .workspace-app .sp-fold, .workspace-app .sp-free > section > .sp-rows, .workspace-app .sp-tabs, .workspace-app .jm-banner, .workspace-app .jm-top, .workspace-app .sp-strip {
+  border-color: var(--p-line); background: var(--p-surface);
+}
+.workspace-app .sqd-brief, .workspace-app .sqd-work { border-radius: 14px; box-shadow: var(--p-card-shadow); }
+.workspace-app .sqd-top, .workspace-app .sp-strip { border-radius: 12px; }
+.workspace-app .sqd-out { background: var(--p-chip); border-radius: 10px; }
+.workspace-app .sqd-hint, .workspace-app .sql-hint, .workspace-app .csd-hint, .workspace-app .sqd-predict, .workspace-app .sqd-compare p, .workspace-app .sp-sum div { background: var(--p-chip); color: var(--p-ink); border: 1px solid var(--p-line); }
+.workspace-app .sqd-hint b, .workspace-app .sql-hint b, .workspace-app .csd-hint b, .workspace-app .sqd-compare b { color: var(--p-blue-ink); font-family: var(--p-mono); font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; }
+.workspace-app .sqd-error, .workspace-app .sql-error, .workspace-app .csd-error { background: var(--p-chip); border-left-color: var(--p-blue); color: var(--p-ink); }
+.workspace-app .sqd-skel, .workspace-app .sp-skel { background: var(--p-chip); color: var(--p-ink-3); }
+.workspace-app .sp-skel { background-image: none; }
+.workspace-app .sp-brief { background: var(--p-chip); border-left-color: var(--p-blue); border-radius: 12px; }
+.workspace-app .sqd-verdict, .workspace-app .sql-verdict { font-weight: 500; letter-spacing: -.02em; }
+.workspace-app .sqd-verdict.is-solved, .workspace-app .sql-verdict.is-solved, .workspace-app .csd-verdict.is-solved { color: var(--p-blue-ink); }
+.workspace-app .sqd-verdict.is-not-yet, .workspace-app .sql-verdict.is-not-yet { color: var(--p-ink-2); }
+.workspace-app .sql-schema summary, .workspace-app .csd-schema summary, .workspace-app .sqd-link, .workspace-app .sql-link, .workspace-app .pr-link { color: var(--p-blue-ink); }
+.workspace-app .sqd-link, .workspace-app .pr-link, .workspace-app .sql-link { font-weight: 500; }
+
+/* buttons: dark pressed pills */
+.workspace-app .sqd-run, .workspace-app .sqd-chip[aria-pressed="true"], .workspace-app .sqd-mt[aria-pressed="true"], .workspace-app .jm-cta, .workspace-app .sp-tabs button.is-on {
+  background: var(--p-btn); color: var(--p-btn-ink); border: 1px solid color-mix(in srgb, var(--p-btn) 70%, #000);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .2) inset, 0 4px 10px -5px rgba(20, 20, 30, .5);
+}
+.workspace-app .jm-cta { border-radius: 12px; font-weight: 500; letter-spacing: -.01em; }
+.workspace-app .sp-tabs button.is-on { border-radius: 9px; }
+.workspace-app .sqd-btn, .workspace-app .sqd-chip, .workspace-app .sqd-mt { background: transparent; color: var(--p-ink); border-color: var(--p-line-strong); border-radius: 10px; font-weight: 500; }
+.workspace-app .sqd-chip { border-radius: 999px; }
+.workspace-app .sqd-btn:hover:not(:disabled), .workspace-app .sqd-chip:hover { background: var(--p-hover); }
+.workspace-app .sqd-tab { font-weight: 500; color: var(--p-ink-3); }
+.workspace-app .sqd-tab[aria-selected="true"] { color: var(--p-ink); border-bottom-color: var(--p-btn); }
+.workspace-app .sqd-dot, .workspace-app .sp-points li::before { background: var(--p-blue); }
+.workspace-app .sp-tabs button { font-weight: 500; color: var(--p-ink-3); min-height: 44px; }
+.workspace-app .sp-tabs button:not(.is-on):hover { color: var(--p-ink); }
+.workspace-app .sqd .ml-btn, .workspace-app .csd .ml-btn, .workspace-app .sql-round .ml-btn { min-height: 44px; }
+.workspace-app .sp-go { min-height: 44px; }
+.workspace-app .sp-strip .ml-btn { min-height: 36px; height: 36px; }
+.workspace-app .sp-opts label { background: var(--p-surface); border-color: var(--p-line-strong); color: var(--p-ink-2); font-weight: 500; min-height: 44px; border-radius: 10px; }
+.workspace-app .sp-opts label.is-on { border-color: var(--p-btn); color: var(--p-ink); background: var(--p-chip); }
+.workspace-app .sp-sum dd { font-weight: 500; letter-spacing: -.03em; }
+.workspace-app .sp-fold > summary, .workspace-app .sp-rowbtn b, .workspace-app .sp-prob-title { font-weight: 500; }
+.workspace-app .sp-fold > summary { min-height: 44px; }
+.workspace-app .sp-rowbtn, .workspace-app .sp-prob { min-height: 44px; }
+.workspace-app button.sp-rowbtn:hover b, .workspace-app .sp-prob:hover .sp-prob-title, .workspace-app .pr-item:hover .pr-item-title { color: var(--p-blue-ink); }
+.workspace-app .sp-tick.is-done { background: var(--p-blue); border-color: var(--p-blue); color: var(--p-btn-ink); }
+.workspace-app .sp-tick { color: var(--p-btn-ink); border-color: var(--p-line-strong); }
+
+/* focus */
+.workspace-app .practice :where(button, a, summary, input, textarea):focus-visible, .workspace-app .sqd :where(button, summary, input, textarea):focus-visible, .workspace-app .sp :where(button, input, summary):focus-visible, .workspace-app .sql-round :where(button, textarea, summary):focus-visible, .workspace-app .csd :where(button, textarea, summary):focus-visible, .workspace-app .jm :focus-visible { outline: 2px solid var(--p-blue); outline-offset: 2px; }
+
+/* ---------- Pass 2: hub, journey, mock ---------- */
+.workspace-app .pr-back { justify-self: start; width: fit-content; min-height: 44px; }
+.workspace-app .pr-note { background: var(--p-surface); border-color: var(--p-line); border-radius: 12px; color: var(--p-ink-2); }
+.workspace-app .pr-note p { color: inherit; }
+.workspace-app .pr-track { border-radius: 16px; padding: 20px; gap: 8px; transition: transform .2s var(--p-ease), box-shadow .2s var(--p-ease); }
+.workspace-app .pr-track:hover { transform: translateY(-2px); border-color: var(--p-line-strong); }
+.workspace-app .pr-track b { font-weight: 500; font-size: 20px; letter-spacing: -.03em; color: var(--p-ink); }
+.workspace-app .pr-blurb { color: var(--p-ink-2); }
+.workspace-app .pr-solved { font-family: var(--p-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--p-ink); }
+.workspace-app .pr-topic { border-radius: 16px; padding: 16px 18px; }
+.workspace-app .pr-topic h2 { font-family: var(--p-mono); font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--p-ink-3); }
+.workspace-app .pr-item:hover { background: var(--p-hover); }
+.workspace-app .pr-bars i, .workspace-app .pr-cal .is-on { background: var(--p-blue); }
+.workspace-app .pr-cal li { background: var(--p-chip); border: 1px solid var(--p-line); }
+.workspace-app .pr-cal .is-on { border-color: var(--p-blue); }
+.workspace-app .pr-record { border-radius: 14px; }
+.workspace-app .pr-record summary { font-family: var(--p-mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--p-ink-3); min-height: 44px; }
+.workspace-app .pr-record-body { color: var(--p-ink-2); }
+@media (prefers-reduced-motion: reduce) {
+.workspace-app .pr-track { transition: none; }
+.workspace-app .pr-track:hover { transform: none; } }
+.workspace-app .sp-free > section > h2, .workspace-app .sp-free h2, .workspace-app .sp-mod h2, .workspace-app .sp-side h2, .workspace-app .mk-pick h2, .workspace-app .mk-res h2 {
+  font-family: var(--p-mono); font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--p-ink-3);
+}
+.workspace-app .mk-pick .mk-card h2, .workspace-app .mk-pick .mk-own h2, .workspace-app .mk-confirm-box h2 { font-family: var(--p-sans); font-size: 17px; letter-spacing: -.025em; text-transform: none; color: var(--p-ink); font-weight: 500; }
+.workspace-app .sp-crumbs { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--p-ink-3); }
+.workspace-app .sp-tabs { box-shadow: 0 1px 2px rgba(20, 20, 30, .05); background: var(--p-surface); }
+.workspace-app .sp-fold, .workspace-app .sp-free > section > .sp-rows { border-radius: 14px; box-shadow: 0 1px 2px rgba(20, 20, 30, .04); }
+.workspace-app .sp-ring-bg { stroke: var(--p-line); }
+.workspace-app .sp-ring-fg { stroke: var(--p-blue); }
+
+/* mock + build-a-set */
+.workspace-app .mk-pick .sqd-run, .workspace-app .mk-res .sqd-run, .workspace-app .mk-pick .sqd-chip[aria-pressed="true"] {
+  background: var(--p-btn); color: var(--p-btn-ink); border: 1px solid color-mix(in srgb, var(--p-btn) 70%, #000);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .2) inset, 0 4px 10px -5px rgba(20, 20, 30, .5); font-weight: 500; min-height: 44px;
+}
+.workspace-app .mk-pick .sqd-btn, .workspace-app .mk-pick .sqd-chip, .workspace-app .mk-res .sqd-btn { color: var(--p-ink); border-color: var(--p-line-strong); font-weight: 500; min-height: 44px; background: transparent; }
+.workspace-app .mk-pick .sqd-link, .workspace-app .mk-res .sqd-link { color: var(--p-blue-ink); font-weight: 500; min-height: 44px; }
+.workspace-app .mk-pick .sqd-chip { background: var(--p-surface); }
+.workspace-app .mk-card, .workspace-app .mk-resume, .workspace-app .mk-rev, .workspace-app .mk-row { border-radius: 16px; }
+.workspace-app .mk-card { padding: 18px; }
+.workspace-app .mk-card > p, .workspace-app .mk-fields label, .workspace-app .mk-rn, .workspace-app .mk-rt i, .workspace-app .mk-time, .workspace-app .mk-rev i, .workspace-app .mk-res .sqd-note { color: var(--p-ink-3); }
+.workspace-app .mk-fields label { font-family: var(--p-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.workspace-app .mk-fields input { min-height: 44px; font-family: var(--p-mono); }
+.workspace-app .mk-card.is-picked { border-color: var(--p-blue); box-shadow: 0 0 0 2px var(--p-blue); }
+.workspace-app .mk-clock { background: var(--p-chip); border: 1px solid var(--p-line); font-size: 14px; }
+.workspace-app .mk-clock.is-low { background: var(--circled); color: var(--circled-ink); }
+.workspace-app .mk-n { border-color: var(--p-line-strong); color: var(--p-ink-3); font-family: var(--p-mono); font-weight: 500; }
+.workspace-app .mk-n.is-progress { color: var(--p-ink); border-color: var(--p-ink-3); }
+.workspace-app .mk-n.is-answered { color: var(--p-ink); background: var(--p-chip); border-color: var(--p-ink-2); }
+.workspace-app .mk-n.is-cur { box-shadow: inset 0 -3px 0 var(--p-blue); color: var(--p-ink); }
+.workspace-app .mk-confirm-box { background: var(--p-surface); border-color: var(--p-line); box-shadow: var(--p-card-shadow); border-radius: 16px; }
+.workspace-app .mk-rev h3, .workspace-app .mk-res .sqd-lbl { font-family: var(--p-mono); font-weight: 500; letter-spacing: .08em; color: var(--p-ink-3); }
+.workspace-app .mk-out.is-yes { color: var(--p-blue-ink); }
+.workspace-app .mk-out.is-no { color: var(--p-ink-3); }
+.workspace-app .mk-out { font-family: var(--p-mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; font-weight: 500; }
+.workspace-app .mk-res .sqd-hint, .workspace-app .mk-res .sqd-skel { background: var(--p-chip); color: var(--p-ink); }
+.workspace-app .mk-res .sqd-code { background: var(--p-surface); border-color: var(--p-line-strong); font-family: var(--p-mono); }
+
+/* journey (SQL map) */
+.workspace-app .jm-top { background: var(--p-surface); border-radius: 16px; box-shadow: var(--p-card-shadow); backdrop-filter: none; }
+.workspace-app .jm-bubble { background: var(--p-chip); border: 1px solid var(--p-line); color: var(--p-ink); }
+.workspace-app .jm-level strong { font-weight: 500; }
+.workspace-app .jm-level small, .workspace-app .jm-count { font-size: 11px; color: var(--p-ink-3); letter-spacing: .04em; }
+.workspace-app .jm-bar { background: var(--p-chip); border: 1px solid var(--p-line); height: 8px; }
+.workspace-app .jm-bar i { background: var(--p-blue); }
+.workspace-app .jm-quest { background: var(--circled); color: var(--circled-ink); font-family: var(--p-mono); font-size: 11px; letter-spacing: .04em; }
+.workspace-app .jm-quest.is-done { background: var(--p-chip); color: var(--p-blue-ink); }
+.workspace-app .jm-medal { border-color: var(--p-line-strong); color: var(--p-ink-3); opacity: 1; }
+.workspace-app .jm-medal.is-earned { background: var(--p-blue); border-color: var(--p-blue); color: var(--p-btn-ink); box-shadow: none; }
+.workspace-app .jm-banner { border-radius: 14px; box-shadow: 0 1px 2px rgba(20, 20, 30, .05); }
+.workspace-app .jm-banner h2 { font-size: 17px; font-weight: 500; letter-spacing: -.03em; text-transform: none; color: var(--p-ink); font-family: var(--p-sans); }
+.workspace-app .jm-banner p { color: var(--p-ink-3); }
+.workspace-app .jm-line path { stroke: var(--p-line-strong); }
+.workspace-app .jm-line path.is-done, .workspace-app .jm-ring { stroke: var(--p-blue); }
+.workspace-app .jm-btn { background: var(--p-surface); border: 1px solid var(--p-line-strong); box-shadow: var(--p-card-shadow); color: var(--p-blue-ink); }
+.workspace-app .jm-ico { color: var(--p-blue-ink); }
+.workspace-app .jm-ring-bg { stroke: var(--p-line); }
+.workspace-app .jm-node.is-done .jm-btn { background: var(--p-btn); color: var(--p-btn-ink); border-color: var(--p-btn); }
+.workspace-app .jm-node.is-done .jm-ico { color: var(--p-btn-ink); }
+.workspace-app .jm-node.is-current .jm-btn { box-shadow: 0 0 0 5px color-mix(in srgb, var(--p-blue) 18%, transparent), var(--p-card-shadow); }
+.workspace-app .jm-node.is-boss .jm-btn { background: var(--circled); border: 2px solid var(--circled-ink); }
+.workspace-app .jm-node.is-boss.is-done .jm-btn { background: var(--p-btn); border-color: var(--p-btn); }
+.workspace-app .jm-stars svg { color: var(--p-ink-3); opacity: 1; }
+.workspace-app .jm-stars .on { color: var(--p-blue); fill: var(--p-blue); }
+.workspace-app .jm-pin { background: var(--p-btn); color: var(--p-btn-ink); font-family: var(--p-mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; font-weight: 500; }
+.workspace-app .jm-title b { font-weight: 500; letter-spacing: -.01em; }
+.workspace-app .jm-title small { color: var(--p-ink-3); font-family: var(--p-mono); font-size: 11px; letter-spacing: .02em; }
+.workspace-app .jm-sheet, .workspace-app .jm-jump { background: var(--p-surface); border-color: var(--p-line); box-shadow: var(--p-card-shadow); color: var(--p-ink); }
+.workspace-app .jm-sheet { border-radius: 16px; }
+.workspace-app .jm-sheet h3 { font-weight: 500; letter-spacing: -.025em; }
+.workspace-app .jm-sheet p, .workspace-app .jm-x { color: var(--p-ink-2); }
+.workspace-app .jm-jump { color: var(--p-blue-ink); }
+
+/* ---------- Pass 3: python, stats, case ---------- */
+.workspace-app .py-round, .workspace-app .stt { --circled: color-mix(in srgb, #e8a028 22%, var(--p-surface)); }
+.workspace-app .py-round .ml-eyebrow, .workspace-app .stt .ml-eyebrow { font-family: var(--p-mono); font-size: 11.5px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--p-ink-3); }
+.workspace-app .py-round h1, .workspace-app .stt h1, .workspace-app .csd h1, .workspace-app .sql-top h1 { font-family: var(--p-sans); font-weight: 500; letter-spacing: -.04em; }
+.workspace-app .py-lead, .workspace-app .sql-lead { font-weight: 500; letter-spacing: -.03em; }
+.workspace-app .py-round :where(button, textarea, summary):focus-visible, .workspace-app .stt :where(button, summary):focus-visible, .workspace-app .stt-opt:has(input:focus-visible), .workspace-app .csd-opt:has(input:focus-visible) { outline: 2px solid var(--p-blue); outline-offset: 2px; }
+.workspace-app .py-editor textarea { font-family: var(--p-mono); font-size: 13.5px; line-height: 1.65; background: var(--p-surface); border-color: var(--p-line-strong); color: var(--p-ink); }
+.workspace-app .py-editor textarea:focus-visible { border-color: var(--p-blue); }
+.workspace-app .py-hint, .workspace-app .py-error { background: var(--p-chip); color: var(--p-ink); }
+.workspace-app .py-error { border-left-color: var(--p-blue); }
+.workspace-app .py-hint b { color: var(--p-blue-ink); font-family: var(--p-mono); font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; }
+.workspace-app .py-note, .workspace-app .stt-note, .workspace-app .csd-note, .workspace-app .csd-why, .workspace-app .csd-from { color: var(--p-ink-3); }
+.workspace-app .py-link, .workspace-app .csd-link { color: var(--p-blue-ink); font-weight: 500; }
+.workspace-app .py-verdict, .workspace-app .stt-verdict, .workspace-app .csd-verdict { font-weight: 500; letter-spacing: -.03em; }
+.workspace-app .py-verdict.is-solved, .workspace-app .stt-verdict.is-right, .workspace-app .csd-verdict.is-right { color: var(--p-blue-ink); }
+.workspace-app .py-verdict.is-not-yet, .workspace-app .stt-verdict.is-miss, .workspace-app .csd-verdict.is-miss { color: var(--p-ink-2); }
+.workspace-app .py-pass, .workspace-app .py-fail { font-family: var(--p-mono); font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; }
+.workspace-app .py-pass { color: var(--p-blue-ink); }
+.workspace-app .py-fail { color: var(--p-ink-3); }
+.workspace-app .py-test-name { font-weight: 500; }
+.workspace-app .py-detail { color: var(--p-ink-3); }
+.workspace-app .py-round pre { background: var(--p-surface); border-color: var(--p-line-strong); font-family: var(--p-mono); color: var(--p-ink); }
+.workspace-app .py-tests li { border-bottom-color: var(--p-line); }
+.workspace-app .py-side, .workspace-app .py-pad, .workspace-app .stt-card, .workspace-app .csd-step, .workspace-app .csd-side, .workspace-app .py-editor, .workspace-app .py-results, .workspace-app .csd-editor, .workspace-app .csd-results, .workspace-app .sql-side, .workspace-app .sql-editor, .workspace-app .sql-results, .workspace-app .sql-speech, .workspace-app .sql-center { border-radius: 16px; }
+.workspace-app .stt-opt, .workspace-app .csd-opt { border-radius: 12px; border-color: var(--p-line-strong); color: var(--p-ink); transition: border-color .15s var(--p-ease), background .15s var(--p-ease); }
+.workspace-app .stt-opt:hover, .workspace-app .csd-opt:hover { background: var(--p-hover); }
+.workspace-app .stt-opt input, .workspace-app .csd-opt input { accent-color: var(--p-btn); }
+.workspace-app .stt-opt.is-pick, .workspace-app .stt-opt.is-best, .workspace-app .csd-opt.is-pick, .workspace-app .csd-opt.is-best, .workspace-app .stt-why li.is-best { border-color: var(--p-blue); background: var(--p-chip); box-shadow: inset 3px 0 0 var(--p-blue); }
+.workspace-app .stt-why li { border-color: var(--p-line); border-radius: 12px; color: var(--p-ink-2); }
+.workspace-app .stt-why b { font-family: var(--p-mono); font-size: 10.5px; font-weight: 500; letter-spacing: .08em; color: var(--p-ink-3); }
+.workspace-app .stt-q, .workspace-app .csd-q { font-weight: 500; letter-spacing: -.02em; color: var(--p-ink); }
+.workspace-app .stt-quote { font-weight: 500; color: var(--p-ink); }
+.workspace-app .stt-work summary, .workspace-app .csd-schema summary { color: var(--p-blue-ink); font-weight: 500; }
+.workspace-app .stt-work { border-top-color: var(--p-line); }
+.workspace-app .stt-scenario, .workspace-app .stt-sum, .workspace-app .csd-brief, .workspace-app .csd-text { color: var(--p-ink); }
+.workspace-app .csd h2 { font-weight: 500; letter-spacing: -.03em; }
+.workspace-app .csd h3 { font-weight: 500; }
+.workspace-app .csd-why b { color: var(--p-ink); font-weight: 500; }
+.workspace-app .csd-from { font-family: var(--p-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.workspace-app .csd-note-box { border-radius: 12px; font-family: var(--p-sans); }
+.workspace-app .csd-schema, .workspace-app .sql-schema { border-top-color: var(--p-line); }
+.workspace-app .sql-side h2 { font-size: 20px; letter-spacing: -.03em; }
+.workspace-app .sql-progress { font-family: var(--p-mono); font-size: 11.5px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--p-ink-3); }
+.workspace-app .sql-speech { background: var(--p-surface); }
+.workspace-app .sql-follow { font-weight: 500; letter-spacing: -.02em; }
+.workspace-app .sqd-cols code { background: var(--p-chip); }
+.workspace-app .sqd-names { color: var(--p-ink-3); }
+@media (prefers-reduced-motion: reduce) {
+.workspace-app .stt-opt, .workspace-app .csd-opt { transition: none; } }
+
+/* disabled primary buttons: flat, readable, no shadow */
+.workspace-app .sqd .ml-btn:disabled, .workspace-app .sql-round .ml-btn:disabled, .workspace-app .csd .ml-btn:disabled, .workspace-app .py-round .ml-btn:disabled, .workspace-app .stt .ml-btn:disabled, .workspace-app .sqd-run:disabled, .workspace-app .mk-pick .sqd-run:disabled {
+  background: var(--p-chip); color: var(--p-ink-3); border: 1px solid var(--p-line); box-shadow: none; opacity: 1;
+}
+
+/* ---------- Targets ---------- */
+.workspace-app .targets { padding-top: 24px; }
+.workspace-app .tg-wrap { gap: 14px; }
+.workspace-app .targets .m-kicker { font-family: var(--p-mono); font-size: 11.5px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--p-ink-3); margin: 0 0 6px; }
+.workspace-app .targets h1 { font-weight: 500; letter-spacing: -.045em; }
+.workspace-app .targets h2 { font-weight: 500; letter-spacing: -.03em; }
+.workspace-app .targets .m-card h2, .workspace-app .tg-card-body > h2 { font-family: var(--p-mono); font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--p-ink-3); }
+.workspace-app .targets .m-card h3, .workspace-app .tg-area h3 { font-family: var(--p-sans); font-size: 15px; font-weight: 500; letter-spacing: -.02em; color: var(--p-ink); margin-top: 8px; }
+.workspace-app .tg-note, .workspace-app .tg-muted, .workspace-app .tg-meta { color: var(--p-ink-3); font-size: 14px; line-height: 1.55; }
+.workspace-app .tg-meta { font-family: var(--p-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.workspace-app .tg-note { padding: 12px 16px; border: 1px solid var(--p-line); border-radius: 12px; background: var(--p-surface); color: var(--p-ink-2); }
+.workspace-app .tg-link { font: inherit; font-size: 14px; color: var(--p-blue-ink); background: none; border: 0; cursor: pointer; min-height: 44px; padding: 0 4px; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, var(--p-blue-ink) 40%, transparent); }
+.workspace-app .tg-back { justify-self: start; font-family: var(--p-mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; text-decoration: none; color: var(--p-ink-2); }
+.workspace-app .tg-back::before { content: "\2190\00a0"; }
+.workspace-app .tg-back:hover { color: var(--p-ink); }
+.workspace-app .tg-danger .tg-link { color: var(--p-ink-3); }
+.workspace-app .tg-error { color: var(--p-ink); border-left: 3px solid var(--p-blue); background: var(--p-chip); padding: 10px 14px; border-radius: 0 10px 10px 0; font-size: 14px; }
+.workspace-app .tg-card { border-radius: 16px; padding: 18px 22px; min-height: 76px; transition: transform .2s var(--p-ease), box-shadow .2s var(--p-ease), border-color .2s var(--p-ease); }
+.workspace-app .tg-card:hover { transform: translateY(-2px); border-color: var(--p-line-strong); }
+.workspace-app .tg-card-main b { font-weight: 500; font-size: 18px; letter-spacing: -.03em; color: var(--p-ink); }
+.workspace-app .tg-card-main span, .workspace-app .tg-card-main small { color: var(--p-ink-3); }
+.workspace-app .targets .m-chip { font-family: var(--p-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; background: var(--p-chip); border: 1px solid var(--p-line); color: var(--p-ink-2); padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+.workspace-app .targets .m-chip.is-ready, .workspace-app .targets .m-chip.is-core { color: var(--p-blue-ink); border-color: color-mix(in srgb, var(--p-blue) 35%, var(--p-line)); }
+.workspace-app .tg-empty { padding: 32px; display: grid; gap: 12px; justify-items: start; }
+.workspace-app .tg-stages button { background: var(--p-surface); border-color: var(--p-line); color: var(--p-ink-2); font-size: 14px; padding: 6px 16px; border-radius: 999px; }
+.workspace-app .tg-stages button:hover { background: var(--p-hover); }
+.workspace-app .tg-stages button.is-now { background: var(--p-btn); color: var(--p-btn-ink); border-color: var(--p-btn); }
+.workspace-app .targets .m-card { border-radius: 16px; }
+.workspace-app .tg-card-body { padding: 22px; gap: 10px; }
+.workspace-app .tg-plan { background: var(--p-chip); border: 1px solid var(--p-line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 6px; }
+.workspace-app .tg-next { color: var(--p-ink); }
+.workspace-app .tg-rounds { gap: 0; margin-top: 4px; }
+.workspace-app .tg-rounds li { padding: 14px 0; justify-content: space-between; gap: 16px; border-top: 1px solid var(--p-line); }
+.workspace-app .tg-rounds li:first-child { padding-top: 4px; }
+.workspace-app .tg-rounds b { font-weight: 500; letter-spacing: -.02em; color: var(--p-ink); }
+.workspace-app .tg-rounds p { color: var(--p-ink-3); }
+.workspace-app .tg-rounds li .m-btn { flex: none; }
+.workspace-app .targets .m-btn, .workspace-app .targets .m-btn.m-btn--quiet { min-height: 44px; border-radius: 12px; padding: 0 18px; font-weight: 500; letter-spacing: -.01em; font-size: 14px; }
+.workspace-app .targets .m-btn.m-btn--quiet { background: transparent; color: var(--p-ink); border: 1px solid var(--p-line-strong); box-shadow: none; }
+.workspace-app .targets .m-btn.m-btn--quiet:hover { background: var(--p-hover); }
+.workspace-app .targets .m-btn:disabled { background: var(--p-chip); color: var(--p-ink-3); border: 1px solid var(--p-line); box-shadow: none; opacity: 1; }
+.workspace-app .tg-weight { padding: 2px 8px; }
+.workspace-app .tg-area ul { gap: 14px; }
+.workspace-app .tg-area q { color: var(--p-ink-3); }
+.workspace-app .tg-debriefs li { padding-top: 12px; border-top: 1px solid var(--p-line); display: grid; gap: 4px; }
+.workspace-app .tg-debriefs li:first-child { border-top: 0; padding-top: 0; }
+.workspace-app .tg-debriefs b { font-weight: 500; color: var(--p-ink); }
+.workspace-app .tg-form { border-radius: 16px; }
+.workspace-app .tg-form label { color: var(--p-ink); font-weight: 500; }
+.workspace-app .tg-form label span { font-family: var(--p-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--p-ink-3); font-weight: 500; }
+.workspace-app .tg-form input, .workspace-app .tg-form textarea { background: var(--p-surface); border-color: var(--p-line-strong); border-radius: 10px; color: var(--p-ink); }
+.workspace-app .tg-count { font-family: var(--p-mono); color: var(--p-ink-3); }
+.workspace-app .tg-count.is-low { color: var(--p-ink); }
+.workspace-app .tg-feed-details summary { color: var(--p-ink-3); min-height: 44px; font-family: var(--p-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.workspace-app .tg-agent { font-family: var(--p-mono); font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--p-ink-3); }
+.workspace-app .targets :is(button, input, textarea, summary):focus-visible { outline: 2px solid var(--p-blue); outline-offset: 2px; }
+@media (max-width: 520px) {
+.workspace-app .tg-rounds li { flex-wrap: wrap; }
+.workspace-app .tg-card { flex-wrap: wrap; }
+.workspace-app .tg-card-body { padding: 18px; } }
+@media (prefers-reduced-motion: reduce) {
+.workspace-app .tg-card { transition: none; }
+.workspace-app .tg-card:hover { transform: none; } }
+.workspace-app .tg-card-body > .m-btn, .workspace-app .tg-card-body > .tg-link { justify-self: start; }
+.workspace-app .tg-fields { display: grid; gap: 16px; }
+
+/* ---------- Sessions / reports and Stories ---------- */
+.workspace-app .sessions .eyebrow, .workspace-app .stories-page .eyebrow, .workspace-app .sessions .m-kicker, .workspace-app .stories-page .m-kicker {
+  display: block; font-family: var(--p-mono); font-size: 11.5px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--p-ink-3);
+}
+.workspace-app .sessions .m-card h2, .workspace-app .stories-page .m-card h2 { font-family: var(--p-mono); font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--p-ink-3); margin-bottom: 4px; }
+.workspace-app .sessions .m-card > h2:only-of-type:first-child + p, .workspace-app .sessions .m-card:not(.m-review) > h2 { margin-bottom: 2px; }
+.workspace-app .sessions .m-card:not(.m-review) > h2:first-child { font-family: var(--p-sans); font-size: 22px; letter-spacing: -.035em; text-transform: none; color: var(--p-ink); }
+.workspace-app .sessions .m-card:not(.m-review), .workspace-app .stories-page .m-card { padding: 22px; gap: 10px; border-radius: 16px; cursor: default; }
+.workspace-app .sessions .m-quiet, .workspace-app .stories-page .m-quiet, .workspace-app .sessions .m-meta { color: var(--p-ink-3); }
+.workspace-app .sessions .m-card > .m-btn, .workspace-app .stories-page .m-card > .m-btn, .workspace-app .stories-page .m-card > .m-link { justify-self: start; }
+.workspace-app .sessions .m-btn, .workspace-app .stories-page .m-btn { min-height: 44px; border-radius: 12px; padding: 0 18px; font-weight: 500; letter-spacing: -.01em; font-size: 14px; }
+.workspace-app .sessions .m-btn.m-btn--quiet, .workspace-app .stories-page .m-btn.m-btn--quiet { background: transparent; color: var(--p-ink); border: 1px solid var(--p-line-strong); box-shadow: none; }
+.workspace-app .sessions .m-btn.m-btn--quiet:hover, .workspace-app .stories-page .m-btn.m-btn--quiet:hover { background: var(--p-hover); }
+.workspace-app .sessions .m-btn:disabled, .workspace-app .stories-page .m-btn:disabled { background: var(--p-chip); color: var(--p-ink-3); border: 1px solid var(--p-line); box-shadow: none; opacity: 1; }
+.workspace-app .sessions .m-link, .workspace-app .stories-page .m-link { color: var(--p-blue-ink); min-height: 44px; display: inline-flex; align-items: center; font-weight: 500; }
+.workspace-app .sessions :is(button, a, summary):focus-visible, .workspace-app .stories-page :is(button, a, input, textarea, summary):focus-visible, .workspace-app .stories-page label:has(input:focus-visible) { outline: 2px solid var(--p-blue); outline-offset: 2px; }
+.workspace-app .sessions-layout { gap: 16px; }
+.workspace-app .m-session, .workspace-app .m-grid-cards > li > button { background: var(--p-surface); border: 1px solid var(--p-line); border-radius: 14px; padding: 16px 18px; }
+.workspace-app .m-session strong, .workspace-app .m-grid-cards strong { font-weight: 500; font-size: 17px; letter-spacing: -.03em; color: var(--p-ink); }
+.workspace-app .m-session span, .workspace-app .m-session .m-meta { font-family: var(--p-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--p-ink-3); }
+.workspace-app .m-session[aria-current='true'], .workspace-app .m-grid-cards > li > button[aria-current='true'] { border-color: var(--p-blue); background: var(--p-surface); box-shadow: 0 0 0 1px var(--p-blue), var(--p-card-shadow); }
+.workspace-app .m-session:hover { border-color: var(--p-line-strong); }
+.workspace-app .sessions .m-review { padding: 24px; gap: 16px; }
+.workspace-app .sessions .m-review h2 { font-family: var(--p-sans); font-size: 24px; font-weight: 500; letter-spacing: -.04em; text-transform: none; color: var(--p-ink); }
+.workspace-app .sessions .m-review h3 { font-family: var(--p-mono); font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--p-ink-3); margin: 8px 0 0; }
+.workspace-app .sessions .m-review p { color: var(--p-ink-2); }
+.workspace-app .m-q { border-top-color: var(--p-line); gap: 10px; padding-top: 16px; }
+.workspace-app .m-q h4, .workspace-app .m-q > b, .workspace-app .m-q > strong { font-weight: 500; letter-spacing: -.02em; color: var(--p-ink); }
+.workspace-app .m-star li { background: var(--p-chip); border: 1px solid var(--p-line); border-radius: 10px; color: var(--p-ink); padding: 10px; }
+.workspace-app .m-star b { font-family: var(--p-mono); font-size: 10.5px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--p-ink-3); }
+.workspace-app .m-star .is-open { background: transparent; border: 1px dashed var(--p-line-strong); color: var(--p-ink-2); }
+.workspace-app .sessions blockquote, .workspace-app .stories-quote { background: var(--p-chip); border: 1px solid var(--p-line); border-left: 3px solid var(--p-line-strong); border-radius: 0 10px 10px 0; color: var(--p-ink-2); padding: 10px 14px; }
+.workspace-app .stories-quote span { font-family: var(--p-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--p-ink-3); }
+
+/* chips (theme maps) */
+.workspace-app .stories-page .m-chips li, .workspace-app .m-chips li { font-family: var(--p-mono); font-size: 11px; letter-spacing: .04em; padding: 5px 12px; border-radius: 999px; background: var(--p-chip); border: 1px solid var(--p-line); color: var(--p-ink-2); }
+.workspace-app .stories-page .m-chips li.is-open, .workspace-app .m-chips .is-open { background: transparent; border: 1px dashed var(--p-line-strong); color: var(--p-ink-3); }
+.workspace-app .stories-page .m-card > p.m-quiet:first-of-type { font-family: var(--p-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.workspace-app .stories-page .m-card h2 + div > .m-quiet:first-child, .workspace-app .stories-page .m-card h2 + div p.m-quiet:first-child { font-family: var(--p-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.workspace-app .stories-page strong { font-weight: 500; color: var(--p-ink); letter-spacing: -.01em; }
+.workspace-app .stories-roles { gap: 14px; }
+.workspace-app .stories-roles li { gap: 2px; }
+.workspace-app .stories-roles li + li { border-top: 1px solid var(--p-line); padding-top: 14px; }
+.workspace-app .m-grid-cards article { background: var(--p-surface); border-color: var(--p-line); border-radius: 14px; padding: 16px 18px; gap: 6px; }
+.workspace-app .m-grid-cards h3 { font-weight: 500; font-size: 17px; letter-spacing: -.03em; }
+.workspace-app .stories-page label, .workspace-app .stories-page legend { color: var(--p-ink-2); font-size: 14px; }
+.workspace-app .stories-page input:not([type=checkbox]), .workspace-app .stories-page textarea { background: var(--p-surface); border: 1px solid var(--p-line-strong); border-radius: 10px; color: var(--p-ink); min-height: 44px; padding: 10px 14px; font-family: var(--p-sans); }
+.workspace-app .stories-page input[type=checkbox] { accent-color: var(--p-btn); width: 20px; height: 20px; }
+.workspace-app .stories-chip { min-height: 44px; padding: 0 12px; border: 1px solid var(--p-line); border-radius: 999px; background: var(--p-surface); gap: 8px; }
+.workspace-app .stories-chip:has(input:checked) { border-color: var(--p-ink-2); background: var(--p-chip); color: var(--p-ink); }
+.workspace-app .stories-error { color: var(--p-ink); border-left: 3px solid var(--p-blue); background: var(--p-chip); padding: 10px 14px; border-radius: 0 10px 10px 0; }
+.workspace-app .stories-page fieldset { border: 0; padding: 0; margin: 0; }
+.workspace-app .stories-page legend { font-family: var(--p-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--p-ink-3); padding: 0 0 6px; }
+.workspace-app .stories-page .m-split { gap: 16px; }
+.workspace-app .m-q > .m-btn { justify-self: start; }
+.workspace-app .stories-page .m-quiet:has(+ .m-chips) { font-family: var(--p-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.workspace-app .m-grid-cards > li { display: grid; }

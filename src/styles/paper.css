@@ -285,3 +285,82 @@ html:has(.mirror-landing), html:has(.mirror-landing) body { background: var(--p-
 .account-menu__item:hover, .account-menu__item:focus-visible { background: var(--p-hover); }
 .ambient { display: none !important; }
 .workspace-app .m-card .m-meta, .workspace-app small { color: var(--p-ink-3); }
+
+/* ---------- Page frame: one width, one left edge, one heading size ---------- */
+.workspace-app { --p-page: 1120px; }
+.workspace-app .workspace-content,
+.workspace-app .today-page,
+.workspace-app .today-top,
+.workspace-app .tg-wrap,
+.workspace-app .practice:not(:has(.sqd)) .pr-wrap { max-width: var(--p-page); margin-inline: auto; }
+.workspace-app .workspace-content { max-width: calc(var(--p-page) + 56px); padding: 28px 28px 56px; }
+.workspace-app .mirror-landing.practice:not(:has(.sqd)) { padding: 28px 28px 56px; }
+.workspace-app .page-title h1, .workspace-app .m-page-head h1, .workspace-app .today-head h1,
+.workspace-app .tg-top h1, .workspace-app .pr-top h1 { font-size: clamp(28px, 3vw, 34px); font-weight: 500; letter-spacing: -.045em; line-height: 1.1; margin: 6px 0 8px; }
+.workspace-app .page-title { margin-bottom: 28px; }
+.workspace-app .eyebrow { font-family: var(--p-mono); font-size: 11.5px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--p-ink-3); }
+.workspace-app .page-title > div > p:last-child { color: var(--p-ink-2); }
+@media (max-width: 760px) { .workspace-app .workspace-content, .workspace-app .mirror-landing.practice:not(:has(.sqd)) { padding: 20px 16px 48px; } }
+
+/* ---------- Settings, Account, Privacy ---------- */
+.workspace-app .settings-section { display: grid; gap: 4px; padding: 22px 24px; margin-bottom: 14px; background: var(--p-surface); border: 1px solid var(--p-line); border-radius: 14px; box-shadow: var(--p-card-shadow); }
+.workspace-app .settings-section > div:first-child { margin-bottom: 10px; }
+.workspace-app .settings-section > div:first-child > h3 { font-size: 17px; font-weight: 500; letter-spacing: -.025em; margin: 0 0 4px; }
+.workspace-app .settings-section > div:first-child > p { color: var(--p-ink-3); margin: 0; max-width: 62ch; }
+.workspace-app .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-top: 1px solid var(--p-line); }
+.workspace-app .setting-row > span { display: inline-flex; align-items: center; gap: 10px; color: var(--p-ink-3); }
+.workspace-app .setting-row > span b { color: var(--p-ink); font-weight: 500; }
+.workspace-app .segmented { display: inline-flex; padding: 3px; gap: 2px; border: 1px solid var(--p-line); border-radius: 10px; background: var(--p-chip); }
+.workspace-app .segmented button { min-height: 36px; padding: 0 14px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--p-ink-3); font: 500 14px var(--p-sans); cursor: pointer; }
+.workspace-app .segmented button.active { background: var(--p-surface); color: var(--p-ink); border-color: var(--p-line); box-shadow: 0 1px 2px rgba(20, 20, 30, .08); }
+.workspace-app .select-wrap { position: relative; display: inline-flex; align-items: center; }
+.workspace-app .select-wrap select { appearance: none; -webkit-appearance: none; min-height: 44px; padding: 0 38px 0 14px; border: 1px solid var(--p-line-strong); border-radius: 10px; background: var(--p-surface); color: var(--p-ink); font: 500 14px var(--p-sans); }
+.workspace-app .select-wrap svg { position: absolute; right: 12px; pointer-events: none; color: var(--p-ink-3); }
+.workspace-app .switch { position: relative; flex: none; width: 46px; height: 28px; padding: 0; border: 1px solid var(--p-line-strong); border-radius: 999px; background: var(--p-chip); cursor: pointer; transition: background .2s var(--p-ease); }
+.workspace-app .switch i { position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: var(--p-surface); box-shadow: 0 1px 3px rgba(20, 20, 30, .3); transition: transform .2s var(--p-ease); }
+.workspace-app .switch.on { background: var(--p-btn); border-color: var(--p-btn); }
+.workspace-app .switch.on i { transform: translateX(18px); }
+.workspace-app .tech-plan { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.workspace-app .tech-plan > span { display: grid; gap: 2px; padding: 14px 16px; border: 1px solid var(--p-line); border-radius: 12px; background: var(--p-chip); font-weight: 500; }
+.workspace-app .tech-plan small { font: 500 11px var(--p-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--p-ink-3); }
+.workspace-app .pv-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.workspace-app .pv-actions .m-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; width: auto; }
+.workspace-app .pv-link { background: none; border: 0; padding: 0; color: var(--p-blue-ink); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font: inherit; }
+@media (prefers-reduced-motion: reduce) { .workspace-app .switch, .workspace-app .switch i { transition: none; } }
+@media (max-width: 560px) { .workspace-app .setting-row { flex-wrap: wrap; } }
+
+/* ---------- Briefing (Today) and shared card interiors ---------- */
+.workspace-app .today { padding: 28px 28px 56px; }
+.workspace-app .today-page { margin-inline: auto; }
+.workspace-app .today-stack, .workspace-app .today-top { max-width: none; margin-inline: 0; }
+.workspace-app .today-stack { gap: 14px; margin-top: 28px; }
+.workspace-app .today-status { color: var(--p-ink-2); font-size: 17px; }
+.workspace-app .today-head .ml-eyebrow { font-family: var(--p-mono); font-size: 11.5px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--p-ink-3); }
+.workspace-app .today-hero, .workspace-app .today-card { padding: 24px 26px; gap: 10px; border-radius: 16px; background: var(--p-surface); border: 1px solid var(--p-line); box-shadow: var(--p-card-shadow); }
+.workspace-app .today-h { font-family: var(--p-mono); font-size: 11.5px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--p-ink-3); }
+.workspace-app .today-kicker { font-family: var(--p-mono); font-size: 11.5px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--p-blue-ink); }
+.workspace-app .today-hero h2 { font-size: clamp(26px, 3vw, 34px); font-weight: 500; letter-spacing: -.045em; max-width: 24ch; }
+.workspace-app .today-big { font-weight: 500; letter-spacing: -.035em; }
+.workspace-app .today-when .today-big { font-size: 30px; letter-spacing: -.045em; }
+.workspace-app .today-why, .workspace-app .today-muted, .workspace-app .today-also { color: var(--p-ink-2); }
+.workspace-app .today-link { color: var(--p-blue-ink); font-weight: 500; }
+.workspace-app .today-dot { background: var(--p-blue); box-shadow: 0 0 0 4px color-mix(in srgb, var(--p-blue) 16%, transparent); }
+.workspace-app .today-chip { font-family: var(--p-mono); font-size: 11.5px; letter-spacing: .04em; background: var(--p-chip); border-color: var(--p-line); color: var(--p-ink-2); }
+.workspace-app .today-orb { right: 32px; top: 28px; }
+/* card buttons keep their natural width instead of stretching across the card */
+.workspace-app .m-card > .m-btn, .workspace-app .m-card > .button { justify-self: start; width: auto; padding-inline: 18px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+.workspace-app .m-card { padding: 22px 24px; }
+.workspace-app .m-card h2, .workspace-app .m-card h3 { font-weight: 500; letter-spacing: -.03em; color: var(--p-ink); }
+@media (max-width: 760px) { .workspace-app .today { padding: 20px 16px 48px; } .workspace-app .today-hero, .workspace-app .today-card { padding: 20px; } }
+.workspace-app .m-card .today-h, .workspace-app .today-card .today-h { color: var(--p-ink-3); font-size: 11.5px; }
+
+/* ---------- Landing: small screens ---------- */
+@media (max-width: 880px) {
+  .mirror-landing .ml-links { display: none; }
+  .mirror-landing .ml-nav-bar, .mirror-landing .ml-nav-bar.ml-glass { padding: 10px 16px; }
+}
+@media (max-width: 560px) {
+  .mirror-landing .mh-frame { margin-inline: -4px; }
+  .mirror-landing .mh-hero .ml-btn { width: 100%; }
+}
+.workspace-app .page-title > .m-btn, .workspace-app .page-title > button { margin-top: 14px; }

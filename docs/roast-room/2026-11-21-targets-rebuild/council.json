@@ -1,0 +1,20 @@
+{
+  "title": "Rebuild Targets like Interview Prep",
+  "decision": "Rebuild Targets as folder cards where each round starts a live interview, and how far to go.",
+  "mode": "quick",
+  "options": [
+    { "id": "A", "label": "Full rebuild: round cards start job-specific interviews" },
+    { "id": "B", "label": "Restyle only: same generic Practise button" },
+    { "id": "C", "label": "Merge Targets into Interview Prep" },
+    { "id": "D", "label": "Leave Targets as it is" }
+  ],
+  "weights": {
+    "graham": { "weight": 3, "reason": "Product and what candidates really need" },
+    "bezos": { "weight": 2, "reason": "Strategic call and reversibility" },
+    "musk": { "weight": 2, "reason": "What to delete and first principles" },
+    "buffett": { "weight": 2, "reason": "Downside of breaking working flows" }
+  },
+  "seats": ["graham", "bezos", "musk", "buffett"],
+  "brief": "Targets is a job-specific page with stages. Interview Prep just shipped with folder cards and live round interviews. Should Targets be rebuilt the same way, and how far?",
+  "assumptions": ["The interviewer can take round and skill context without a server change (assumed)", "Candidates have one to three targets at a time (assumed)"]
+}

@@ -5,7 +5,6 @@ import Landing from './pages/Landing'
 import FirstInterview from './pages/FirstInterview'
 import Overview from './pages/Overview'
 import Today from './pages/Today'
-import Targets from './pages/Targets'
 import Practice from './pages/Practice'
 import Interview from './pages/Interview'
 import Sessions from './pages/Sessions'
@@ -28,7 +27,7 @@ import {
   BookMarked, BookOpen, ClipboardList,
   Circle, Home as HomeIcon,
   Menu, MessageCircle,
-  Settings, Target,
+  Settings,
   X,
 } from 'lucide-react'
 
@@ -219,14 +218,14 @@ useEffect(() => {
     localStorage.setItem('mirror:view-sync', JSON.stringify(view))
   }
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2600) }
-  const startInterview = async (roleName = role, openingQuestion?: string, voiceOn = voiceMode) => {
+  const startInterview = async (roleName = role, openingQuestion?: string, voiceOn = voiceMode, fromTargetId?: string) => {
     if (busy) return
     if (!roleName) return go('firstInterview')
     setBusy(true)
     setFlowState('starting')
     setQuestionIndex(0); setAnswers([]); setAnswer(''); setOrbState('thinking'); setReflection(null); setSessionId(null); setQuestionCap(null); setScreen(null)
     try {
-      const session = await api.createInterview(roleName, undefined, openingQuestion)
+      const session = await api.createInterview(roleName, undefined, openingQuestion, fromTargetId)
       setSessionId(session.id)
       setQuestionCap(session.questionCap ?? null)
       sessionStorage.setItem(SESSION_STORAGE_KEY, session.id)
@@ -548,13 +547,12 @@ useEffect(() => {
   const navItems: { id: View; label: string; icon: typeof HomeIcon }[] = [
     { id: 'workspace', label: 'Briefing', icon: HomeIcon },
     { id: 'practice', label: 'Practice', icon: BookOpen },
-    { id: 'targets', label: 'Targets', icon: Target },
     { id: 'reports', label: 'Sessions', icon: MessageCircle },
     { id: 'stories', label: 'Stories', icon: BookMarked },
     { id: 'prep', label: 'Interview Prep', icon: ClipboardList },
   ]
   return <div className={`app workspace-app ${calmMotion ? 'reduce-motion' : ''}`}><div className="ambient ambient--two" />
-    <aside className={`sidebar ${mobileNav ? 'sidebar--open' : ''}`}><div className="sidebar-top"><Brand onClick={() => go('home')} /><button className="mobile-close" onClick={() => setMobileNav(false)}><X /></button></div><nav>{navItems.map(item => <button key={item.id} className={view === item.id || (view === 'report' && item.id === 'reports') ? 'active' : ''} onClick={() => { if (item.id === 'targets') setTargetId(null); go(item.id) }}><item.icon size={18} />{item.label}</button>)}</nav><div className="sidebar-bottom"><button onClick={() => go('settings')} className={view === 'settings' ? 'active' : ''}><Settings size={18} />Settings</button><button className="demo-profile" onClick={() => go('profile')}>{session.status === 'signedIn'
+    <aside className={`sidebar ${mobileNav ? 'sidebar--open' : ''}`}><div className="sidebar-top"><Brand onClick={() => go('home')} /><button className="mobile-close" onClick={() => setMobileNav(false)}><X /></button></div><nav>{navItems.map(item => <button key={item.id} className={view === item.id || (view === 'report' && item.id === 'reports') || (view === 'targets' && item.id === 'prep') ? 'active' : ''} onClick={() => { if (item.id === 'prep') setTargetId(null); go(item.id) }}><item.icon size={18} />{item.label}</button>)}</nav><div className="sidebar-bottom"><button onClick={() => go('settings')} className={view === 'settings' ? 'active' : ''}><Settings size={18} />Settings</button><button className="demo-profile" onClick={() => go('profile')}>{session.status === 'signedIn'
       ? <><span>{(session.user.email ?? '?').charAt(0).toUpperCase()}</span><div><b>{session.user.email ?? 'Your account'}</b><small>Account</small></div></>
       : <><span>D</span><div><b>Demo account</b><small>Not saved to an account</small></div></>}</button></div></aside>
     {mobileNav && <button className="nav-scrim" aria-label="Close navigation" onClick={() => setMobileNav(false)} />}
@@ -575,15 +573,21 @@ useEffect(() => {
           onOpenItem={id => { setPracticeItem(id); go('practice') }}
           onOpenReplays={id => { setPracticeItem(id); go('practice') }}
           onOpenTarget={id => { setTargetId(id); go('targets') }}
-          onAddTarget={() => { setTargetId(null); go('targets') }}
+          onAddTarget={() => { setTargetId('new'); go('targets') }}
           onFirstInterview={() => go('firstInterview')}
         />)}
-      {view === 'targets' && <Targets openId={targetId} onOpen={setTargetId} onPractise={r => void startInterview(r)} onPractiseProbe={q => void startInterview(role, q)} onScreen={id => void startScreening(id)} onAddStory={theme => addStory(theme)} />}
       {view === 'screen' && sessionId && <ScreenDebriefPage interviewId={sessionId} onDone={() => { setScreen(null); go('workspace') }} />}
       {view === 'practice' && <Practice initialItemId={practiceItem} onInitialConsumed={() => setPracticeItem(null)} />}
       {view === 'profile' && <Account session={session} role={role} onSettings={() => go('settings')} />}
       {(view === 'reports' || view === 'report') && <Sessions openId={view === 'report' ? sessionId : null} refreshKey={reflection?.interviewId} onPractise={() => void startInterview()} onSaveStory={turn => void saveStoryFromAnswer({ question: turn.question, answer: turn.answer, sourceInterviewId: sessionId, sourceTurnId: turn.id }).then(() => notify('Saved to your stories.')).catch(() => notify('Could not save that story just now.'))} />}
-      {view === 'prep' && <InterviewPrep onStart={(r, q, speak) => { setVoiceMode(speak); void startInterview(r, q, speak) }} />}
+      {(view === 'prep' || view === 'targets') && (
+        <InterviewPrep
+          onStart={(r, q, speak) => { setVoiceMode(speak); void startInterview(r, q, speak) }}
+          jobId={targetId} onOpenJob={setTargetId}
+          onPractise={(r, o) => { if (o?.speak !== undefined) setVoiceMode(o.speak); void startInterview(r, o?.question, o?.speak ?? voiceMode, o?.targetId) }}
+          onPractiseProbe={q => void startInterview(role, q)} onScreen={id => void startScreening(id)} onAddStory={theme => addStory(theme)}
+        />
+      )}
       {view === 'stories' && <Stories initialQuestion={storyQuestion} initialTheme={storyTheme} onInitialConsumed={() => { setStoryQuestion(null); setStoryTheme(null) }} />}
       {view === 'settings' && <SettingsPage voiceSpeed={voiceSpeed} setVoiceSpeed={setVoiceSpeed} language={language} setLanguage={setLanguage} calmMotion={calmMotion} setCalmMotion={setCalmMotion} notify={notify} onResetDemo={resetDemo} onOpenPrivacy={() => go('privacy')} onDeleted={afterDataDeleted} />}
       {view === 'privacy' && <Privacy onBack={() => go('settings')} onOpenSettings={() => go('settings')} />}

@@ -3,7 +3,14 @@ import type { InterviewContext } from '../../providers/types.js'
 import type { InterviewRow, Repository, TurnRow } from '../../repo/types.js'
 import type { AnswerSignals, GapSkill, RoomState } from './types.js'
 
-const OUTCOME = /\b(result|resulted|outcome|improved|reduced|increased|decreased|saved|cut|grew|launched|shipped|delivered|fixed|won|because of|led to|as a result)\b|\d/i
+// Round titles from buildRounds (server/domain/scout.ts) and the skill areas each one covers. The SQL round has its own room.
+const ROUND_AREAS: Record<string, string[]> = {
+  'Behavioural round': ['behavioural'],
+  'Python round': ['python'],
+  'Tools round': ['tools', 'analytics'],
+}
+
+const OUTCOME =/\b(result|resulted|outcome|improved|reduced|increased|decreased|saved|cut|grew|launched|shipped|delivered|fixed|won|because of|led to|as a result)\b|\d/i
 
 /** What the last answer looked like: length, thin (short or no outcome), strong (specific, with an outcome). */
 export function answerSignals(answer: string): AnswerSignals {
@@ -29,9 +36,15 @@ export async function buildRoomState(
   let gaps: GapSkill[] = []
   if (interview.targetId) {
     const rows = await repo.listGapMatches(workspace, interview.targetId)
-    gaps = rows
-      .filter(r => r.status !== 'covered')
-      .map(r => ({ skill: r.skill, weight: r.weight, probeQuestion: r.probeQuestion }))
+    // With no résumé match yet, the job's own skills are the open list, so a round can still aim at what the job asks for.
+    const pool = rows.length
+      ? rows.filter(r => r.status !== 'covered').map(r => ({ skill: r.skill, area: r.area, weight: r.weight, probeQuestion: r.probeQuestion }))
+      : ((await repo.getTarget(workspace, interview.targetId))?.skills ?? []).map(s => ({ skill: s.name, area: s.area as string, weight: s.weight, probeQuestion: null as string | null }))
+    // A round started from a Target is named "<role> · <round title>"; keep the follow-ups on that round's skills.
+    const areas = ROUND_AREAS[interview.role.split(' · ')[1] ?? '']
+    gaps = pool
+      .filter(g => !areas || areas.includes(g.area))
+      .map(({ skill, weight, probeQuestion }) => ({ skill, weight, probeQuestion }))
       .sort((a, b) => (a.weight === b.weight ? 0 : a.weight === 'core' ? -1 : 1))
   }
 

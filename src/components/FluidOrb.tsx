@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils'
 export type FluidOrbProps = React.ComponentProps<'div'> & {
   size?: number
   color?: string
+  /** 0..1. How lively the orb is: 0 is the calm drift, 1 swirls faster and warps more. Eased, so it can change every few frames. */
+  energy?: number
 }
 
 const VERT = `
@@ -26,6 +28,7 @@ precision mediump float;
 uniform vec2 u_resolution;
 uniform float u_time;
 uniform vec3 u_color;
+uniform float u_energy;
 
 float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
@@ -62,10 +65,10 @@ void main() {
     cos(t * 0.8) + 0.6 * cos(t * 1.3 + 2.1)
   );
 
-  vec2 p = vec2(uv.x * 1.8, uv.y * 1.0) + drift * 0.7;
+  vec2 p = vec2(uv.x * 1.8, uv.y * 1.0) + drift * (0.7 + u_energy * 0.5);
 
   vec2 q = vec2(fbm(p + drift), fbm(p + vec2(3.2, 1.5) - drift));
-  float f = fbm(p + 1.2 * q);
+  float f = fbm(p + (1.2 + u_energy * 1.4) * q);
 
   float g = clamp(1.0 - uv.y, 0.0, 1.0);
   float anchor = smoothstep(0.0, 0.3, uv.y);
@@ -111,11 +114,15 @@ function compile(gl: WebGLRenderingContext, type: number, src: string) {
 const FluidOrb = ({
   size = 240,
   color = '#1A73F2',
+  energy = 0,
   className,
   style,
   ...props
 }: FluidOrbProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  // The latest energy, read each frame, so a change never rebuilds the GL scene.
+  const energyRef = useRef(energy)
+  useEffect(() => { energyRef.current = energy }, [energy])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -151,6 +158,7 @@ const FluidOrb = ({
 
     const uResolution = gl.getUniformLocation(program, 'u_resolution')
     const uTime = gl.getUniformLocation(program, 'u_time')
+    const uEnergy = gl.getUniformLocation(program, 'u_energy')
     gl.uniform3f(gl.getUniformLocation(program, 'u_color'), ...hexToRgb(color))
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
@@ -161,15 +169,25 @@ const FluidOrb = ({
     gl.uniform2f(uResolution, px, px)
 
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const start = performance.now()
     let raf = 0
+    // Time is a running sum, so a change of energy speeds the swirl up or down without a jump.
+    let phase = 0
+    let last = performance.now()
+    let eased = reduce ? 0 : energyRef.current
 
     const render = (now: number) => {
-      gl.uniform1f(uTime, reduce ? 0 : (now - start) / 1000)
+      const dt = Math.min((now - last) / 1000, 0.1)
+      last = now
+      if (!reduce) {
+        eased += (energyRef.current - eased) * 0.1
+        phase += dt * (1 + eased * 3.5)
+      }
+      gl.uniform1f(uTime, phase)
+      gl.uniform1f(uEnergy, eased)
       gl.drawArrays(gl.TRIANGLES, 0, 6)
       if (!reduce) raf = requestAnimationFrame(render)
     }
-    render(start)
+    render(last)
 
     // Only animate while on screen, so off-screen orbs don't burn GPU.
     const observer = new IntersectionObserver(([entry]) => {

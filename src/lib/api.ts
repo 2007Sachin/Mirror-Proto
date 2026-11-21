@@ -205,8 +205,9 @@ export class ApiError extends Error {
 
 export const api = {
   health: () => request<{ status: string; mode: string; uptime: number }>('/health'),
-  createInterview: (role: string, industry?: string, openingQuestion?: string) =>
-    request<InterviewSession>('/interviews', { method: 'POST', body: JSON.stringify({ role, industry, openingQuestion }) }),
+  /** `targetId` ties a practice round to one job, so follow-ups can aim at that job's gaps. */
+  createInterview: (role: string, industry?: string, openingQuestion?: string, targetId?: string) =>
+    request<InterviewSession>('/interviews', { method: 'POST', body: JSON.stringify({ role, industry, openingQuestion, targetId }) }),
   /** Newest first. No arguments gives the recent few; Sessions pages with limit and a `before` createdAt cursor. */
   listInterviews: (page?: { limit?: number; before?: string }) => {
     const q = new URLSearchParams()

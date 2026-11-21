@@ -132,7 +132,7 @@ export function buildApp(deps: AppDeps): Hono {
   const provider: ReflectionProvider | null = rawProvider && {
     generateReflection: r => withDeadline(rawProvider.generateReflection(r), deadlineMs),
     generateFollowUp: rawProvider.generateFollowUp && (r => withDeadline(rawProvider.generateFollowUp!(r), deadlineMs)),
-    generateNextQuestion: rawProvider.generateNextQuestion && (i => withDeadline(rawProvider.generateNextQuestion!(i), env.interviewerDeadlineMs)),
+    generateNextQuestion: rawProvider.generateNextQuestion && (i => withDeadline(rawProvider.generateNextQuestion!(i), env.interviewerDeadlineMs)),
     generateOnboarding: rawProvider.generateOnboarding && (r => withDeadline(rawProvider.generateOnboarding!(r), deadlineMs)),
   }
 
@@ -304,10 +304,13 @@ export function buildApp(deps: AppDeps): Hono {
       })
       return c.json(serializeInterview(screen, [], null), 201)
     }
+    // A practice round started from a Target keeps the job's id, so the Director can aim follow-ups at that job's gaps (director/state.ts).
+    if (body.targetId) await loadTarget(repo, workspace, body.targetId)
     const interview = await repo.createInterview(workspace, {
       role: body.role,
       industry: body.industry,
       openingQuestion: body.openingQuestion ?? (queued ? profile.firstQuestion : await firstQuestion(profile, body.role, body.industry)),
+      targetId: body.targetId ?? null,
     })
     return c.json(serializeInterview(interview, [], null), 201)
   })

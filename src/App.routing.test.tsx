@@ -46,7 +46,7 @@ describe('URL routing', () => {
     session.current = signedIn
     window.history.replaceState(null, '', '/targets')
     const { container } = render(<App />)
-    await waitFor(() => expect(active(container)).toBe('Targets'))
+    await waitFor(() => expect(active(container)).toBe('Interview Prep'))
     expect(window.location.pathname).toBe('/targets')
   })
 
@@ -91,7 +91,7 @@ describe('URL routing', () => {
     expect(window.location.pathname).toBe('/targets')
     session.current = signedIn
     view.rerender(<App />)
-    await waitFor(() => expect(active(view.container)).toBe('Targets'))
+    await waitFor(() => expect(active(view.container)).toBe('Interview Prep'))
     expect(window.location.pathname).toBe('/targets')
   })
 })

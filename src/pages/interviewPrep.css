@@ -2,6 +2,9 @@
 .prep-page { display: grid; gap: 16px; }
 .prep-page p, .prep-page h2 { margin: 0; overflow-wrap: anywhere; }
 .prep-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.prep-newjob { max-width: 760px; }
+.prep-jobs { display: grid; gap: 12px; margin-top: 12px; }
+.prep-jobs h2 { font-size: var(--m-text-title); font-weight: 600; }
 .prep-go, .prep-alt {
   display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer;
 }

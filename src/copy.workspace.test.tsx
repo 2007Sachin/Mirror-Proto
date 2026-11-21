@@ -55,6 +55,7 @@ vi.mock('./lib/data', () => ({
     remove: async () => undefined,
   },
 }))
+vi.mock('./lib/matchApi', () => ({ getMatch: async () => ({ matches: [], claims: [], probes: [], source: 'fallback', aiAttempted: false, hasResume: false }) }))
 vi.mock('./features/match/MatchSection', () => ({
   default: () => <section aria-labelledby="tg-match"><h2 id="tg-match">Your résumé vs this job</h2><p>SQL joins is on your résumé. Conflict is not.</p></section>,
 }))

@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import './interviewPrep.css'
 import FolderCard from '../components/FolderCard'
+import { api, type TargetSummary } from '../lib/api'
+import { AddForm, Mission, type PracticeOpts } from './Targets'
 import { PREP_ROLES, firstSentence, type PrepRole } from '../prep/roles'
 
 // Which questions you have already been asked live is kept in this browser only (cleared on sign-out with every other mirror.* key).
@@ -16,18 +18,79 @@ const lastRole = () => { try { const slug = localStorage.getItem(LAST); return P
 
 type Start = (role: string, openingQuestion: string, speak: boolean) => void
 
-/** Pick a role, then enter a live mock interview for any round. The interviewer opens with a question from that round and follows up from what you say. */
-export default function InterviewPrep({ onStart }: { onStart: Start }) {
+/** Handlers for a saved job. When they are not given (the tests), the page shows ready-made roles only. */
+type JobProps = {
+  jobId?: string | null
+  onOpenJob?: (id: string | null) => void
+  onPractise?: (role: string, opts?: PracticeOpts) => void
+  onPractiseProbe?: (question: string) => void
+  onScreen?: (targetId: string) => void
+  onAddStory?: (theme: string | null) => void
+}
+
+/** Pick a ready-made role or bring your own job, then enter a live mock interview for any round. The interviewer opens with a question from that round and follows up from what you say. */
+export default function InterviewPrep({ onStart, jobId = null, onOpenJob, onPractise, onPractiseProbe, onScreen, onAddStory }: { onStart: Start } & JobProps) {
   const [role, setRole] = useState<PrepRole | null>(lastRole)
   const open = (r: PrepRole | null) => { setRole(r); try { if (r) localStorage.setItem(LAST, r.slug); else localStorage.removeItem(LAST) } catch { /* ignore */ } }
+  // "new" is the page for bringing a job; any other id is a saved job.
+  if (jobId === 'new' && onOpenJob) {
+    return (
+      <section className="prep-page" aria-label="Interview Prep">
+        <div className="page-title">
+          <div>
+            <p className="eyebrow">Interview Prep</p>
+            <h1>Bring your own job</h1>
+            <p>Paste the job description. MIRROR lines it up with your résumé, suggests rounds, and you can add the ones the company told you about.</p>
+          </div>
+          <button type="button" className="m-btn m-btn--quiet" onClick={() => onOpenJob(null)}>All roles</button>
+        </div>
+        <div className="targets prep-newjob"><AddForm onCancel={() => onOpenJob(null)} onCreated={onOpenJob} /></div>
+      </section>
+    )
+  }
+  if (jobId && onOpenJob && onPractise) {
+    return (
+      <section className="prep-page" aria-label="Interview Prep">
+        <div className="targets">
+          <Mission key={jobId} id={jobId} onBack={() => onOpenJob(null)} onPractise={onPractise} onPractiseProbe={onPractiseProbe} onScreen={onScreen} onAddStory={onAddStory} />
+        </div>
+      </section>
+    )
+  }
   return (
     <section className="prep-page" aria-label="Interview Prep">
-      {role ? <RoleView key={role.slug} role={role} onChange={() => open(null)} onStart={onStart} /> : <Picker onPick={open} />}
+      {role ? <RoleView key={role.slug} role={role} onChange={() => open(null)} onStart={onStart} /> : <Picker onPick={open} onOpenJob={onOpenJob} />}
     </section>
   )
 }
 
-function Picker({ onPick }: { onPick: (r: PrepRole) => void }) {
+/** Saved jobs and a way to bring a new one. A job is a role you made yourself: its rounds come from the posting and your résumé. */
+function Jobs({ onOpen }: { onOpen: (id: string) => void }) {
+  const [items, setItems] = useState<TargetSummary[] | null>(null)
+  useEffect(() => {
+    let live = true
+    api.listTargets().then(t => { if (live) setItems(t) }).catch(() => { if (live) setItems([]) })
+    return () => { live = false }
+  }, [])
+  return (
+    <section className="prep-jobs" aria-labelledby="prep-jobs">
+      <h2 id="prep-jobs">Prepare for a specific job</h2>
+      <p>Bring the job description. MIRROR lines it up with your résumé, suggests rounds, and you can add the ones the company told you about.</p>
+      <ul className="prep-grid">
+        <li>
+          <FolderCard tint={0} label="Your job" title="Bring a job" name="Bring your own job" pill="New" lines={['Paste the job description', 'Your résumé is matched to it', 'Get rounds to practise']} onOpen={() => onOpen('new')} action="Start" />
+        </li>
+        {items?.map((t, i) => (
+          <li key={t.id}>
+            <FolderCard tint={i + 1} label={t.company} title={t.role} name={t.company} pill={t.status === 'ready' ? 'Understood' : 'Reading the role'} summary={t.role} onOpen={() => onOpen(t.id)} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+function Picker({ onPick, onOpenJob }: { onPick: (r: PrepRole) => void; onOpenJob?: (id: string | null) => void }) {
   return (
     <>
       <div className="page-title"><div><p className="eyebrow">Interview Prep</p><h1>Pick the role you are preparing for</h1><p>Every round of the loop is a live mock interview. An interviewer asks, listens and follows up. Nothing is graded.</p></div></div>
@@ -38,6 +101,7 @@ function Picker({ onPick }: { onPick: (r: PrepRole) => void }) {
           </li>
         ))}
       </ul>
+      {onOpenJob && <Jobs onOpen={onOpenJob} />}
     </>
   )
 }

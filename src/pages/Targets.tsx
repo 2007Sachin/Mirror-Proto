@@ -4,8 +4,14 @@ import FallbackNote from '../components/FallbackNote'
 import MatchSection from '../features/match/MatchSection'
 import { api, type Skill, type SkillArea, type Target, type TargetSummary } from '../lib/api'
 import * as data from '../lib/data'
+import { ArrowRight } from 'lucide-react'
 import FolderCard from '../components/FolderCard'
 import { rolesNeedStories, themeHint } from '../stories/bank'
+import { canTalk, nextStart, roundOpener } from '../targets/roundOpener'
+import ExtraRounds from '../targets/ExtraRounds'
+
+/** A live practice round tied to one job: the opening question, voice or text, and the job it came from. */
+export type PracticeOpts = { question?: string; speak?: boolean; targetId?: string }
 
 // The SQL round (and sql.js with it) loads only when someone opens it.
 const SqlRound = lazy(() => import('./target/SqlRound'))
@@ -43,7 +49,7 @@ const time = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day:
 export default function Targets({ openId, onOpen, onPractise, onPractiseProbe, onScreen, onAddStory }: {
   openId: string | null
   onOpen: (id: string | null) => void
-  onPractise: (role: string) => void
+  onPractise: (role: string, opts?: PracticeOpts) => void
   /** Optional: when given, each résumé probe question gets a prepare button. */
   onPractiseProbe?: (question: string) => void
   /** Starts a realistic screening call for this target. */
@@ -114,7 +120,7 @@ function List({ onOpen }: { onOpen: (id: string | null) => void }) {
   )
 }
 
-function AddForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (id: string) => void }) {
+export function AddForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (id: string) => void }) {
   const [company, setCompany] = useState('')
   const [role, setRole] = useState('')
   const [date, setDate] = useState('')
@@ -162,7 +168,7 @@ function AddForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (id
   )
 }
 
-function Mission({ id, onBack, onPractise, onPractiseProbe, onScreen, onAddStory }: { id: string; onBack: () => void; onPractise: (role: string) => void; onPractiseProbe?: (question: string) => void; onScreen?: (targetId: string) => void; onAddStory?: (theme: string | null) => void }) {
+export function Mission({ id, onBack, onPractise, onPractiseProbe, onScreen, onAddStory }: { id: string; onBack: () => void; onPractise: (role: string, opts?: PracticeOpts) => void; onPractiseProbe?: (question: string) => void; onScreen?: (targetId: string) => void; onAddStory?: (theme: string | null) => void }) {
   const [target, setTarget] = useState<Target | null>(null)
   const [failures, setFailures] = useState(0)
   const [sqlOpen, setSqlOpen] = useState(false)
@@ -238,14 +244,14 @@ function Mission({ id, onBack, onPractise, onPractiseProbe, onScreen, onAddStory
 
   return (
     <div className="tg-wrap">
-      {back}
-      <header className="tg-top">
+      <div className="page-title">
         <div>
-          <p className="m-kicker">{target.company}</p>
+          <p className="eyebrow">{target.company}</p>
           <h1>{target.role}</h1>
+          {day && <p>{day}</p>}
         </div>
-        {day && <span className="m-chip tg-days">{day}</span>}
-      </header>
+        <button type="button" className="m-btn m-btn--quiet" onClick={onBack}>All roles</button>
+      </div>
 
       <ol className="tg-stages" aria-label="How you prepare for this role">
         {([
@@ -307,26 +313,45 @@ function Mission({ id, onBack, onPractise, onPractiseProbe, onScreen, onAddStory
           )}
           <p>{themeHint(need.storyTitle, need.needs)}</p>
           {onAddStory && need.needsId && <button type="button" className="m-btn m-btn--quiet" onClick={() => onAddStory(need.needsId)}>Add that story</button>}
-          <ul className="tg-rounds">
-            {target.rounds.map(r => {
-              const primary = r.available && r.id === target.rounds.find(x => x.available)?.id && !(onScreen && ready && target.skills.length > 0)
+          <ul className="tg-round-grid">
+            {target.rounds.map((r, i) => {
+              // The SQL round keeps its own room. Behavioural, Python and tools open a live interview built from this job.
+              const sql = r.kind === 'sql'
+              const talk = !sql && canTalk(r.kind, target.skills)
+              const begin = (speak: boolean) => {
+                const { role, question } = roundOpener(r, target, nextStart(target.id, r.id))
+                onPractise(role, { question, speak, targetId: target.id })
+              }
               return (
                 <li key={r.id}>
-                  <div><b>{r.title}</b><p>{r.why}</p></div>
-                  {r.available
-                    ? <button type="button" className={primary ? 'm-btn' : 'm-btn m-btn--quiet'} onClick={() => (r.kind === 'sql' ? setSqlOpen(true) : onPractise(target.role))}>Practise</button>
-                    : <span className="m-chip tg-next-chip">Later</span>}
+                  <FolderCard
+                    tint={i} label={target.company} title={r.title} name={r.title} headingId={`tg-r-${r.id}`} level="h3"
+                    pill={sql || talk ? `Round ${i + 1}` : 'Later'}
+                    summary={r.why}
+                    lines={sql
+                      ? ['Write queries against a practice database', 'What worked and what to strengthen, afterwards']
+                      : ['A live interviewer, spoken or typed', 'Questions come from this job’s skills']}
+                    footer={sql && r.available
+                      ? <button type="button" className="tg-go" onClick={() => setSqlOpen(true)}>Start round <ArrowRight size={18} aria-hidden="true" /></button>
+                      : talk
+                        ? <><button type="button" className="tg-go" onClick={() => begin(true)}>Start interview <ArrowRight size={18} aria-hidden="true" /></button><button type="button" className="tg-alt" onClick={() => begin(false)}>Type instead</button></>
+                        : undefined}
+                  />
                 </li>
               )
             })}
+            {onScreen && (
+              <li>
+                <FolderCard
+                  tint={target.rounds.length} label={target.company} title="Screening call" name="Rehearse a screening call" headingId="tg-r-screen" level="h3"
+                  pill="Call" summary="A short call with questions from this job. No hints. It ends on its own."
+                  lines={target.skills.length === 0 ? ['There is nothing to ask about until the posting has been read.'] : undefined}
+                  footer={<button type="button" className="tg-go" disabled={!ready || target.skills.length === 0} onClick={() => onScreen(target.id)}>Start the call <ArrowRight size={18} aria-hidden="true" /></button>}
+                />
+              </li>
+            )}
           </ul>
-          {onScreen && (
-            <div className="tg-screen">
-              <button type="button" className={ready && target.skills.length > 0 ? 'm-btn' : 'm-btn m-btn--quiet'} disabled={!ready || target.skills.length === 0} aria-describedby={target.skills.length === 0 ? 'tg-screen-why' : undefined} onClick={() => onScreen(target.id)}>Rehearse a screening call</button>
-              <p className="tg-muted">A short call with questions from this job. No hints. It ends on its own.</p>
-              {target.skills.length === 0 && <p id="tg-screen-why" className="tg-muted">There is nothing to ask about until the posting has been read.</p>}
-            </div>
-          )}
+          {ready && <ExtraRounds target={target} firstTint={target.rounds.length + 1} onPractise={onPractise} />}
         </section>}
 
       {open === 'day' && <section className="m-card tg-card-body" aria-labelledby="tg-day">

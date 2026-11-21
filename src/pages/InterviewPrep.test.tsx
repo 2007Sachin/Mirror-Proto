@@ -4,6 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import InterviewPrep from './InterviewPrep'
 import { PREP_ROLES } from '../prep/roles'
 
+vi.mock('../lib/api', async orig => ({
+  ...(await orig<typeof import('../lib/api')>()),
+  api: { listTargets: async () => [{ id: 't1', company: 'Northwind', role: 'Data Analyst', interviewDate: null, status: 'ready', nextStep: null, nextStepSource: 'fallback', createdAt: '2026-11-01T00:00:00Z', skills: [] }] },
+}))
+
 beforeEach(() => localStorage.clear())
 afterEach(cleanup)
 
@@ -35,6 +40,25 @@ describe('Interview Prep room', () => {
     const round = PREP_ROLES[2].rounds[0]
     expect(onStart).toHaveBeenNthCalledWith(1, `Financial Analyst · ${round.name}`, round.questions[0], false)
     expect(onStart).toHaveBeenNthCalledWith(2, `Financial Analyst · ${round.name}`, round.questions[1], true)
+  })
+
+  it('offers your own job next to the ready-made roles: bring one, or open a saved one', async () => {
+    const onOpenJob = vi.fn()
+    render(<InterviewPrep onStart={vi.fn()} onOpenJob={onOpenJob} onPractise={vi.fn()} />)
+    fireEvent.click(await screen.findByRole('button', { name: /Northwind/ }))
+    expect(onOpenJob).toHaveBeenCalledWith('t1')
+    fireEvent.click(screen.getByRole('button', { name: /Bring your own job/ }))
+    expect(onOpenJob).toHaveBeenLastCalledWith('new')
+  })
+
+  it('bringing a job is its own page: the form, with no ready-made roles on it', () => {
+    const onOpenJob = vi.fn()
+    render(<InterviewPrep onStart={vi.fn()} jobId="new" onOpenJob={onOpenJob} onPractise={vi.fn()} />)
+    expect(screen.getByRole('heading', { level: 1, name: 'Bring your own job' })).toBeTruthy()
+    expect(screen.getByLabelText(/Job description/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Product Manager/ })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'All roles' }))
+    expect(onOpenJob).toHaveBeenCalledWith(null)
   })
 
   it('remembers the last role', () => {

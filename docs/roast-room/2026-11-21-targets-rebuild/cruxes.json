@@ -1,0 +1,19 @@
+{
+  "cruxes": [
+    {
+      "question": "Can the interviewer stay on a round and the job's skills?",
+      "sides": [
+        { "position": "Test it first, then build", "seats": ["Bezos", "Musk", "Graham"] },
+        { "position": "Ship in slices, keep old paths", "seats": ["Buffett"] }
+      ]
+    },
+    {
+      "question": "Is anyone using Targets enough to justify a rebuild?",
+      "sides": [
+        { "position": "Unknown, ask for the numbers", "seats": ["Graham", "Bezos", "Buffett", "Musk"] }
+      ]
+    }
+  ],
+  "unanimous": true,
+  "note": "All four back A, so the Chair asks Buffett and Graham to argue leaving Targets alone or merging it."
+}

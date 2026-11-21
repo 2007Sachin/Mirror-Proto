@@ -6,7 +6,7 @@ import { CHANGED, DID, countWords } from '../lib/analyse'
 import ReplayPanel from '../features/replay/ReplayPanel'
 import type { VoiceSessionApi } from '../voice/useVoiceSession'
 import { screenLine, screenMilestone } from '../features/screen/countdown'
-import { ArrowRight, Captions, CircleHelp, Mic, MicOff, MessageSquare, Repeat, RotateCcw, Square, Volume2, VolumeX, X } from 'lucide-react'
+import { ArrowRight, Captions, CircleHelp, Mic, MicOff, MessageSquare, Pause, Play, Repeat, RotateCcw, Square, Volume2, VolumeX, X } from 'lucide-react'
 
 const MIN = 20 // characters; matches the interview's own minimum
 const draftKey = (sessionId: string | null, index: number) => `mirror.draft.${sessionId ?? 'none'}:${index}`
@@ -83,7 +83,7 @@ export type InterviewProps = {
   screen?: { remainingSeconds: number | null; totalSeconds: number | null; onEnd: () => void }
 }
 
-const SHORTCUTS: [string, string][] = [['M', 'Mute or unmute'], ['C', 'Captions on or off'], ['T', 'Switch between speaking and typing'], ['P', 'Show or hide the side panel'], ['R', 'Repeat the question'], ['Esc', 'Close a dialog or panel']]
+const SHORTCUTS: [string, string][] = [['M', 'Mute or unmute'], ['K', 'Pause or resume'], ['C', 'Captions on or off'], ['T', 'Switch between speaking and typing'], ['P', 'Show or hide the side panel'], ['R', 'Repeat the question'], ['Esc', 'Close a dialog or panel']]
 
 export default function Interview(p: InterviewProps) {
   const { voice, answer, setAnswer } = p
@@ -95,6 +95,11 @@ export default function Interview(p: InterviewProps) {
   const [captions, setCaptions] = useState(true)
   const [help, setHelp] = useState(false)
   const [sec, setSec] = useState(0)
+  // A pause stops the session clock and the microphone; a screening call cannot be paused (its clock is the server's).
+  const [paused, setPaused] = useState(false)
+  const [pauseSec, setPauseSec] = useState(0)
+  const wasMuted = useRef(false)
+  const resumeBtn = useRef<HTMLButtonElement>(null)
   const [answerFrom, setAnswerFrom] = useState({ q: p.questionIndex, at: 0 })
   const [speakFrom, setSpeakFrom] = useState<number | null>(null)
   const [t0] = useState(() => Date.now())
@@ -118,7 +123,17 @@ export default function Interview(p: InterviewProps) {
   if (answerFrom.q !== p.questionIndex) { setAnswerFrom({ q: p.questionIndex, at: sec }); setSpeakFrom(null) }
   // Times for the chat bubbles, noted as answers arrive.
   if (stamps.length < p.answers.length) setStamps([...stamps, ...Array.from({ length: p.answers.length - stamps.length }, () => new Date(t0 + sec * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }))])
-  useEffect(() => { const id = window.setInterval(() => setSec(s => s + 1), 1000); return () => window.clearInterval(id) }, [])
+  useEffect(() => {
+    if (paused) return
+    const id = window.setInterval(() => setSec(s => s + 1), 1000)
+    return () => window.clearInterval(id)
+  }, [paused])
+  useEffect(() => {
+    if (!paused) return
+    const id = window.setInterval(() => setPauseSec(s => s + 1), 1000)
+    return () => window.clearInterval(id)
+  }, [paused])
+  useEffect(() => { if (paused) resumeBtn.current?.focus() }, [paused])
 
   useEffect(() => {
     const mq = window.matchMedia(DESKTOP)
@@ -163,13 +178,15 @@ export default function Interview(p: InterviewProps) {
   const ready = answer.trim().length >= MIN
   const canSend = ready && !p.busy && !p.waiting
   const canSpeakSend = voice.active && voice.voiceState === 'listening' && hasSpoken
-  const sendOk = speaking ? canSpeakSend : canSend
+  const sendOk = !paused && (speaking ? canSpeakSend : canSend)
 
   const mic = speaking && voice.active
   const muted = mic && voice.isMuted
   const thinking = p.busy || p.orb === 'thinking'
-  const chip = thinking ? 'Thinking about it' : muted ? 'Muted' : p.orb === 'speaking' ? 'MIRROR is speaking' : speaking && p.orb === 'listening' ? 'Listening to you' : 'Your turn'
-  const level = muted ? 0 : Math.min(1, p.orb === 'speaking' ? voice.outputLevel : speaking ? voice.inputLevel : 0)
+  const chip = paused ? 'Paused' : thinking ? 'Thinking about it' : muted ? 'Muted' : p.orb === 'speaking' ? 'MIRROR is speaking' : speaking && p.orb === 'listening' ? 'Listening to you' : 'Your turn'
+  // While paused the orb is calm, whatever the interview underneath is doing.
+  const orbShown: OrbState = paused ? 'idle' : p.orb
+  const level = paused || muted ? 0 : Math.min(1, p.orb === 'speaking' ? voice.outputLevel : speaking ? voice.inputLevel : 0)
   const hint = p.orb === 'speaking' ? 'Listen first, then answer in your own words.' : speaking ? 'Say what happened, what you did, what changed.' : 'Write what happened, what you did, what changed.'
 
   const { shown, replay } = useReveal(p.question, p.orb === 'speaking')
@@ -184,9 +201,26 @@ export default function Interview(p: InterviewProps) {
   const openPanel = (next: boolean) => { setPanel(next); if (next && !desktop) window.setTimeout(() => closeBtn.current?.focus(), 0) }
   const send = () => { if (speaking) voice.commitSpokenAnswer(); else p.onSubmit() }
 
+  // Pause: MIRROR stops talking, the microphone goes quiet and the clock stops. Resume puts the question back on screen.
+  const pause = () => {
+    if (sc || paused) return
+    wasMuted.current = voice.isMuted
+    if (p.orb === 'speaking' && voice.active) voice.interrupt()
+    if (mic && !voice.isMuted) voice.mute(true)
+    setPauseSec(0)
+    setPaused(true)
+  }
+  const resume = () => {
+    if (!paused) return
+    if (mic && !wasMuted.current) voice.mute(false)
+    setPaused(false)
+    replay()
+  }
+  const togglePause = () => { if (paused) resume(); else pause() }
+
   // Keyboard shortcuts (not while typing) and Esc.
-  const handlers = useRef({ micPress, toggleMode, replay, openPanel, closeConfirm })
-  useEffect(() => { handlers.current = { micPress, toggleMode, replay, openPanel, closeConfirm } })
+  const handlers = useRef({ micPress, toggleMode, replay, openPanel, closeConfirm, togglePause })
+  useEffect(() => { handlers.current = { micPress, toggleMode, replay, openPanel, closeConfirm, togglePause } })
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
       const h = handlers.current
@@ -197,7 +231,9 @@ export default function Interview(p: InterviewProps) {
       const t = e.target as HTMLElement | null
       if (e.ctrlKey || e.metaKey || e.altKey || confirming || t?.closest('textarea, input, select, [contenteditable="true"]')) return
       const k = e.key.toLowerCase()
-      if (k === 'm') h.micPress()
+      if (paused && k !== 'k' && e.key !== '?') return // while paused only Resume and the shortcut list work
+      if (k === 'k' && !sc) h.togglePause()
+      else if (k === 'm') h.micPress()
       else if (k === 'c' && !sc) setCaptions(c => !c)
       else if (k === 't') h.toggleMode()
       else if (k === 'p') h.openPanel(!panel)
@@ -208,7 +244,7 @@ export default function Interview(p: InterviewProps) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [confirming, help, panel, desktop, sc])
+  }, [confirming, help, panel, desktop, sc, paused])
 
   // Keep the chat pinned to the newest line unless you scrolled up.
   useEffect(() => {
@@ -270,7 +306,7 @@ export default function Interview(p: InterviewProps) {
 
   return (
     <div className={`mirror-landing iv ${panel ? 'has-panel' : ''} ${sheetOpen ? 'has-sheet' : ''}`}>
-      <div className="iv-stage" style={{ ['--level' as string]: level }}>
+      <div className={`iv-stage${paused ? ' is-paused' : ''}`} style={{ ['--level' as string]: level }}>
         <header className="iv-top">
           <div className="iv-top-l">
             <span className="iv-timer" aria-label={`Session time ${clock(sec)}`}>{clock(sec)}</span>
@@ -315,11 +351,29 @@ export default function Interview(p: InterviewProps) {
           </section>
         )}
 
+        {paused && (
+          <section className="iv-pause" role="region" aria-labelledby="iv-pause-t">
+            <div className="ml-glass iv-pause-card">
+              <div className="iv-breathe" aria-hidden="true"><i /><span><b>Breathe in</b><b>Breathe out</b></span></div>
+              <h2 id="iv-pause-t">Paused</h2>
+              <p>Your place is saved. The clock and the microphone are stopped until you resume.</p>
+              <p className="iv-pause-time" role="timer" aria-live="off">Paused for {clock(pauseSec)}</p>
+              <div className="iv-row">
+                <button ref={resumeBtn} type="button" className="ml-btn" onClick={resume}><Play size={16} aria-hidden="true" />Resume</button>
+                <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={p.onContinueLater}>Continue later</button>
+                <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={openConfirm}><Square size={14} aria-hidden="true" />End session</button>
+              </div>
+            </div>
+          </section>
+        )}
+
         <main className="iv-center">
-          <div className="iv-orbbox">
+          <div className="iv-orbbox" data-state={orbShown}>
             <div className="iv-ring" aria-hidden="true" />
-            <div className="ml-orb iv-orb" data-state={p.orb}><LiveOrb state={p.orb} inputLevel={voice.active ? voice.inputLevel : undefined} outputLevel={voice.active ? voice.outputLevel : undefined} /></div>
+            <div className="iv-ripples" aria-hidden="true"><i /><i /><i /></div>
+            <div className="ml-orb iv-orb" data-state={orbShown}><LiveOrb state={orbShown} inputLevel={voice.active ? voice.inputLevel : undefined} outputLevel={voice.active ? voice.outputLevel : undefined} /></div>
           </div>
+          <div className="iv-wave" data-state={muted ? 'idle' : orbShown} aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /></div>
           <p className="iv-chip" data-state={thinking ? 'thinking' : muted ? 'muted' : p.orb}><i aria-hidden="true" />{chip}</p>
 
           <h1 className="iv-question" aria-label={p.question}>
@@ -367,6 +421,12 @@ export default function Interview(p: InterviewProps) {
               <button type="button" className="iv-cb" onClick={replay} aria-label="Show the question again" title="Show the question again (R)"><Repeat size={22} aria-hidden="true" /></button>
               <span>Repeat</span>
             </div>
+            {!sc && (
+              <div className="iv-cbw">
+                <button type="button" className="iv-cb" onClick={togglePause} aria-label="Pause" title="Pause (K)"><Pause size={22} aria-hidden="true" /></button>
+                <span>Pause</span>
+              </div>
+            )}
             {p.orb === 'speaking' && voice.active && (
               <div className="iv-cbw">
                 <button type="button" className="iv-cb" onClick={() => voice.interrupt()} aria-label="Stop speaking"><VolumeX size={22} aria-hidden="true" /></button>
@@ -451,7 +511,7 @@ export default function Interview(p: InterviewProps) {
                   id="iv-text" ref={area} rows={3} value={answer}
                   onChange={e => change(e.target.value)} onKeyDown={onTextKey}
                   placeholder="Write what happened, in your own words."
-                  disabled={p.busy || p.waiting}
+                  disabled={p.busy || p.waiting || paused}
                 />
                 <p className="iv-count">{words} {words === 1 ? 'word' : 'words'}{sc ? '' : ' · about 80–150 words works well'}</p>
                 <p id="iv-need" className="iv-count">{ready ? 'Ctrl or Cmd + Enter sends.' : `Send unlocks at ${MIN} characters — a little more detail first.`}</p>

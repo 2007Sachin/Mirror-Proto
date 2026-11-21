@@ -92,6 +92,8 @@ export interface InterviewSummary {
   role: string
   status: InterviewStatus
   createdAt: string
+  /** The job this practice was for, when it was started from one. */
+  targetId?: string | null
   answered: number
   /** Present once a finished session has its notes. */
   notes: { keepWorkingOn: string; quotes: string[]; source: Source } | null

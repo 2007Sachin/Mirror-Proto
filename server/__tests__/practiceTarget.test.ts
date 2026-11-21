@@ -19,7 +19,8 @@ async function setup() {
   ])
   const H = { 'X-Test-User': 'dev', 'Content-Type': 'application/json' }
   const post = (body: unknown, user = 'dev') => app.request('/interviews', { method: 'POST', headers: { ...H, 'X-Test-User': user }, body: JSON.stringify(body) })
-  return { repo, t, post }
+  const get = (path: string) => app.request(path, { headers: H })
+  return { repo, t, post, get }
 }
 
 describe('a practice round started from a Target', () => {
@@ -36,6 +37,15 @@ describe('a practice round started from a Target', () => {
     const { post, t } = await setup()
     expect((await post({ role: 'Data Analyst', targetId: t.id }, 'someone-else')).status).toBe(404)
     expect((await post({ role: 'Data Analyst', targetId: '00000000-0000-4000-8000-000000000000' })).status).toBe(404)
+  })
+
+  it('says which job each session was for in the sessions list', async () => {
+    const { post, get, t } = await setup()
+    await post({ role: 'Data Analyst · Behavioural round', openingQuestion: 'Tell me about a time you disagreed with a stakeholder.', targetId: t.id })
+    await post({ role: 'Data Analyst', openingQuestion: 'Tell me about a project you are proud of.' })
+    const list = await j(await get('/interviews'))
+    expect(list).toHaveLength(2)
+    expect(list.map((i: { targetId: string | null }) => i.targetId).sort()).toEqual([null, t.id].sort())
   })
 
   it('still works without a job, as before', async () => {

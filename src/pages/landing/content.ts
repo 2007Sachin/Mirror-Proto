@@ -163,6 +163,7 @@ export const CLOSE = {
 } as const
 
 export const FAQ = [
+  ['Is this for practising, or for recording my real interviews?', 'For practising, before the interview. MIRROR does not join your real calls.'],
   ['Do I need a job description?', 'No. You can start with one moment from your work. A job description lets MIRROR aim the practice at a role.'],
   ['Can I speak, or do I have to type?', 'Both work. When you speak, a speech service turns your voice into text while you talk. MIRROR does not keep the audio.'],
   ['Will I be given a score?', CLAIMS[1]],

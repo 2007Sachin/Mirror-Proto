@@ -329,6 +329,8 @@ export function buildApp(deps: AppDeps): Hono {
         role: i.role,
         status: i.status,
         createdAt: i.createdAt,
+        // Which job the practice was for, so a job page can show the effort next to the result.
+        targetId: i.targetId ?? null,
         answered: (await repo.getTurns(workspace, i.id)).length,
         // The notes, so Today can show lines that landed and how the gap moved without another call.
         notes: await repo.getReflection(workspace, i.id).then(r => r && { keepWorkingOn: r.focus, quotes: r.evidence.map(e => e.quote), source: reflectionSource(r) }),

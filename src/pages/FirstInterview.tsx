@@ -200,6 +200,7 @@ export default function FirstInterview({
 
       <main className="ml-wrap ml-fi-main">
         <div className="ml-orb ml-fi-orb" data-state={orb} aria-hidden="true"><LiveOrb state={orb} /></div>
+        {step === 'story' && <p className="ml-fi-purpose">MIRROR is practice before the interview. Tell it about your work and it suggests what to practise.</p>}
         <p className="ml-eyebrow">{EYEBROW[step]}</p>
         <div aria-live="polite">
           <div className="ml-glass ml-fi-agent" key={`${step}-${agent}`}>{agent}</div>

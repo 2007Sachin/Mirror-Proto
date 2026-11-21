@@ -35,6 +35,15 @@
 .tg-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 /* Prepare: one folder card per round. The card look is in src/components/folderCard.css. */
 .tg-round-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.tg-outcome { display: grid; gap: 10px; margin-bottom: 14px; }
+.tg-outcome h3 { margin: 0; font-size: var(--m-text-title); font-weight: 600; }
+.tg-outcome p { margin: 0; font-size: var(--m-text-body); }
+.tg-results { display: grid; gap: 6px; border: 0; padding: 0; margin: 0; }
+.tg-results legend { padding: 0; margin-bottom: 4px; font-size: var(--m-text-body); color: var(--muted); }
+.tg-results label { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: var(--m-text-body); }
+.tg-note-field { display: grid; gap: 6px; font-size: var(--m-text-body); }
+.tg-note-field span { color: var(--muted); }
+.tg-note-field textarea { font: inherit; font-size: var(--m-text-body); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--glass); color: inherit; resize: vertical; }
 .tg-extra { display: grid; gap: 10px; margin-top: 18px; }
 .tg-extra h3 { margin: 0; font-size: var(--m-text-title); font-weight: 600; }
 .tg-addround { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }

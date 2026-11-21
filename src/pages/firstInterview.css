@@ -8,6 +8,7 @@
 .ml-fi-steps li { width: 28px; height: 4px; border-radius: 4px; background: var(--line); transition: background-color .4s var(--ease); }
 .ml-fi-steps li.is-on { background: var(--accent); }
 
+.ml-fi-purpose { max-width: 46ch; margin: 0 0 4px; text-align: center; color: var(--muted); font-size: var(--m-text-body); }
 .ml-fi-agent {
   padding: 22px 26px;
   font-size: clamp(19px, 2.6vw, 24px);

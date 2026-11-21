@@ -453,7 +453,7 @@ useEffect(() => {
   }, [authed, view, profileStatus])
 
   useEffect(() => {
-    document.title = 'MIRROR — You know what you did'
+    document.title = 'MIRROR — Practise for the job you want'
   }, [])
 
   useEffect(() => {

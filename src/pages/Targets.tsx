@@ -9,6 +9,7 @@ import FolderCard from '../components/FolderCard'
 import { rolesNeedStories, themeHint } from '../stories/bank'
 import { canTalk, nextStart, roundOpener } from '../targets/roundOpener'
 import ExtraRounds from '../targets/ExtraRounds'
+import Outcome from '../targets/OutcomePanel'
 
 /** A live practice round tied to one job: the opening question, voice or text, and the job it came from. */
 export type PracticeOpts = { question?: string; speak?: boolean; targetId?: string }
@@ -362,6 +363,7 @@ export function Mission({ id, onBack, onPractise, onPractiseProbe, onScreen, onA
 
       {open === 'after' && <section className="m-card tg-card-body" aria-labelledby="tg-after">
         <h2 id="tg-after">Afterwards</h2>
+        <Outcome targetId={target.id} />
         {debriefs.length === 0 && <p className="tg-muted">After you practise a round, what worked and what to strengthen will sit here.</p>}
         {debriefs.length > 0 && (
           <ul className="tg-debriefs">

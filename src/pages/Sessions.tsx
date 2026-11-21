@@ -3,6 +3,7 @@ import './sessions.css'
 import { api, type InterviewSession, type InterviewSummary } from '../lib/api'
 import { reviewSession, type SessionReview } from '../features/sessions/review'
 import FallbackNote from '../components/FallbackNote'
+import FolderCard from '../components/FolderCard'
 import FollowedTap from '../features/room/FollowedTap'
 
 const PAGE = 20
@@ -98,13 +99,14 @@ export default function Sessions({ openId, refreshKey, onPractise, onSaveStory }
       {rows && rows.length > 0 && (
         <div className={`sessions-layout${current ? ' has-review' : ''}`}>
           <ul className="m-grid-cards sessions-cards" role="list">
-            {rows.map(s => (
+            {rows.map((s, i) => (
               <li key={s.id}>
-                <button type="button" className="m-session" aria-current={s.id === current} onClick={() => { setSelected(s.id); setNotesFailed(false) }}>
-                  <strong>{s.role}</strong>
-                  <span>{when(s.createdAt)}</span>
-                  <p className="m-quiet">{s.notes ? s.notes.keepWorkingOn : 'Notes not written yet.'}</p>
-                </button>
+                <FolderCard
+                  compact tint={i} label="Session" title={s.role} name={s.role} pill={when(s.createdAt)}
+                  summary={s.notes ? s.notes.keepWorkingOn : 'Notes not written yet.'}
+                  current={s.id === current}
+                  onOpen={() => { setSelected(s.id); setNotesFailed(false) }}
+                />
               </li>
             ))}
           </ul>

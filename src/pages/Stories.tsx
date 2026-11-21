@@ -6,6 +6,7 @@ import { draftStory } from '../stories/starLogic'
 import { suggestStories, type Suggestion } from '../stories/suggest'
 import { MAX_THEMES, THEMES, themeName } from '../stories/themes'
 import { openParts, rolesNeedStories, themeHint, themeMap } from '../stories/bank'
+import FolderCard from '../components/FolderCard'
 
 type Editing = { id: string | null; story: data.StoryInput }
 const FIELDS = ['situation', 'task', 'action', 'result'] as const
@@ -181,17 +182,19 @@ export default function Stories({ initialQuestion = null, initialTheme = null, o
             const open = openParts(s)
             return (
               <li key={s.id}>
-                <article>
-                  <h3>{s.title}</h3>
-                  <p className="m-quiet">{s.themes.length ? s.themes.map(themeName).join(', ') : 'No theme chosen'}</p>
-                  <p>{open.length ? `${open.join(' and ')} ${open.length === 1 ? 'is' : 'are'} still open.` : 'Situation, task, action and result are all in place.'}</p>
-                  <div className="stories-row">
-                    <button type="button" className="m-btn m-btn--quiet" onClick={() => setEditing({ id: s.id, story: { title: s.title, themes: s.themes, situation: s.situation, task: s.task, action: s.action, result: s.result, quote: s.quote, question: s.question, sourceInterviewId: s.sourceInterviewId, sourceTurnId: s.sourceTurnId } })}>Edit</button>
-                    {confirmId === s.id
-                      ? <><span>Delete this story?</span><button type="button" className="m-btn m-btn--quiet" onClick={() => void remove(s.id)}>Yes, delete</button><button type="button" className="m-btn m-btn--quiet" onClick={() => setConfirmId(null)}>Keep it</button></>
-                      : <button type="button" className="m-btn m-btn--quiet" onClick={() => setConfirmId(s.id)}>Delete</button>}
-                  </div>
-                </article>
+                <FolderCard
+                  compact level="h3" tint={list.indexOf(s)} label="Story" title={s.themes.length ? s.themes.map(themeName).join(', ') : 'No theme'} name={s.title}
+                  headingId={`st-${s.id}`}
+                  summary={open.length ? `${open.join(' and ')} ${open.length === 1 ? 'is' : 'are'} still open.` : 'Situation, task, action and result are all in place.'}
+                  footer={
+                    <div className="stories-row">
+                      <button type="button" className="m-btn m-btn--quiet" onClick={() => setEditing({ id: s.id, story: { title: s.title, themes: s.themes, situation: s.situation, task: s.task, action: s.action, result: s.result, quote: s.quote, question: s.question, sourceInterviewId: s.sourceInterviewId, sourceTurnId: s.sourceTurnId } })}>Edit</button>
+                      {confirmId === s.id
+                        ? <><span>Delete this story?</span><button type="button" className="m-btn m-btn--quiet" onClick={() => void remove(s.id)}>Yes, delete</button><button type="button" className="m-btn m-btn--quiet" onClick={() => setConfirmId(null)}>Keep it</button></>
+                        : <button type="button" className="m-btn m-btn--quiet" onClick={() => setConfirmId(s.id)}>Delete</button>}
+                    </div>
+                  }
+                />
               </li>
             )
           })}

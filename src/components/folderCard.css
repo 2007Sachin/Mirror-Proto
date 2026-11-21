@@ -1,0 +1,47 @@
+/* FolderCard: a soft tint mixed into the theme surface, so light and dark both work. Type sizes come from the --m-text-* tokens.
+   Selectors are doubled on purpose: the page and theme sheets (paper*.css) also style cards and buttons, and this card must win. */
+.fc.fc.fc {
+  --tint: #e8a9a0; --deep: #a84a42;
+  display: grid; gap: 12px; align-content: start; width: 100%; height: 100%; box-sizing: border-box; text-align: left; font: inherit; color: inherit;
+  padding: 20px; border: 1px solid var(--line, rgb(0 0 0 / .12)); border-radius: 18px; box-shadow: none; min-height: 0;
+  background: color-mix(in srgb, var(--tint) 30%, var(--glass, transparent));
+}
+.fc.fc > * { margin: 0; overflow-wrap: anywhere; }
+button.fc.fc.fc { cursor: pointer; min-height: 44px; transition: transform .15s ease, border-color .15s ease; }
+button.fc.fc.fc:hover { border-color: var(--deep); transform: translateY(-2px); }
+.fc.fc.fc[aria-current="true"] { border-color: var(--deep); box-shadow: 0 0 0 1px var(--deep); }
+.fc.fc.fc--1 { --tint: #a9b99a; --deep: #4f6b3f; }
+.fc.fc.fc--2 { --tint: #f0cf5a; --deep: #8a6a00; }
+.fc.fc.fc--3 { --tint: #9db5d8; --deep: #25479a; }
+.fc.fc.fc--4 { --tint: #c4a9d8; --deep: #6b4a93; }
+
+/* The folder: a faint blueprint grid behind the title, with a tab at the top right. The words come from data attributes. */
+.fc.fc .fc-folder {
+  position: relative; display: grid; align-content: space-between; gap: 18px; min-height: 150px; margin: 6px 22px 6px 0; padding: 16px;
+  border-radius: 8px 4px 8px 8px; color: #fff;
+  background:
+    repeating-linear-gradient(0deg, rgb(255 255 255 / .09) 0 1px, transparent 1px 22px),
+    repeating-linear-gradient(90deg, rgb(255 255 255 / .09) 0 1px, transparent 1px 22px),
+    var(--deep);
+  box-shadow: 0 1px 0 rgb(0 0 0 / .25);
+}
+.fc.fc .fc-folder::before { content: attr(data-label); font: 500 var(--m-text-meta) "IBM Plex Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; opacity: .8; }
+.fc.fc .fc-folder::after { content: attr(data-title); font: 500 var(--m-text-page) / 1.15 "IBM Plex Mono", ui-monospace, monospace; overflow-wrap: anywhere; }
+.fc.fc .fc-tab { position: absolute; top: 14px; right: -16px; width: 16px; height: 46px; border-radius: 0 8px 8px 0; background: var(--deep); filter: brightness(1.15); }
+.fc--compact.fc .fc-tab { top: 10px; height: 30px; }
+.fc--compact.fc .fc-folder { min-height: 84px; gap: 8px; padding: 12px; }
+.fc--compact.fc .fc-folder::after { font-size: var(--m-text-title); }
+
+.fc.fc .fc-pill {
+  justify-self: start; padding: 3px 10px; border-radius: 6px; background: color-mix(in srgb, var(--deep) 16%, transparent);
+  font: 500 var(--m-text-meta) "IBM Plex Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase;
+}
+.fc.fc .fc-name { font-size: var(--m-text-page); font-weight: 600; line-height: 1.15; letter-spacing: -.02em; color: inherit; font-family: inherit; text-transform: none; }
+.fc--compact.fc .fc-name { font-size: var(--m-text-title); }
+.fc.fc .fc-summary { font-size: var(--m-text-body); color: var(--muted, inherit); }
+.fc.fc .fc-plus { display: grid; gap: 6px; font-size: var(--m-text-body); }
+.fc.fc .fc-plus > span { display: block; padding-left: 18px; position: relative; }
+.fc.fc .fc-plus > span::before { content: "+"; position: absolute; left: 0; color: var(--muted, inherit); }
+.fc.fc .fc-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 4px; padding-top: 6px; font-size: var(--m-text-body); font-weight: 600; }
+.fc.fc:focus-visible, .fc.fc :focus-visible { outline: 2px solid var(--accent, currentColor); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { button.fc.fc.fc { transition: none; } button.fc.fc.fc:hover { transform: none; } }

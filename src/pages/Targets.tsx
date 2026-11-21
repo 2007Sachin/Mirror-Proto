@@ -4,6 +4,7 @@ import FallbackNote from '../components/FallbackNote'
 import MatchSection from '../features/match/MatchSection'
 import { api, type Skill, type SkillArea, type Target, type TargetSummary } from '../lib/api'
 import * as data from '../lib/data'
+import FolderCard from '../components/FolderCard'
 import { rolesNeedStories, themeHint } from '../stories/bank'
 
 // The SQL round (and sql.js with it) loads only when someone opens it.
@@ -96,16 +97,15 @@ function List({ onOpen }: { onOpen: (id: string | null) => void }) {
 
       {items && items.length > 0 && (
         <ul className="tg-list">
-          {items.map(t => (
+          {items.map((t, i) => (
             <li key={t.id}>
-              <button type="button" className="m-card tg-card" onClick={() => onOpen(t.id)}>
-                <span className="tg-card-main">
-                  <b>{t.company}</b>
-                  <span>{t.role}</span>
-                  {when(t.interviewDate) && <small>Interview {when(t.interviewDate)}</small>}
-                </span>
-                <span className={`m-chip tg-status ${t.status === 'ready' ? 'is-ready' : ''}`}>{t.status === 'ready' ? 'Understood' : 'Reading the role'}</span>
-              </button>
+              <FolderCard
+                tint={i} label="Target" title={t.company} name={t.company}
+                pill={t.status === 'ready' ? 'Understood' : 'Reading the role'}
+                summary={t.role}
+                lines={when(t.interviewDate) ? [`Interview ${when(t.interviewDate)}`] : []}
+                onOpen={() => onOpen(t.id)}
+              />
             </li>
           ))}
         </ul>

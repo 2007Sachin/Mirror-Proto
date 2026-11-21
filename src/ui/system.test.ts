@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 
 const systemCss = readFileSync('src/ui/system.css', 'utf8')
-const pageCss = ['src/pages/today.css', 'src/pages/targets.css', 'src/pages/sessions.css', 'src/pages/stories.css'].map(file => readFileSync(file, 'utf8'))
+const pageCss = ['src/pages/today.css', 'src/pages/targets.css', 'src/pages/sessions.css', 'src/pages/stories.css', 'src/pages/interviewPrep.css'].map(file => readFileSync(file, 'utf8'))
 
 function fontSizes(css: string): string[] {
   const withoutTokens = css.replace(/--m-text-[\w-]+\s*:\s*\d+px/g, '')

@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import { findItem, moduleFor, tracks } from '../practice/tracks'
 import Path from '../practice/sql/Path'
 import YourRecord from '../practice/YourRecord'
+import FolderCard from '../components/FolderCard'
 import type { AttemptReport, ItemStat, PracticeItem, PracticeSummary, Track } from '../practice/types'
 
 const PYTHON_NOTE = 'Plain Python, no pandas yet. The runtime downloads once (about 10 MB).'
@@ -112,19 +113,19 @@ export default function Practice({ initialItemId = null, onInitialConsumed, onCh
               const solved = t.items.filter(i => solvedIn(stats, i.id)).length
               return (
                 <li key={t.track}>
-                  <button type="button" className="ml-glass pr-track" onClick={() => setTrack(t.track)}>
-                    <b>{t.title}</b>
-                    <span className="pr-blurb">{t.blurb}</span>
-                    <span className="pr-solved">{summary ? `${solved} solved` : `${t.items.length} exercises`}</span>
-                    <span className="pr-ladder">
-                      {LEVELS.map(l => {
+                  <FolderCard
+                    tint={tracks.indexOf(t)} label="Practice" title={t.title} name={t.title}
+                    pill={summary ? `${solved} solved` : `${t.items.length} exercises`}
+                    summary={t.blurb}
+                    lines={[
+                      ...LEVELS.flatMap(l => {
                         const at = t.items.filter(i => i.level === l)
-                        if (!at.length) return null
-                        return <span key={l}>Level {l}: {summary ? `${at.filter(i => solvedIn(stats, i.id)).length} solved` : `${at.length} exercises`}</span>
-                      })}
-                    </span>
-                    {t.track === 'python' && <small>{PYTHON_NOTE}</small>}
-                  </button>
+                        return at.length ? [`Level ${l}: ${summary ? `${at.filter(i => solvedIn(stats, i.id)).length} solved` : `${at.length} exercises`}`] : []
+                      }),
+                      ...(t.track === 'python' ? [PYTHON_NOTE] : []),
+                    ]}
+                    onOpen={() => setTrack(t.track)}
+                  />
                 </li>
               )
             })}

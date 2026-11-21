@@ -10,6 +10,7 @@ import Practice from './pages/Practice'
 import Interview from './pages/Interview'
 import Sessions from './pages/Sessions'
 import Stories from './pages/Stories'
+import InterviewPrep from './pages/InterviewPrep'
 import SettingsPage from './pages/Settings'
 import Privacy from './pages/Privacy'
 import Account from './pages/Account'
@@ -24,14 +25,14 @@ import { useScreenClock } from './features/screen/countdown'
 import { ScreenDebriefPage } from './features/screen/ScreenDebrief'
 import { createScreen } from './lib/screenApi'
 import {
-  BookMarked, BookOpen,
+  BookMarked, BookOpen, ClipboardList,
   Circle, Home as HomeIcon,
   Menu, MessageCircle,
   Settings, Target,
   X,
 } from 'lucide-react'
 
-type View = 'home' | 'firstInterview' | 'workspace' | 'targets' | 'practice' | 'interview' | 'reports' | 'report' | 'stories' | 'screen' | 'profile' | 'settings' | 'privacy'
+type View = 'home' | 'firstInterview' | 'workspace' | 'targets' | 'practice' | 'interview' | 'reports' | 'report' | 'stories' | 'prep' | 'screen' | 'profile' | 'settings' | 'privacy'
 type Answer = { question: string; answer: string }
 type FlowState = 'not_completed' | 'idle' | 'starting' | 'saving' | 'waiting_nim' | 'generating_reflection' | 'provider_unavailable' | 'retryable_failure' | 'validation_failure'
 
@@ -70,7 +71,7 @@ function Brand({ onClick }: { onClick: () => void }) {
 // Pages that can be opened straight from the address bar. Interview, report and screen need a live session id, so they open the dashboard.
 const URL_VIEWS: Record<string, View> = {
   '': 'home', workspace: 'workspace', targets: 'targets', practice: 'practice', reports: 'reports',
-  stories: 'stories', profile: 'profile', settings: 'settings', privacy: 'privacy', firstInterview: 'firstInterview',
+  stories: 'stories', prep: 'prep', profile: 'profile', settings: 'settings', privacy: 'privacy', firstInterview: 'firstInterview',
 }
 function viewFromPath(pathname: string): View {
   const key = pathname.replace(/^\/+|\/+$/g, '')
@@ -112,6 +113,7 @@ const viewToUrl = (view: View): string => {
     'screen': 'screen',
     'report': 'report',
     'stories': 'stories',
+    'prep': 'prep',
     'profile': 'profile',
     'settings': 'settings',
     'privacy': 'privacy',
@@ -549,6 +551,7 @@ useEffect(() => {
     { id: 'targets', label: 'Targets', icon: Target },
     { id: 'reports', label: 'Sessions', icon: MessageCircle },
     { id: 'stories', label: 'Stories', icon: BookMarked },
+    { id: 'prep', label: 'Interview Prep', icon: ClipboardList },
   ]
   return <div className={`app workspace-app ${calmMotion ? 'reduce-motion' : ''}`}><div className="ambient ambient--two" />
     <aside className={`sidebar ${mobileNav ? 'sidebar--open' : ''}`}><div className="sidebar-top"><Brand onClick={() => go('home')} /><button className="mobile-close" onClick={() => setMobileNav(false)}><X /></button></div><nav>{navItems.map(item => <button key={item.id} className={view === item.id || (view === 'report' && item.id === 'reports') ? 'active' : ''} onClick={() => { if (item.id === 'targets') setTargetId(null); go(item.id) }}><item.icon size={18} />{item.label}</button>)}</nav><div className="sidebar-bottom"><button onClick={() => go('settings')} className={view === 'settings' ? 'active' : ''}><Settings size={18} />Settings</button><button className="demo-profile" onClick={() => go('profile')}>{session.status === 'signedIn'
@@ -580,6 +583,7 @@ useEffect(() => {
       {view === 'practice' && <Practice initialItemId={practiceItem} onInitialConsumed={() => setPracticeItem(null)} />}
       {view === 'profile' && <Account session={session} role={role} onSettings={() => go('settings')} />}
       {(view === 'reports' || view === 'report') && <Sessions openId={view === 'report' ? sessionId : null} refreshKey={reflection?.interviewId} onPractise={() => void startInterview()} onSaveStory={turn => void saveStoryFromAnswer({ question: turn.question, answer: turn.answer, sourceInterviewId: sessionId, sourceTurnId: turn.id }).then(() => notify('Saved to your stories.')).catch(() => notify('Could not save that story just now.'))} />}
+      {view === 'prep' && <InterviewPrep onStart={(r, q, speak) => { setVoiceMode(speak); void startInterview(r, q, speak) }} />}
       {view === 'stories' && <Stories initialQuestion={storyQuestion} initialTheme={storyTheme} onInitialConsumed={() => { setStoryQuestion(null); setStoryTheme(null) }} />}
       {view === 'settings' && <SettingsPage voiceSpeed={voiceSpeed} setVoiceSpeed={setVoiceSpeed} language={language} setLanguage={setLanguage} calmMotion={calmMotion} setCalmMotion={setCalmMotion} notify={notify} onResetDemo={resetDemo} onOpenPrivacy={() => go('privacy')} onDeleted={afterDataDeleted} />}
       {view === 'privacy' && <Privacy onBack={() => go('settings')} onOpenSettings={() => go('settings')} />}

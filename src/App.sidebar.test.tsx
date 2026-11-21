@@ -10,7 +10,7 @@ import App from './App'
 const base = { providers: { google: false }, refresh: () => {}, clear: () => {} }
 
 beforeEach(() => {
-  window.history.replaceState(null, '', '/') // signed in at / goes straight to the dashboard
+  window.history.replaceState(null, '', '/workspace') // open the dashboard directly: / is the website
   window.matchMedia = (q: string) => ({ matches: false, media: q, addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {}, dispatchEvent: () => false, onchange: null }) as MediaQueryList
   // Every api call answers 404 JSON: the app shows its empty states, which is all the sidebar needs.
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {

@@ -444,11 +444,7 @@ useEffect(() => {
     loadProfile()
   }, [authed])
 
-  // A signed-in visitor never sees the public landing: / opens the dashboard. The local demo is not an account, so / still shows the website.
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (session.status === 'signedIn' && view === 'home') { window.history.replaceState({ mirrorView: 'workspace' }, '', '/workspace'); setView('workspace') }
-  }, [session.status, view])
+  // The website at / always opens as the website, signed in or not. Its button goes to the workspace (or sign-in).
   // Only "none" shows onboarding.
   useEffect(() => {
     if (authed && view === 'workspace' && profileStatus === 'none' && !profileFresh.current) go('firstInterview')

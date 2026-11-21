@@ -69,12 +69,11 @@ describe('URL routing', () => {
     await waitFor(() => expect(active(container)).toBe('Practice'))
   })
 
-  it('sends a signed-in user at / to the dashboard, never the landing', async () => {
+  it('keeps the website at / for a signed-in user too', async () => {
     session.current = signedIn
-    const { container } = render(<App />)
-    await waitFor(() => expect(container.querySelector('.sidebar')).not.toBeNull())
-    expect(window.location.pathname).toBe('/workspace')
-    expect(screen.queryAllByText('Request access')).toHaveLength(0)
+    render(<App />)
+    expect((await screen.findAllByText('Request access')).length).toBeGreaterThan(0)
+    expect(window.location.pathname).toBe('/')
   })
 
   it('shows the landing at / to a signed-out visitor', async () => {

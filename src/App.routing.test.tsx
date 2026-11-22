@@ -5,6 +5,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const session = vi.hoisted(() => ({ current: {} as Record<string, unknown> }))
 vi.mock('./features/auth/useSession', () => ({ useSession: () => session.current }))
 
+vi.mock('./pages/FirstInterview', () => ({
+  default: ({ onDone }: { onDone: (p: unknown, saved: boolean) => void }) => (
+    <>
+      <button onClick={() => onDone(profile, true)}>finish saved</button>
+      <button onClick={() => onDone(profile, false)}>finish unsaved</button>
+    </>
+  ),
+}))
+
 import App from './App'
 
 const base = { providers: { google: false }, refresh: () => {}, clear: () => {} }
@@ -119,6 +128,18 @@ describe('profile states', () => {
     window.history.replaceState(null, '', '/workspace')
     render(<App />)
     await waitFor(() => expect(window.location.pathname).toBe('/firstInterview'))
+  })
+
+  it.each(['finish saved', 'finish unsaved'])('after onboarding (%s) the Briefing shows with no stuck skeleton', async label => {
+    session.current = signedIn
+    profileReply = async () => json({ error: 'not_found' }, 404)
+    window.history.replaceState(null, '', '/workspace')
+    const { container } = render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: label }))
+    await waitFor(() => expect(window.location.pathname).toBe('/workspace'))
+    await waitFor(() => expect(active(container)).toBe('Briefing'))
+    expect(screen.queryByRole('status', { name: 'Loading your workspace' })).toBeNull()
+    await waitFor(() => expect(container.querySelector('.workspace-main h1')).not.toBeNull())
   })
 
   it.each([500, 503, 403])('a %i shows retry, never onboarding', async status => {

@@ -443,7 +443,7 @@ useEffect(() => {
     api.getProfile()
       .then(p => {
         if (profileFresh.current) return
-        setProfile(p); setRole(p.role); setVoiceMode(p.mode === 'voice')
+        setProfile(p); setProfileStatus('ready'); setRole(p.role); setVoiceMode(p.mode === 'voice')
         setProfileStatus('ready')
         setView(v => (v === 'firstInterview' ? 'workspace' : v)) // clicked Start before this arrived
       })
@@ -519,7 +519,7 @@ useEffect(() => {
       onBack={() => go('home')}
       onDone={(p, saved) => {
         profileFresh.current = true
-        setProfile(p); setRole(p.role); setVoiceMode(p.mode === 'voice')
+        setProfile(p); setProfileStatus('ready'); setRole(p.role); setVoiceMode(p.mode === 'voice')
         if (!saved) notify('Your first interview is ready, but it could not be saved to the practice server.')
         go('workspace')
       }}

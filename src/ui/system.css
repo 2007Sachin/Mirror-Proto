@@ -332,3 +332,6 @@
   .workspace-app .sidebar { width: 200px; }
   .workspace-app .workspace-main { margin-left: 200px; width: calc(100% - 200px); }
 }
+
+/* Short notices from App.tsx. Without a position they sat below the visible page. */
+.toast { position: fixed; z-index: 100; left: 50%; bottom: 16px; transform: translateX(-50%); max-width: min(480px, calc(100vw - 32px)); padding: 10px 14px; border-radius: var(--m-radius); background: var(--m-card); color: var(--m-ink, inherit); border: 1px solid var(--m-line); box-shadow: 0 8px 24px rgba(0, 0, 0, .18); font-size: var(--m-text-body); line-height: 1.4; }

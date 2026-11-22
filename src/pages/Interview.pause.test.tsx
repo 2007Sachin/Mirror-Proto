@@ -106,3 +106,22 @@ describe('Interview room: typing and a lost session', () => {
     expect(onStartNew).toHaveBeenCalled()
   })
 })
+
+describe('Interview room: starting in typing mode', () => {
+  const typing = () => props({ startsTyping: true, voice: makeVoice({ active: false, voiceState: 'idle' }) })
+  it('opens the panel and focuses the answer box on first render', () => {
+    render(<Interview {...typing()} />)
+    act(() => { vi.advanceTimersByTime(10) })
+    const box = screen.getByLabelText('Your answer')
+    expect(document.activeElement).toBe(box)
+  })
+  it('does not open the panel for an interview that starts by voice', () => {
+    render(<Interview {...props()} />)
+    expect(screen.queryByLabelText('Your answer')).toBeNull()
+  })
+  it('shows the session-lost message next to the button inside the panel and keeps it', () => {
+    render(<Interview {...props({ ...typing(), flowText: 'This interview could not be found.', onStartNew: vi.fn() })} />)
+    act(() => { vi.advanceTimersByTime(10000) })
+    expect(screen.getAllByRole('alert').some(a => /could not be found/.test(a.textContent ?? ''))).toBe(true)
+  })
+})

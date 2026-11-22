@@ -45,7 +45,7 @@ function flowLabel(state: FlowState): string | null {
     case 'provider_unavailable': return 'MIRROR cannot reach the question service right now. Your answers are saved. Try again.'
     case 'retryable_failure': return 'That did not go through. Your answers are saved. Try again when you are ready.'
     case 'validation_failure': return 'Your notes could not be put together from these answers.'
-    case 'session_lost': return 'This interview could not be found on the server, so this answer was not saved. Start a new one from your Briefing.'
+    case 'session_lost': return 'This interview could not be found, so your answer was not saved. Start a new one.'
     case 'not_completed': return 'This session was not completed, so there are no notes.'
     default: return null
   }
@@ -297,7 +297,6 @@ useEffect(() => {
       setFlowState(state)
       if (state === 'session_lost') {
         sessionStorage.removeItem(SESSION_STORAGE_KEY)
-        notify('That interview could not be found, so your answer was not saved. Start a new one from your Briefing.')
       } else if (err instanceof ApiError && err.body && typeof err.body === 'object' && 'saved' in err.body && (err.body as { saved?: boolean }).saved) {
         setAnswers(prev => [...prev, { question: currentQuestion, answer: trimmed }])
         setAnswer('')
@@ -540,6 +539,7 @@ useEffect(() => {
         voice={voice}
         flowText={flowLabel(flowState)}
         canRetry={flowState === 'provider_unavailable' || flowState === 'retryable_failure' || flowState === 'waiting_nim'}
+        startsTyping={!voiceMode}
         onStartNew={flowState === 'session_lost' ? startNewAfterLoss : undefined}
         waiting={flowState === 'waiting_nim'}
         busy={busy}
@@ -555,7 +555,7 @@ useEffect(() => {
         onSwitchToSpeak={switchToSpeak}
         screen={screen ? { remainingSeconds: screenLeft === null ? null : Math.ceil(screenLeft / 1000), totalSeconds: screen.capSeconds, onEnd: () => void finishScreen() } : undefined}
       />
-      {toast && <div className="toast">{toast}</div>}
+      {toast && <div className="toast" role="status">{toast}</div>}
     </>
   }
 
@@ -606,5 +606,5 @@ useEffect(() => {
       {view === 'stories' && <Stories initialQuestion={storyQuestion} initialTheme={storyTheme} onInitialConsumed={() => { setStoryQuestion(null); setStoryTheme(null) }} />}
       {view === 'settings' && <SettingsPage voiceSpeed={voiceSpeed} setVoiceSpeed={setVoiceSpeed} language={language} setLanguage={setLanguage} calmMotion={calmMotion} setCalmMotion={setCalmMotion} notify={notify} onResetDemo={resetDemo} onOpenPrivacy={() => go('privacy')} onDeleted={afterDataDeleted} />}
       {view === 'privacy' && <Privacy onBack={() => go('settings')} onOpenSettings={() => go('settings')} />}
-    </main>{toast && <div className="toast">{toast}</div>}</div>
+    </main>{toast && <div className="toast" role="status">{toast}</div>}</div>
 }

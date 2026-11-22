@@ -184,7 +184,7 @@ function RoleView({ role, onChange, onStart }: { role: PrepRole; onChange: () =>
                 <summary>See the questions</summary>
                 <ol>{r.questions.map((q, qi) => {
                   const on = isWeak(weak, { role: role.slug, round: ri, question: qi })
-                  return <li key={q}>{q} <button type="button" className="prep-alt" aria-pressed={on} onClick={() => flag(ri, qi)}>{on ? 'Needs more work ✓' : 'Needs more work'}</button></li>
+                  return <li key={q}><span>{q}</span><button type="button" className="prep-alt prep-flag" aria-pressed={on} onClick={() => flag(ri, qi)}>{on ? 'Needs more work ✓' : 'Needs more work'}</button></li>
                 })}</ol>
               </details>
             </FolderCard>

@@ -1,222 +1,237 @@
-# Design Foundation
+# MIRROR design foundation
 
-## Overview
-This document establishes the design system for MIRROR, inspired by the clean, functional aesthetic of [fanout.sh](https://fanout.sh/). The goal is to remove "AI slop" design elements and create a calm, consistent product experience from the website through every app page.
+How MIRROR looks and behaves, written from the code as it is today. Visual reference for type and cards is fanout.sh. The mood is in `docs/DESIGN-PHILOSOPHY.md` ("Paper Instrument").
 
-## Fonts
+## How the pieces fit
 
-### Primary Font System
-- **Body**: System font stack, regular weight (400), size 16px base, line-height 1.6
-- **Headings**: Medium weight (500), scaled proportionally from base size
-- **Removed**: All bold headings (700–800), Google Fonts (Inter), and CDN dependencies
+Three layers, loaded in this order:
 
-### Font Stack
-```
--- Light mode:  system-ui, -apple-system, "Segoe UI", Ubuntu, sans-serif;
--- Dark mode:   system-ui, -apple-system, "Segoe UI", Ubuntu, sans-serif;
-```
+1. **Foundation tokens** (`src/styles/tokens.css`, imported by `src/index.css`). The scales: type, colour, spacing, radii, borders, shadows, layering, layout sizes, motion. Every declaration is inside `:root`; dark values are a second `:root` inside `prefers-color-scheme: dark`. A test (`src/styles/tokens.test.ts`) fails if a declaration ever sits outside a rule again, and checks contrast.
+2. **Page and system sheets**: `src/landing.css` (`.mirror-landing`), `src/ui/system.css` (`.workspace-app`, the `--m-*` app scale), `src/pages/*.css`, `src/components/folderCard.css`.
+3. **Theme layer**: `src/styles/paper.css`, `paper-session.css`, `paper-practice.css`. Loaded last. It re-points the page tokens at the `--p-*` paper palette.
 
-### Weight Scale
-| Element   | Weight |
-|-----------|--------|
-| Body text | 400    |
-| Headings  | 500    |
-| Strong    | 600    |
+New work uses layer 1 for scales and the shared pieces below for look. Do not redefine a scale in a page sheet.
 
-### Size Scale (relative to base 16px)
-- xs: 12px (0.75rem)
-- sm: 14px (0.875rem)
-- base: 16px (1rem)
-- lg: 20px (1.25rem)
-- xl: 24px (1.5rem)
-- 2xl: 30px (1.875rem)
-- 3xl: 36px (2.25rem)
+The foundation's colours equal the live theme's (`--color-bg` is `--p-bg`, `--color-accent` is `--p-blue`), so a token and the screen agree.
 
-### Line Height
-- Base: 1.6
-- Headings: 1.1–1.2
+---
 
-### Letter Spacing
-- Tight: -.03em
-- Upright: .02em
-- Caps: .06em
+## 1. Brand and visual foundations
 
-## Colours
+### Identity and principles
+MIRROR is a calm place to practise an interview. It is not a performance review.
+- **Clarity.** One thing per screen is the main thing, and it has one filled button.
+- **Simplicity.** Plain words, few boxes, one accent colour. No decorative blobs, gradient text or glass used as decoration.
+- **Trust.** Nothing is scored, no percentages, no streaks on interview answers. Privacy sentences come only from `docs/PRIVACY-AUDIT.md`.
+- **Efficiency.** A tap target is at least 44px. The next step is always visible.
 
-### Token File (single source of truth)
-Created as `src/styles/tokens.css` with CSS variables for both light and dark modes.
+Voice: short sentences, second person, no hype. Say what happened and what to do next. Never "great job", never a grade.
 
-### Light Mode Tokens
-```
---bg: #f8fafc;
---bg-subtle: #f1f5f9;
---ink: #0f172a;
---muted: #64748b;
---accent: #1e40af;
---accent-ink: #fff;
---border: #e2e8f0;
---ring: #3b82f6;
---success: #10b981;
---error: #ef4444;
-```
+### Colour
+Defined in `tokens.css`. Light and dark are separate values for the same names.
 
-### Dark Mode Tokens (prefers-color-scheme: dark)
-```
---bg: #0f172a;
---bg-subtle: #1e293b;
---ink: #f8fafc;
---muted: #94a3b8;
---accent: #60a5fa;
---accent-ink: #0f172a;
---border: #334155;
---ring: #93c5fd;
-```
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| `--color-bg` | `#f7f7f8` | `#111213` | Page |
+| `--color-surface` | `#fff` | `#1a1b1d` | Cards, sheets |
+| `--color-bg-subtle` | `#f4f4f5` | `#202123` | Chips, quiet fills |
+| `--color-ink` | `#1d1d1d` | `#f2f4f7` | Text |
+| `--color-muted` | `#6e6e6e` | `#8b94a0` | Secondary text |
+| `--color-accent` (`--color-primary`) | `#1062fe` | `#6ea2ff` | The one action colour |
+| `--color-accent-ink` | `#fff` | `#111315` | Text on accent |
+| `--color-border` / `-strong` | `#e8e8ea` / `#c9c9cf` | `#2a2b2e` / `#4c4e54` | Hairlines |
+| `--color-ring` | `#1062fe` | `#6ea2ff` | Focus ring |
 
-### Colour Usage Rules
-- One accent colour throughout (--accent), with tints/shades for states
-- Neutral greys for backgrounds and borders
-- Green/red used only with explicit labels (▲/▼) and text, never colour alone
-- Contrast minimum 4.5:1 for text, 3:1 for UI components
+- **Neutral scale** `--color-neutral-50` to `-900`: the same in both modes (`#f7f7f8` … `#1d1d1d`). Semantic colours pick from it.
+- **Semantic:** `--color-success`, `--color-warning`, `--color-error`, `--color-info` (also `--color-semantic-*`), each with a `-soft` tint. Values are chosen to be readable as text on `--color-bg` (4.5:1, checked in `tokens.test.ts`).
+- **Interactive states of primary:** `--color-primary` (default), `-hover` and `-active` (darker mixes), `-soft` (tint), `--color-focus-ring`, `--color-disabled-ink`.
+- **Rules:** one accent. Greys carry the rest. Green and red never carry meaning alone: they come with a word or a mark. Category hues exist only for small tags and the folder cards.
 
-## Spacing
+### Typography
+- **Families:** `--font-family-base` (Overused Grotesk, self-hosted from `/fonts`, then the system stack), `--font-family-code` (IBM Plex Mono, from `@fontsource`, then system mono), `--font-family-pixel` (Departure Mono, for small display labels). No font loads from a third party.
+- **Weights:** `--font-weight-body` 400, `--font-weight-medium` and `-heading` 500, `--font-weight-semibold` 600. Bold (700 and up) and black are not tokens on purpose: headings are medium.
+- **Foundation sizes:** xs 12, sm 14, base 16, lg 20, xl 24, 2xl 30, 3xl 36 (`--font-size-*`).
+- **App sizes:** the workspace uses a four-step scale in `system.css`: `--m-text-meta` 12, `--m-text-body` 15, `--m-text-title` 17, `--m-text-page` 28. Pages styled in `src/pages/*.css` use these, and a test (`src/ui/system.test.ts`) rejects a raw font size there.
+- **Line height:** `--line-height-tight` 1.2, `-heading` 1.1, `-base` 1.6, `-relaxed` 1.75.
+- **Letter spacing:** `--letter-spacing-tight` -.03em for headings, `-upright` .02em, `-caps` .06em for mono labels.
+- **Headings:** h1 to h3 medium, tight tracking. Small caps mono labels (`eyebrow`, pills) in the code or pixel family.
 
-### Token Scale (4px base unit)
-- 0: 0 (no margin/padding)
-- 1: 4px (0.25rem)
-- 2: 8px (0.5rem)
-- 3: 12px (0.75rem)
-- 4: 16px (1rem)
-- 5: 20px (1.25rem)
-- 6: 24px (1.5rem)
-- 7: 28px (1.75rem)
-- 8: 32px (2rem)
-- 12: 48px (3rem)
-- 16: 64px (4rem)
+### Spacing
+4px base. `--space-N` where N is the step: 0, 1 (4), 2 (8), 3 (12), 4 (16), 5 (20), 6 (24), 7 (28), 8 (32), 10 (40), 12 (48), 16 (64), 20 (80). Named steps: `--spacing-xs` 4, `sm` 8, `md` 16, `lg` 24, `xl` 32, `xxl` 64.
+- Component padding: steps 3 to 6. Section spacing: 8 to 16. Page gutter: `--layout-gutter` 24px (16px on phones).
+- Never invent a value between steps.
 
-### Usage
-- Consistent vertical rhythm: 4px grid
-- Component padding: typically 3–6
-- Section spacing: typically 8–12
-- Margins: never use values between the scale steps
+### Borders, radius, dividers, elevation
+- **Border width:** `--border-width-0/1/2/3` (0, 1, 2, 3px). Hairlines are 1px `--color-border`. Focus uses 2px.
+- **Radius:** `--radius-0/1/2/3/4/5/full` (0, 4, 8, 12, 16, 20, 999). Named: `none`, `sm` (4), `md` (8), `lg` (12). Inputs 8, cards 12 to 18, pills full.
+- **Dividers:** 1px solid `--color-border`. Dashed only to show something in progress (the orb's "thinking" ring). No dotted rules.
+- **Elevation:** `--shadow-1` to `-5` (named `sm` = 1, `md` = 3, `lg` = 4). Cards sit on a hairline and at most shadow 1 to 3. Keep shadow 5 for the largest overlays.
+- **Layering:** see section 2.
 
-## Radii
+### Iconography and illustration
+- **Icons:** `lucide-react`. Sizes in use: 14 and 16 inline and in buttons, 18 in navigation, 22 in the room's call controls. Stroke is the library default. Icons support a word; they do not replace it.
+- **Illustration:** none from stock. Product pictures are real screenshots (landing). The folder pictures on cards are drawn in CSS from the card's tint (`src/components/folderCard.css`). The orb is a WebGL shader (`FluidOrb`), calm at rest and livelier as the voice level rises.
+- **Custom icons:** only the logo mark. Everything else comes from the library.
 
-### Border Radius Scale
-- 0: 0px (sharp corners)
-- 1: 4px (small inputs, chips)
-- 2: 8px (default buttons, inputs)
-- 3: 12px (cards, modals)
-- 4: 16px (large cards, orb)
-- 5: 20px (rounded corners, avatars)
-- 6: 999px (full pill, buttons)
+---
 
-### Usage
-- Buttons: radius 5 (999px for pill shape)
-- Inputs: radius 2 (8px)
-- Cards: radius 3 (12px)
-- Orb: radius 4 (16px)
-- Avatars: radius 5 (20px)
+## 2. Layout and responsive foundations
 
-## Shadows
+### Breakpoints
+Target set: **mobile** up to 640px (design at 390), **tablet** 641 to 1024, **desktop** 1025 and up (design at 1440).
+The code still holds older page-specific widths that should converge on those: 420, 560, 640, 760 (landing phone layout), 780 (sidebar goes off-canvas), 800, 860, 880, 959.98 and 960 (room switches between side panel and bottom sheet), 1050 (tablet sidebar). A media query cannot read a custom property, so the values are written out.
 
-### Shadow Scale
-- None: none
-- 1: 0 1px 2px rgba(0, 0, 0, 0.05)
-- 2: 0 1px 3px rgba(0, 0, 0, 0.1)
-- 3: 0 4px 6px rgba(0, 0, 0, 0.1)
-- 4: 0 10px 20px rgba(0, 0, 0, 0.1)
-- 5: 0 25px 50px rgba(0, 0, 0, 0.25)
+### Grid
+No 12-column system. Pages are a centred column with CSS grid where needed.
+- Page column max width: `--layout-page-max` 1120px (landing 1100px).
+- Card lists: `repeat(auto-fill, minmax(260px–280px, 1fr))`, gap 10 to 18px.
+- Two-up and three-up splits collapse to one column at 780–800px.
 
-### Usage
-- Elevation: shadow 2 or 3 for cards, modals
-- Focus ring: ring variable, not shadow
-- Orb/ambient: shadow 4 or 5 for depth
+### Workspace layout
+- **Left navigation:** fixed, 216px (`--layout-sidebar`). 200px between 781 and 1050px (`--layout-sidebar-tablet`).
+- **Main content:** `margin-left` equals the sidebar, content centred up to 1120px, padding 20px 16px on phones.
+- **Right companion:** the interview room's side panel (Chat, Tips, Replay), 300px (`--layout-room-panel`) beside the stage from 960px, a bottom sheet (70% of the screen) below that.
+- **Density:** one density. There are no compact or spacious modes.
 
-## Motion / Ease
+### Sidebar behaviour
+Expanded labels at all desktop widths. At 780px and below it slides off-canvas (260px, `--layout-sidebar-mobile`) behind a menu button and closes on selection. There is no icon-only collapsed mode.
 
-### Easing Functions
-- Default: cubic-bezier(.22, 1, .36, 1) (spring-like)
-- Reduced: linear 0s (prefers-reduced-motion)
-- Fast: cubic-bezier(.4, 0, .2, 1)
-- Slow: cubic-bezier(.25, .46, .45, .94)
+### Page structure
+- One `h1` per page, in a `page-title` block with a small label above, the title, one line of help, and any page action on the right.
+- Section headings are h2 then h3, no skipped levels. Every section is named by its heading (`aria-labelledby`).
+- Left-aligned text. Centre only a single focus (onboarding, the paused screen).
+- Sticky: the landing nav and the room's call bar. The sidebar is fixed.
 
-### Transition Duration
-- Fast: 150ms
-- Normal: 250ms
-- Slow: 350ms
+### Layering (z-index)
+`--z-index-base` 0, `-raised` 5, `-sticky` 20, `-bar` 30 (the room's call bar), `-nav` 40 (sidebar), `-modal` 50 (the room's bottom sheet, the SQL drawer), `-tooltip` 60 (the top layer: today the SQL map's sheet; keep it for popovers). A dialog or sheet traps focus and closes on Esc.
 
-### Usage
-- Buttons: transform .2s var(--ease) on hover
-- Modals/panels: 250ms fade/slide
-- Orb state changes: 1.4s–6s for pulse animations (respect prefers-reduced-motion)
-- No automatic "glowing blobs" or decorative animations
+---
 
-## Components
+## 3. Interaction and accessibility
 
-### Button (shared across website and app)
-```css
-.button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 48px;
-  padding: 0 24px;
-  border: 0;
-  border-radius: var(--radius-full, 999px);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: -.01em;
-  transition: transform .2s var(--ease), background .2s var(--ease), box-shadow .2s var(--ease);
-  white-space: nowrap;
-  cursor: pointer;
-}
+### States
+| State | Look |
+|---|---|
+| Default | Hairline, surface fill |
+| Hover | Border or text to accent, cards lift 2px |
+| Active | Lift removed |
+| Focus | 2px solid ring, 2 to 4px offset, never removed |
+| Selected | Accent border or `aria-pressed` / `aria-current` |
+| Disabled | Muted ink, 50% opacity, `not-allowed` |
 
-.button:hover:not(:disabled) { transform: translateY(-1px); }
-.button:active:not(:disabled) { transform: none; }
-.button--primary { ... }
-.button--secondary { ... }
-.button--ghost { ... }
-```
+### State meanings
+- **Loading:** quiet placeholder bars (`src/ui/PageSkeleton.tsx`, `role="status"`, `aria-busy`). Do not show placeholder copy that could change.
+- **Empty:** one sentence on what this is and one button to begin.
+- **Success:** a word, and a mark if it helps. No confetti.
+- **Warning:** the warning colour with a word. Used rarely.
+- **Error:** the error colour, a plain sentence, and a way to retry. Announced with `role="alert"`.
 
-### Input / Form Controls
-- Height: 44px minimum (tap target)
-- Border radius: var(--radius-2, 8px)
-- Font size: 14px
-- Padding: 0 12px
-- Focus ring: var(--ring) with outline-offset 4px
+### Keyboard
+- Logical tab order. Focus ring always visible.
+- Skip link: the landing page has one. The app shell does not yet (see open gaps).
+- Modals and sheets trap focus, return it on close, and close on Esc.
+- Shortcuts live in the interview room only, and are listed under "?" there: M mute, K pause, C captions, T speak or type, P panel, R repeat, Esc.
 
-### Card
-- Padding: var(--spacing-4, 16px) internally
-- Border radius: var(--radius-3, 12px)
-- Border: 1px solid var(--border)
-- Background: var(--bg) or var(--bg-subtle)
-- Shadow: var(--shadow-3, 0 4px 6px rgba(0,0,0,0.1))
+### Accessibility foundations
+- **Contrast:** 4.5:1 for text, 3:1 for UI and focus. `tokens.test.ts` checks the foundation text pairs in light and dark.
+- **Targets:** at least 44px (`--tap-target`) with room between.
+- **Zoom:** the goal is no horizontal scroll at 200%. Not yet tested.
+- **Not by colour alone:** status always has a word.
+- **ARIA:** only where HTML has no element. Regions are labelled by their heading. Live updates use `role="status"` (polite) or `role="alert"`.
 
-### Orb (signature MIRROR element)
-- Size: variable, max 240px
-- Border radius: var(--radius-4, 16px)
-- No glowing blobs, gradient text, or heavy shadows
-- Single accent colour with opacity variations
+### Motion
+- **Durations:** `--transition-fast` 150ms, `-normal` 250ms, `-slow` 350ms. **Easing:** `--ease-default` (spring-like), `--ease-fast`, `--ease-slow`.
+- **What moves:** transform and opacity only. Cards lift 2px on hover. Panels fade or slide in 250ms. Nothing bounces.
+- **The orb:** swirl speed and size follow the voice level; ripples and bars show who is talking.
+- **Reduced motion:** `prefers-reduced-motion: reduce` sets the durations to 0 and runs animations once. Ripples, bars and the breathing circle stop.
 
-## Responsive Breakpoints
-- Mobile: <640px (420px in some contexts)
-- Tablet: 640px–1024px
-- Desktop: >1024px
+### Forms
+- Validate when the form is sent, not while typing. One inline message under the form, `role="alert"`, in plain words.
+- No asterisks. If a field is optional it says "(optional)". Counters show length, never a pass mark.
+- Sending a form disables its button and says what is happening ("Saving…").
+- Drafts of long answers are kept as you type.
 
-## Accessibility
-- 44px minimum tap targets
-- Visible focus (2px solid accent, 4px outline-offset)
-- Colour contrast: 4.5:1 text, 3:1 UI components
-- Reduced motion support: `prefers-reduced-motion: reduce`
-- One h1 per page
-- ARIA labels on interactive elements
-- Keyboard-navigable (tab order, focus management)
+---
 
-## One Token File
-All of the above tokens are collected in `src/styles/tokens.css`, imported by:
-- `src/index.css` (app)
-- `src/landing.css` (website landing page)
-- `src/pages/landing/home.css` (landing page layout)
+## 4. Learning-specific foundations
 
-This ensures consistent theming across the entire product.
+### Reading typography
+Reading text is at most about 600px wide (60 to 66 characters), `--line-height-base`, paragraphs spaced one step (`--space-3`) apart. Lesson headings are h2 then h3, medium weight.
+
+### Code and editors
+Code uses `--font-family-code`. The SQL, Python and case editors are plain text areas with the code font, not a highlighting editor, so there is no syntax palette. Results are shown in tables in the same font. Line numbers and current-line highlight are not built.
+
+### Progress and completion
+- Show progress as plain counts and steps: question dots in the room, "N solved" and levels in Practice.
+- No percentages, no streaks, no badges, no "x of y" for interview answers. The copy scan enforces this.
+
+### Assessment feedback
+- **Exercises with one right answer** (SQL, Python, stats): marked correct or not, with a word and a mark. No partial credit.
+- **Interview answers:** never scored. Notes say what worked, what to strengthen and what to say again, quoting the learner's own words.
+- Tone: plain and specific. No praise words.
+
+### Practice workspace
+Tool areas are fixed columns that stack on phones. Panes are not drag-resizable (`components/ui/resizable.tsx` exists but nothing uses it). The room is a full-screen stage with one side panel.
+
+### AI companion in the room
+- **Messages:** MIRROR on the left, you on the right, with a time. The live line shows a caret while you speak.
+- **Tips:** a short checklist (what happened, what you did, what changed) and pace. Guidance, not a grade.
+- **Suggestions:** the next question appears as a button ("Practise this question").
+- **Evidence:** quotes from the learner's own answer. There are no citations to outside sources and no confidence bars, because the interviewer does not claim to know.
+- **Actions:** one filled button (Send answer), quiet buttons for the rest.
+
+---
+
+## Shared pieces
+- **Buttons:** `.m-btn` (workspace) and `.ml-btn` (landing and room). One filled button per screen; others `--quiet`.
+- **Folder card:** `src/components/FolderCard.tsx`. Tinted card, folder picture, mono pill, heading, "+" lines, footer. Used for roles, jobs, rounds, tracks, sessions, stories.
+- **Cards:** `.m-card`, 12 to 18px radius, hairline border.
+- **Page skeleton:** `src/ui/PageSkeleton.tsx`.
+- **Orb:** `LiveOrb` over `FluidOrb`. Used for the room and onboarding.
+
+## Intentionally not adopted
+Items in the original foundation checklist that conflict with the product's rules:
+- **Percentage display, streaks, completion badges, confetti.** MIRROR never grades or gamifies interview practice.
+- **Confidence bars and partial credit** on answers. Nothing is scored.
+- **Bold and black weights.** Headings are medium.
+- **A normalize or reset package.** `src/index.css` already resets what is needed, and no dependency was added.
+- **A separate `design/foundation/tokens.css`.** The foundation lives in `src/styles/tokens.css` so there is one copy.
+
+## Open gaps
+- The app shell has no skip link.
+- Breakpoints are still the ten page-specific values listed above.
+- There is no icon-only collapsed sidebar, no density modes and no resizable panes.
+- Editors have no syntax highlighting, line numbers or current-line marker.
+- Foundation tokens are used by only a handful of rules. Most pages still read the page tokens (`--m-*`, `--p-*`), so a change here does not restyle them yet.
+
+## Target spec from the story-system build prompt
+
+Values the product owner asked to have written down. They are a **target**, not what the app does today. Where a value differs from the sections above, the sections above describe the app and this table describes the wish. Nothing here has been applied to the tokens.
+
+| Area | Target | Today |
+|---|---|---|
+| Primary colour | `#1a1a2e` (deep navy) | `#1062fe` blue (`--color-accent`) |
+| Neutral | `#f0f0f0` (light grey) | `#f7f7f8` page, `#f4f4f5` fills |
+| Semantic | green success, red error, orange warning | green, red and amber, tuned for text contrast |
+| Body and code fonts | System fonts for body, IBM Plex Mono for code | Overused Grotesk then system for body, IBM Plex Mono for code |
+| Breakpoints | 390 mobile, 768 tablet, 1440 desktop | Ten page-specific widths (see section 2) |
+| Grid | 12 columns, 16px gutter | No column grid; CSS grid per page, 24px gutter |
+| Sidebar | 240px collapsed, 300px expanded | 216px fixed, off-canvas at 780px and below, no collapsed mode |
+| Buttons | Primary, secondary, ghost, disabled | `.m-btn` filled and `--quiet`, disabled at 50% opacity |
+| Inputs | Focus ring, error state, disabled | Focus ring and disabled; errors as one inline message per form |
+| Cards | Elevation, hover, selected | Hairline cards; folder cards lift on hover and show `aria-current` when selected |
+| Code blocks | Monospace with line numbers | Monospace; line numbers not built |
+| Progress | Percentage bar and completion states | Not used for interview answers (no percentages). Used only in the story completion preview below |
+| Assessments | "Verified-evidence" visual language | Not adopted: "evidence" is a banned word in learner-facing text, and interview answers are not assessed |
+
+### Story system additions (branch `feat/story-bank-gaps`)
+All additive in `src/stories/`; existing calls and tests behave as before.
+- **`themes.ts`:** `themeConfidence(text)` ranks themes with an internal 0 to 1 confidence; `detectThemes(answer)` returns the primary theme, the others, and whether the primary shows up in the setup or the ending. `themesFor` still returns plain theme ids.
+- **`bank.ts`:** `computeRoleRelevance(roles, skills)` ranks themes for a role (a skill counts double a role). `themeMap(stories, profile?)` orders its lists by that ranking. `themeHint(title, needs, roleTag?)` adds the role. `rolesNeedStories(profile, stories)` returns the missing themes most relevant first. `getNextPracticeThemes(profile, stories)` returns up to three `[theme id, reason]` pairs.
+- **`suggest.ts`:** `UserProgress` (completed, open, explored themes, stories per theme). `getSuggestions(progress, stories)` ranks saved stories by gap-filling, then relevance, then recency, then how much of the STAR is filled, each with a `gapAnalysis` line. `suggestStories(question, stories, progress?)` uses the same ordering when progress is given.
+- **`SaveStoryButton.tsx`:** before saving it shows how much of the STAR is filled in ("Complete ✓", or a bar and a percentage) and a **Fill gaps** button that names the missing parts inline ("Add Task and Result for a complete story."). `showCompletion` turns it off. Nothing renders this button yet; the percentage text would need a copy-scan allowance on any page that does.
+
+## Checking a change
+1. `npm test`: `tokens.test.ts` (every token defined, nothing outside a rule, contrast) and `system.test.ts` (no raw font sizes on redesigned pages).
+2. `npm run build`.
+3. Look at the landing page, Briefing, Interview Prep, Practice, Sessions and Stories at 1440 and 390px, in light and dark, with reduced motion on.

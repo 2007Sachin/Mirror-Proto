@@ -119,3 +119,16 @@ describe('today.css (focus, tap targets, 390 px)', () => {
     expect(all).toMatch(/prefers-color-scheme:\s*dark/)
   })
 })
+
+describe('Today: greeting appears once', () => {
+  it.each(['hero', 'since', 'replays'] as const)('shows no greeting, status or hero copy while %s is still loading', which => {
+    show(withStatus(newUser, { [which]: 'loading' }))
+    expect(screen.queryByText(/Welcome|Good (morning|afternoon|evening)/)).toBeNull()
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Briefing')
+    expect(screen.getByText('Choosing your next step…')).toBeTruthy()
+  })
+  it('shows the final greeting once everything has settled', () => {
+    show(newUser)
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Welcome. Start with one question.')
+  })
+})

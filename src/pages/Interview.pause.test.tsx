@@ -89,3 +89,20 @@ describe('Interview room: pause', () => {
     expect(scanHtml('Interview paused', container.innerHTML)).toEqual([])
   })
 })
+
+describe('Interview room: typing and a lost session', () => {
+  it('opens the panel with the answer box when you switch to typing on a narrow screen', () => {
+    const { rerender } = render(<Interview {...props()} />)
+    expect(screen.queryByLabelText('Your answer')).toBeNull()
+    rerender(<Interview {...props({ voice: makeVoice({ active: false, voiceState: 'idle' }) })} />)
+    expect(screen.getByLabelText('Your answer')).toBeTruthy()
+  })
+  it('offers a way to start a new interview when the session is gone', () => {
+    const onStartNew = vi.fn()
+    render(<Interview {...props({ flowText: 'This interview could not be found.', onStartNew })} />)
+    // Status line when no sheet covers it; the sheet carries its own copy on a phone.
+    expect(screen.getAllByRole('button', { name: 'Start a new interview' })).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Start a new interview' }))
+    expect(onStartNew).toHaveBeenCalled()
+  })
+})

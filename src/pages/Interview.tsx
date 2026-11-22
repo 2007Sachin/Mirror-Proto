@@ -65,6 +65,8 @@ export type InterviewProps = {
   flowText: string | null
   /** The last request failed in a way "Try again" can fix. */
   canRetry: boolean
+  /** The server no longer has this interview; offers a way to begin a new one. */
+  onStartNew?: () => void
   /** The next question is still being made. */
   waiting: boolean
   busy: boolean
@@ -162,11 +164,14 @@ export default function Interview(p: InterviewProps) {
     el.style.height = `${el.scrollHeight}px`
   }, [answer, speaking, panel])
 
-  // Moving to typing puts the cursor in the box.
+  // Moving to typing opens the panel if it is closed (the box lives in it, and on a phone it starts shut) and puts the cursor in the box.
   useEffect(() => {
-    if (lastMode.current === true && !speaking && panel) area.current?.focus()
+    const toTyping = lastMode.current === true && !speaking
     lastMode.current = speaking
-  }, [speaking, panel])
+    if (!toTyping) return
+    setPanel(true)
+    window.setTimeout(() => area.current?.focus(), 0)
+  }, [speaking])
 
   const change = (value: string) => { setAnswer(value); writeDraft(key, value) }
 
@@ -395,6 +400,7 @@ export default function Interview(p: InterviewProps) {
           <div className="iv-status" role="status">
             {statusText && <p>{statusText}</p>}
             {voice.nudgeText && <p className="iv-nudge" aria-live="polite">{voice.nudgeText}</p>}
+            {p.onStartNew && !(panel && !desktop) && <button type="button" className="ml-btn ml-btn--sm" onClick={p.onStartNew}>Start a new interview</button>}
             {p.canRetry && <button type="button" className="ml-btn ml-btn--sm" onClick={p.onRetry} disabled={p.busy}>Try again</button>}
           </div>
         </main>
@@ -519,6 +525,7 @@ export default function Interview(p: InterviewProps) {
             )}
             <div className="iv-actions">
               {sendButton}
+              {p.onStartNew && <button type="button" className="ml-btn ml-btn--sm" onClick={p.onStartNew}>Start a new interview</button>}
               {!sc && <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={p.onContinueLater}>Continue later</button>}
               <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={endFromSheet}><Square size={14} aria-hidden="true" />{sc ? 'End the call' : 'End session'}</button>
             </div>

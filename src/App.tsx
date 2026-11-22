@@ -373,6 +373,14 @@ useEffect(() => {
       setBusy(false)
     }
   }
+  /** After a 404 on submit: drop the lost interview and go back to the Briefing. */
+  const startNewAfterLoss = () => {
+    stopVoice()
+    sessionStorage.removeItem(SESSION_STORAGE_KEY)
+    setVoiceMode(false); setOrbState('idle')
+    setSessionId(null); setScreen(null); setAnswer(''); setFlowState('idle')
+    go('workspace')
+  }
   const finishing = useRef(false)
   /** The time cap or "End the call": stop voice, end early, put the notes together, then show the debrief. */
   // ponytail: an answer typed at the very last second may be dropped; the server's 20 s grace covers one already sent.
@@ -532,6 +540,7 @@ useEffect(() => {
         voice={voice}
         flowText={flowLabel(flowState)}
         canRetry={flowState === 'provider_unavailable' || flowState === 'retryable_failure' || flowState === 'waiting_nim'}
+        onStartNew={flowState === 'session_lost' ? startNewAfterLoss : undefined}
         waiting={flowState === 'waiting_nim'}
         busy={busy}
         answer={answer}

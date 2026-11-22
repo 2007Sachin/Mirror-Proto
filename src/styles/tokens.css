@@ -1,100 +1,196 @@
-/* MIRROR Design Tokens — single source of truth for type, colour, spacing, radii, shadows, motion */
-/* Auto-inherits light/dark via prefers-color-scheme media queries */
+/* MIRROR design foundation tokens: type, colour, spacing, radii, borders, shadows, layering, motion, layout.
+   Values match the live Paper Instrument theme (src/styles/paper.css), so a token and the screen agree.
+   Rules: every declaration lives inside :root. Dark values are a second :root inside prefers-color-scheme.
+   Documented in docs/DESIGN.md. Page and theme sheets may re-point these; they should not redefine the scales. */
 
-/* --- Font Family --- */
---font-family-sans: system-ui, -apple-system, "Segoe UI", Ubuntu, sans-serif;
+:root {
+  /* --- Font families --- */
+  --font-family-base: "Overused Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-family-sans: var(--font-family-base);
+  --font-family-code: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-family-pixel: "Departure Mono", var(--font-family-code);
 
-/* --- Font Weight Scale --- */
---font-weight-body: 400;
---font-weight-heading: 500;
---font-weight-semibold: 600;
+  /* --- Font weight scale. Bold (700 and up) is intentionally not a token: headings are medium. --- */
+  --font-weight-body: 400;
+  --font-weight-medium: 500;
+  --font-weight-heading: 500;
+  --font-weight-semibold: 600;
 
-/* --- Font Size Scale (relative to base 16px) --- */
---font-size-xs: 12px;    /* 0.75rem */
---font-size-sm: 14px;    /* 0.875rem */
---font-size-base: 16px;  /* 1rem */
---font-size-lg: 20px;    /* 1.25rem */
---font-size-xl: 24px;    /* 1.5rem */
---font-size-2xl: 30px;   /* 1.875rem */
---font-size-3xl: 36px;   /* 2.25rem */
+  /* --- Font size scale (16px base) --- */
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 20px;
+  --font-size-xl: 24px;
+  --font-size-2xl: 30px;
+  --font-size-3xl: 36px;
 
-/* --- Line Height --- */
---line-height-base: 1.6;
---line-height-heading: 1.1;
+  /* --- Line height --- */
+  --line-height-tight: 1.2;
+  --line-height-heading: 1.1;
+  --line-height-base: 1.6;
+  --line-height-relaxed: 1.75;
 
-/* --- Letter Spacing --- */
---letter-spacing-tight: -.03em;
---letter-spacing-upright: .02em;
---letter-spacing-caps: .06em;
+  /* --- Letter spacing --- */
+  --letter-spacing-tight: -.03em;
+  --letter-spacing-upright: .02em;
+  --letter-spacing-caps: .06em;
 
-/* --- Colours (Light) --- */
---color-bg: #f8fafc;
---color-bg-subtle: #f1f5f9;
---color-ink: #0f172a;
---color-muted: #64748b;
---color-accent: #1e40af;
---color-accent-ink: #fff;
---color-border: #e2e8f0;
---color-ring: #3b82f6;
---color-success: #10b981;
---color-error: #ef4444;
+  /* --- Neutral scale: the same in light and dark. Semantic colours below choose from it. --- */
+  --color-neutral-50: #f7f7f8;
+  --color-neutral-100: #f4f4f5;
+  --color-neutral-200: #e8e8ea;
+  --color-neutral-300: #c9c9cf;
+  --color-neutral-400: #9a9aa2;
+  --color-neutral-500: #6e6e6e;
+  --color-neutral-600: #4a4a4a;
+  --color-neutral-700: #343434;
+  --color-neutral-800: #272727;
+  --color-neutral-900: #1d1d1d;
 
-/* --- Colours (Dark) --- */
-@media (prefers-color-scheme: dark) {
-  --color-bg: #0f172a;
-  --color-bg-subtle: #1e293b;
-  --color-ink: #f8fafc;
-  --color-muted: #94a3b8;
-  --color-accent: #60a5fa;
-  --color-accent-ink: #0f172a;
-  --color-border: #334155;
-  --color-ring: #93c5fd;
+  /* --- Colours (light) --- */
+  --color-bg: #f7f7f8;
+  --color-surface: #fff;
+  --color-bg-subtle: #f4f4f5;
+  --color-ink: #1d1d1d;
+  --color-muted: #6e6e6e;
+  --color-accent: #1062fe;
+  --color-accent-ink: #fff;
+  --color-border: #e8e8ea;
+  --color-border-strong: #c9c9cf;
+  --color-ring: #1062fe;
+
+  /* Semantic: text-safe on --color-bg (see src/styles/tokens.test.ts for the contrast checks) */
+  --color-success: #137a45;
+  --color-warning: #8a5a00;
+  --color-error: #c62828;
+  --color-info: var(--color-accent);
+  --color-semantic-success: var(--color-success);
+  --color-semantic-warning: var(--color-warning);
+  --color-semantic-error: var(--color-error);
+  --color-semantic-info: var(--color-info);
+  --color-success-soft: color-mix(in srgb, var(--color-success) 12%, transparent);
+  --color-warning-soft: color-mix(in srgb, var(--color-warning) 14%, transparent);
+  --color-error-soft: color-mix(in srgb, var(--color-error) 12%, transparent);
+  --color-info-soft: color-mix(in srgb, var(--color-info) 12%, transparent);
+
+  /* Primary and its interactive states */
+  --color-primary: var(--color-accent);
+  --color-primary-hover: color-mix(in srgb, var(--color-accent) 88%, var(--color-ink));
+  --color-primary-active: color-mix(in srgb, var(--color-accent) 76%, var(--color-ink));
+  --color-primary-soft: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  --color-focus-ring: var(--color-ring);
+  --color-disabled-ink: var(--color-neutral-400);
+
+  /* --- Spacing scale (4px base). The number is the step: --space-4 is 16px. --- */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  /* Named steps */
+  --spacing-0: var(--space-0);
+  --spacing-xs: var(--space-1);
+  --spacing-sm: var(--space-2);
+  --spacing-md: var(--space-4);
+  --spacing-lg: var(--space-6);
+  --spacing-xl: var(--space-8);
+  --spacing-xxl: var(--space-16);
+
+  /* --- Border width --- */
+  --border-width-0: 0;
+  --border-width-1: 1px;
+  --border-width-2: 2px;
+  --border-width-3: 3px;
+
+  /* --- Border radius --- */
+  --radius-0: 0;
+  --radius-1: 4px;
+  --radius-2: 8px;
+  --radius-3: 12px;
+  --radius-4: 16px;
+  --radius-5: 20px;
+  --radius-full: 999px;
+  --radius-none: var(--radius-0);
+  --radius-sm: var(--radius-1);
+  --radius-md: var(--radius-2);
+  --radius-lg: var(--radius-3);
+
+  /* --- Shadow scale --- */
+  --shadow-1: 0 1px 2px rgba(20, 20, 30, .05);
+  --shadow-2: 0 1px 3px rgba(20, 20, 30, .1);
+  --shadow-3: 0 4px 6px rgba(20, 20, 30, .1);
+  --shadow-4: 0 10px 20px rgba(20, 20, 30, .1);
+  --shadow-5: 0 25px 50px rgba(20, 20, 30, .25);
+  --shadow-sm: var(--shadow-1);
+  --shadow-md: var(--shadow-3);
+  --shadow-lg: var(--shadow-4);
+
+  /* --- Layering. Matches what the app uses today: the room's bar 30, the sidebar 40, a bottom sheet 50, a toast 60. --- */
+  --z-index-base: 0;
+  --z-index-raised: 5;
+  --z-index-sticky: 20;
+  --z-index-bar: 30;
+  --z-index-nav: 40;
+  --z-index-modal: 50;
+  --z-index-tooltip: 60;
+
+  /* --- Layout sizes --- */
+  --layout-page-max: 1120px;
+  --layout-sidebar: 216px;
+  --layout-sidebar-tablet: 200px;
+  --layout-sidebar-mobile: 260px;
+  --layout-room-panel: 300px;
+  --layout-gutter: 24px;
+  --tap-target: 44px;
+
+  /* --- Motion --- */
+  --ease-default: cubic-bezier(.22, 1, .36, 1);
+  --ease-fast: cubic-bezier(.4, 0, .2, 1);
+  --ease-slow: cubic-bezier(.25, .46, .45, .94);
+  --transition-fast: 150ms;
+  --transition-normal: 250ms;
+  --transition-slow: 350ms;
 }
 
-/* --- Spacing Scale (4px base unit) --- */
---space-0: 0;
---space-1: 4px;   /* 0.25rem */
---space-2: 8px;   /* 0.5rem */
---space-3: 12px;  /* 0.75rem */
---space-4: 16px;  /* 1rem */
---space-5: 20px;  /* 1.25rem */
---space-6: 24px;  /* 1.5rem */
---space-7: 28px;  /* 1.75rem */
---space-8: 32px;  /* 2rem */
---space-12: 48px; /* 3rem */
---space-16: 64px; /* 4rem */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #111213;
+    --color-surface: #1a1b1d;
+    --color-bg-subtle: #202123;
+    --color-ink: #f2f4f7;
+    --color-muted: #8b94a0;
+    --color-accent: #6ea2ff;
+    --color-accent-ink: #111315;
+    --color-border: #2a2b2e;
+    --color-border-strong: #4c4e54;
+    --color-ring: #6ea2ff;
+    --color-success: #4cc38a;
+    --color-warning: #f0b44c;
+    --color-error: #ff7a7a;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .3);
+    --shadow-2: 0 1px 3px rgba(0, 0, 0, .35);
+    --shadow-3: 0 4px 6px rgba(0, 0, 0, .35);
+    --shadow-4: 0 10px 20px rgba(0, 0, 0, .4);
+    --shadow-5: 0 25px 50px rgba(0, 0, 0, .55);
+  }
+}
 
-/* --- Border Radius Scale --- */
---radius-0: 0;
---radius-1: 4px;  /* small inputs, chips */
---radius-2: 8px;  /* default buttons, inputs */
---radius-3: 12px; /* cards, modals */
---radius-4: 16px; /* orb, large cards */
---radius-5: 20px; /* avatars */
---radius-full: 999px; /* pill buttons */
-
-/* --- Shadow Scale --- */
---shadow-1: 0 1px 2px rgba(0, 0, 0, 0.05);
---shadow-2: 0 1px 3px rgba(0, 0, 0, 0.1);
---shadow-3: 0 4px 6px rgba(0, 0, 0, 0.1);
---shadow-4: 0 10px 20px rgba(0, 0, 0, 0.1);
---shadow-5: 0 25px 50px rgba(0, 0, 0, 0.25);
-
-/* --- Motion / Ease --- */
---ease-default: cubic-bezier(.22, 1, .36, 1);
---ease-fast: cubic-bezier(.4, 0, .2, 1);
---ease-slow: cubic-bezier(.25, .46, .45, .94);
-
-/* --- Transition Durations --- */
---transition-fast: 150ms;
---transition-normal: 250ms;
---transition-slow: 350ms;
-
-/* --- Reduced Motion --- */
+/* --- Reduced motion: durations go to zero and animations run once. --- */
 @media (prefers-reduced-motion: reduce) {
-  --transition-normal: 0ms;
-  --transition-fast: 0ms;
-  --transition-slow: 0ms;
+  :root {
+    --transition-fast: 0ms;
+    --transition-normal: 0ms;
+    --transition-slow: 0ms;
+  }
   *,
   *::before,
   *::after {

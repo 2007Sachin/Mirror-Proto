@@ -1,0 +1,7 @@
+/* Loading placeholder shared by every data screen. Tokens only; the pulse stops for people who ask for less motion. */
+.workspace-skeleton { display: grid; gap: 16px; width: 100%; max-width: 760px; padding: 16px; box-sizing: border-box; }
+.workspace-skeleton span { display: block; height: 96px; border-radius: var(--m-radius, 14px); background: var(--m-soft, #f5f5f7); animation: m-skeleton-pulse 1.4s ease-in-out infinite; }
+.workspace-skeleton span:first-child { height: 40px; max-width: 60%; }
+@keyframes m-skeleton-pulse { 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .workspace-skeleton span { animation: none; } }
+.reduce-motion .workspace-skeleton span { animation: none; }

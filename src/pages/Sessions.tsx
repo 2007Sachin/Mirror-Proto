@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import PageSkeleton from '../ui/PageSkeleton'
 import './sessions.css'
 import { api, type InterviewSession, type InterviewSummary } from '../lib/api'
 import { reviewSession, type SessionReview } from '../features/sessions/review'
@@ -87,6 +88,8 @@ export default function Sessions({ openId, refreshKey, onPractise, onSaveStory }
           <button type="button" className="m-btn m-btn--quiet" onClick={() => setTick(t => t + 1)}>Try again</button>
         </div>
       )}
+
+      {rows === null && !listFailed && <PageSkeleton label="Loading your sessions" />}
 
       {rows && rows.length === 0 && !listFailed && (
         <div className="m-card">

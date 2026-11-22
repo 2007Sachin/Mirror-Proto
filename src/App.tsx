@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import PageSkeleton from './ui/PageSkeleton'
 import { api, authApi, ApiError, type Profile, type Reflection } from './lib/api'
 import type { OrbState } from './components/LiveOrb'
 import Landing from './pages/Landing'
@@ -33,7 +34,7 @@ import {
 
 type View = 'home' | 'firstInterview' | 'workspace' | 'targets' | 'practice' | 'interview' | 'reports' | 'report' | 'stories' | 'prep' | 'screen' | 'profile' | 'settings' | 'privacy'
 type Answer = { question: string; answer: string }
-type FlowState = 'not_completed' | 'idle' | 'starting' | 'saving' | 'waiting_nim' | 'generating_reflection' | 'provider_unavailable' | 'retryable_failure' | 'validation_failure'
+type FlowState = 'not_completed' | 'session_lost' | 'idle' | 'starting' | 'saving' | 'waiting_nim' | 'generating_reflection' | 'provider_unavailable' | 'retryable_failure' | 'validation_failure'
 
 function flowLabel(state: FlowState): string | null {
   switch (state) {
@@ -44,6 +45,7 @@ function flowLabel(state: FlowState): string | null {
     case 'provider_unavailable': return 'MIRROR cannot reach the question service right now. Your answers are saved. Try again.'
     case 'retryable_failure': return 'That did not go through. Your answers are saved. Try again when you are ready.'
     case 'validation_failure': return 'Your notes could not be put together from these answers.'
+    case 'session_lost': return 'This interview could not be found on the server, so this answer was not saved. Start a new one from your Briefing.'
     case 'not_completed': return 'This session was not completed, so there are no notes.'
     default: return null
   }
@@ -51,6 +53,7 @@ function flowLabel(state: FlowState): string | null {
 
 function classifyApiError(err: unknown): FlowState {
   if (err instanceof ApiError) {
+    if (err.status === 404) return 'session_lost'
     if (err.code === 'interview_incomplete' || err.code === 'interview_abandoned') return 'not_completed'
     if (err.code.includes('unavailable') || err.status === 503) return 'provider_unavailable'
     if (err.status === 400 && (err.code.startsWith('invalid_') || err.code === 'empty_answer')) return 'validation_failure'
@@ -205,7 +208,7 @@ useEffect(() => {
   const openStories = (question?: string) => { setStoryQuestion(question ?? null); go('stories') }
   const addStory = (theme: string | null) => { setStoryTheme(theme ?? ''); go('stories') }
   // A finished screening call goes to its debrief instead of the plain notes page.
-  const go = (next: View) => {
+  const go = (next: View, replace = false) => {
     const isReportToScreen = next === 'report' && screenRef.current
     setView(isReportToScreen ? 'screen' : next)
     setScreen(c => (next === 'interview' || next === 'report' ? c : null))
@@ -214,7 +217,7 @@ useEffect(() => {
     // Sync view to URL
     const url = viewToUrl(isReportToScreen ? 'screen' : next)
     const newUrl = url ? `/${url}` : '/'
-    window.history.pushState({ mirrorView: isReportToScreen ? 'screen' : next }, '', newUrl)
+    window.history[replace ? 'replaceState' : 'pushState']({ mirrorView: isReportToScreen ? 'screen' : next }, '', newUrl)
     localStorage.setItem('mirror:view-sync', JSON.stringify(view))
   }
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2600) }
@@ -292,7 +295,10 @@ useEffect(() => {
     } catch (err) {
       const state = classifyApiError(err)
       setFlowState(state)
-      if (err instanceof ApiError && err.body && typeof err.body === 'object' && 'saved' in err.body && (err.body as { saved?: boolean }).saved) {
+      if (state === 'session_lost') {
+        sessionStorage.removeItem(SESSION_STORAGE_KEY)
+        notify('That interview could not be found, so your answer was not saved. Start a new one from your Briefing.')
+      } else if (err instanceof ApiError && err.body && typeof err.body === 'object' && 'saved' in err.body && (err.body as { saved?: boolean }).saved) {
         setAnswers(prev => [...prev, { question: currentQuestion, answer: trimmed }])
         setAnswer('')
         notify('Your answer was saved. The next question is still generating.')
@@ -448,7 +454,7 @@ useEffect(() => {
   // The website at / always opens as the website, signed in or not. Its button goes to the workspace (or sign-in).
   // Only "none" shows onboarding.
   useEffect(() => {
-    if (authed && view === 'workspace' && profileStatus === 'none' && !profileFresh.current) go('firstInterview')
+    if (authed && view === 'workspace' && profileStatus === 'none' && !profileFresh.current) go('firstInterview', true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, view, profileStatus])
 
@@ -461,7 +467,7 @@ useEffect(() => {
     const saved = sessionStorage.getItem(SESSION_STORAGE_KEY)
     if (!saved) return
     // Completed, abandoned or missing: forget it and show the normal Overview.
-    const forget = () => { sessionStorage.removeItem(SESSION_STORAGE_KEY); setView('workspace') }
+    const forget = () => sessionStorage.removeItem(SESSION_STORAGE_KEY)
     void api.getInterview(saved)
       .then(session => {
         if (session.status !== 'in_progress') return forget()
@@ -474,10 +480,10 @@ useEffect(() => {
         if (session.currentQuestion) setCurrentQuestion(session.currentQuestion)
         if (session.nextQuestionIndex !== null) setQuestionIndex(session.nextQuestionIndex)
         setOrbState(session.pendingFollowUp ? 'thinking' : 'idle')
-        setView('workspace') // the Overview's Continue panel is the way back in
+        // The view stays where the URL says; the Briefing's Continue panel is the way back in.
       })
       // Only a missing session is forgotten; a network slip keeps the breadcrumb so the open interview is not lost.
-      .catch(err => (err instanceof ApiError && err.status === 404 ? forget() : setView('workspace')))
+      .catch(err => { if (err instanceof ApiError && err.status === 404) forget() })
   }, [authed])
 
   useEffect(() => {
@@ -494,7 +500,7 @@ useEffect(() => {
       .catch(err => setFlowState(classifyApiError(err)))
   }, [view, sessionId])
 
-  if (view === 'home') return <Landing onTry={() => go(profileStatus === 'none' ? 'firstInterview' : profileStatus === 'loading' ? 'workspace' : profileStatus === 'error' ? 'workspace' : profile ? 'workspace' : 'firstInterview')} />
+  if (view === 'home') return <Landing onTry={() => go(profileStatus === 'none' ? 'firstInterview' : 'workspace')} />
 
   if (!authed) {
     const failed = new URLSearchParams(window.location.search).get('auth') === 'failed'
@@ -557,9 +563,9 @@ useEffect(() => {
       : <><span>D</span><div><b>Demo account</b><small>Not saved to an account</small></div></>}</button></div></aside>
     {mobileNav && <button className="nav-scrim" aria-label="Close navigation" onClick={() => setMobileNav(false)} />}
     <main className="workspace-main"><header className="workspace-header"><button className="mobile-menu" onClick={() => setMobileNav(true)}><Menu size={21} /></button><div /><div className="header-actions">{session.status === 'demo' && <span className="demo-badge"><Circle size={7} fill="currentColor" /> DEMO</span>}<AccountMenu email={session.status === 'signedIn' ? session.user.email : null} onSignOut={() => void signOut()} /></div></header>
-      {view === 'workspace' && profileStatus === 'loading' && <div className="workspace-skeleton" role="status" aria-busy="true" aria-label="Loading your workspace"><span /><span /><span /></div>}
+      {view === 'workspace' && (profileStatus === 'loading' || profileStatus === 'none') && <PageSkeleton label="Loading your workspace" />}
       {view === 'workspace' && profileStatus === 'error' && <div className="workspace-error" role="alert"><p>We could not load your profile.</p><button className="m-btn" onClick={() => { setProfileStatus('loading'); loadProfile() }}>Try again</button></div>}
-      {view === 'workspace' && (profileStatus === 'ready' || profileStatus === 'none') && (TODAY_V1
+      {view === 'workspace' && profileStatus === 'ready' && (TODAY_V1
         ? <Overview profile={profile} busy={busy} onStart={(question, speak) => { setVoiceMode(speak); void startInterview(role, question, speak) }} onContinue={resumeInterview} onLetGo={letGo} onScreen={id => void startScreening(id)} onOpenStories={openStories} onReplay={id => { setSessionId(id); go('report') }} onOpenItem={id => { setPracticeItem(id); go('practice') }} />
         : <Today
           busy={busy}

@@ -5,7 +5,8 @@ import FolderCard from '../components/FolderCard'
 import { api, type TargetSummary } from '../lib/api'
 import { AddForm, Mission, type PracticeOpts } from './Targets'
 import { PREP_ROLES, firstSentence, type PrepRole } from '../prep/roles'
-import { isWeak, loadWeakSpots, saveWeakSpots, toggleWeak, weakCount } from '../prep/weakSpots'
+import { isWeak, loadWeakSpots, saveWeakSpots, toggleWeak, weakCount, weakForRole } from '../prep/weakSpots'
+import { buildPlan, isoToday, loadPlanDate, readinessLine, savePlanDate } from '../prep/plan'
 
 // Which questions you have already been asked live is kept in this browser only (cleared on sign-out with every other mirror.* key).
 const KEY = (slug: string) => `mirror.prep.v1.${slug}`
@@ -107,6 +108,37 @@ function Picker({ onPick, onOpenJob }: { onPick: (r: PrepRole) => void; onOpenJo
   )
 }
 
+const dayLabel = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
+
+/** Interview date for this role, kept in this browser only, and what to practise today and over the next days. */
+function PlanCard({ role }: { role: PrepRole }) {
+  const [date, setDate] = useState(() => loadPlanDate(role.slug) ?? '')
+  const today = isoToday()
+  const plan = buildPlan(role.rounds.length, date || null, today)
+  const change = (v: string) => { setDate(v); savePlanDate(role.slug, v || null) }
+  const name = (ri: number | null) => (ri === null ? 'Revisit your weak spots' : `Round ${ri + 1} – ${role.rounds[ri].name}`)
+  return (
+    <section className="prep-plan" aria-label="Your interview plan">
+      <label className="prep-plan-date">Interview date <span>(optional, kept on this device)</span>
+        <input type="date" value={date} min={today} onChange={e => change(e.target.value)} />
+      </label>
+      {plan.status === 'none' && <p className="prep-plan-note">{date ? 'That is not a date we can read. Pick it again.' : 'Add your interview date to get a day-by-day plan.'}</p>}
+      {plan.status === 'past' && <p className="prep-plan-note" role="status">That date has passed. Pick a new one to get a plan.</p>}
+      {plan.status === 'ready' && (
+        <>
+          <p className="prep-plan-today"><strong>Today: {name(plan.days[0].round)}</strong></p>
+          <p className="prep-plan-note" role="status">{plan.daysToGo === 0 ? 'Your interview is today' : `${plan.daysToGo} ${plan.daysToGo === 1 ? 'day' : 'days'} to go`}</p>
+          {plan.days.length > 1 && (
+            <ol className="prep-plan-next" aria-label="Next days">
+              {plan.days.slice(1, 4).map(d => <li key={d.date}><span>{dayLabel(d.date)}</span> {name(d.round)}</li>)}
+            </ol>
+          )}
+        </>
+      )}
+    </section>
+  )
+}
+
 function RoleView({ role, onChange, onStart }: { role: PrepRole; onChange: () => void; onStart: Start }) {
   const [done, setDone] = useState<string[]>(() => load(role.slug))
   // Questions you flagged "needs more work", kept in this browser only.
@@ -129,9 +161,11 @@ function RoleView({ role, onChange, onStart }: { role: PrepRole; onChange: () =>
           <p className="eyebrow">Interview Prep</p>
           <h1>{role.title}</h1>
           <p>{role.rounds.length} rounds. Pick one to start a live mock interview for it.</p>
+          <p className="prep-ready">{readinessLine(role.rounds.filter((_, ri) => count(ri) > 0).length, role.rounds.length, weakForRole(weak, role.slug).length)}</p>
         </div>
         <button type="button" className="m-btn m-btn--quiet" onClick={onChange}>Change role</button>
       </div>
+      <PlanCard role={role} />
       <ul className="prep-grid">
         {role.rounds.map((r, ri) => (
           <li key={r.name}>

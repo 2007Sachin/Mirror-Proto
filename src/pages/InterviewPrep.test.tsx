@@ -68,4 +68,30 @@ describe('Interview Prep room', () => {
     render(<InterviewPrep onStart={vi.fn()} />)
     expect(screen.getByRole('heading', { level: 1, name: 'Digital Marketing' })).toBeTruthy()
   })
+
+  it('shows a plan from the interview date, remembers it per role, and a readiness line without a score', () => {
+    const d = new Date(); d.setDate(d.getDate() + 10)
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    render(<InterviewPrep onStart={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /Product Manager/ }))
+    expect(screen.getByText(/Add your interview date/)).toBeTruthy()
+    expect(screen.getByText('Rounds practiced 0 of 5 · Revisit items 0')).toBeTruthy()
+    fireEvent.change(screen.getByLabelText(/Interview date/), { target: { value: iso } })
+    expect(screen.getByText(/^Today: Round 1 – /)).toBeTruthy()
+    expect(screen.getByText('10 days to go')).toBeTruthy()
+    expect(screen.getByRole('list', { name: 'Next days' }).children).toHaveLength(3)
+    expect(localStorage.getItem('mirror.prep.v1.plan.product-manager')).toBe(iso)
+    fireEvent.click(screen.getAllByRole('button', { name: 'Start interview' })[0])
+    cleanup()
+    render(<InterviewPrep onStart={vi.fn()} />)
+    expect((screen.getByLabelText(/Interview date/) as HTMLInputElement).value).toBe(iso)
+    expect(screen.getByText('Rounds practiced 1 of 5 · Revisit items 0')).toBeTruthy()
+  })
+
+  it('says so when the saved date has passed', () => {
+    localStorage.setItem('mirror.prep.v1.plan.product-manager', '2020-01-01')
+    render(<InterviewPrep onStart={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /Product Manager/ }))
+    expect(screen.getByText(/That date has passed/)).toBeTruthy()
+  })
 })

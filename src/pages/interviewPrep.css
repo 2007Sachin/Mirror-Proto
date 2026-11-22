@@ -20,3 +20,6 @@
 .prep-plan-date input { min-height: 44px; max-width: 100%; font: inherit; }
 .prep-plan-next { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: var(--m-text-body); }
 .prep-plan-next span { color: var(--muted); margin-right: 8px; }
+/* Each question is its own block: the text, then the "Needs more work" toggle on its own row as a 44px tap target. */
+.prep-list li { display: grid; gap: 4px; justify-items: start; }
+.prep-flag { justify-content: center; min-width: 44px; }

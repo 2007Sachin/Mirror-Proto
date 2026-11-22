@@ -5,6 +5,7 @@ import FolderCard from '../components/FolderCard'
 import { api, type TargetSummary } from '../lib/api'
 import { AddForm, Mission, type PracticeOpts } from './Targets'
 import { PREP_ROLES, firstSentence, type PrepRole } from '../prep/roles'
+import { isWeak, loadWeakSpots, saveWeakSpots, toggleWeak, weakCount } from '../prep/weakSpots'
 
 // Which questions you have already been asked live is kept in this browser only (cleared on sign-out with every other mirror.* key).
 const KEY = (slug: string) => `mirror.prep.v1.${slug}`
@@ -108,6 +109,9 @@ function Picker({ onPick, onOpenJob }: { onPick: (r: PrepRole) => void; onOpenJo
 
 function RoleView({ role, onChange, onStart }: { role: PrepRole; onChange: () => void; onStart: Start }) {
   const [done, setDone] = useState<string[]>(() => load(role.slug))
+  // Questions you flagged "needs more work", kept in this browser only.
+  const [weak, setWeak] = useState(loadWeakSpots)
+  const flag = (ri: number, qi: number) => setWeak(w => { const n = toggleWeak(w, { role: role.slug, round: ri, question: qi }); saveWeakSpots(n); return n })
   const count = (ri: number) => done.filter(d => d.startsWith(`${ri}-`)).length
   const begin = (ri: number, speak: boolean) => {
     const round = role.rounds[ri]
@@ -134,7 +138,7 @@ function RoleView({ role, onChange, onStart }: { role: PrepRole; onChange: () =>
             <FolderCard
               tint={ri} label={role.title} title={r.name} name={r.name} headingId={`prep-r${ri}`} pill={`Round ${ri + 1}`}
               summary={firstSentence(r.tests)}
-              lines={['A live interviewer, spoken or typed', `${r.questions.length} questions, a fresh one each time`, count(ri) ? `${count(ri)} asked so far` : 'Not started yet']}
+              lines={['A live interviewer, spoken or typed', `${r.questions.length} questions, a fresh one each time`, count(ri) ? `${count(ri)} asked so far` : 'Not started yet', ...(weakCount(weak, role.slug, ri) ? [`Revisit these: ${weakCount(weak, role.slug, ri)}`] : [])]}
               footer={
                 <>
                   <button type="button" className="prep-go" onClick={() => begin(ri, true)}>Start interview <ArrowRight size={18} aria-hidden="true" /></button>
@@ -144,7 +148,10 @@ function RoleView({ role, onChange, onStart }: { role: PrepRole; onChange: () =>
             >
               <details className="prep-list">
                 <summary>See the questions</summary>
-                <ol>{r.questions.map(q => <li key={q}>{q}</li>)}</ol>
+                <ol>{r.questions.map((q, qi) => {
+                  const on = isWeak(weak, { role: role.slug, round: ri, question: qi })
+                  return <li key={q}>{q} <button type="button" className="prep-alt" aria-pressed={on} onClick={() => flag(ri, qi)}>{on ? 'Needs more work ✓' : 'Needs more work'}</button></li>
+                })}</ol>
               </details>
             </FolderCard>
           </li>

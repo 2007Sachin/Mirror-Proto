@@ -1,4 +1,5 @@
 import { Component, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import PageSkeleton from '../ui/PageSkeleton'
 import '../landing.css'
 import './practice.css'
 import { api } from '../lib/api'
@@ -107,7 +108,8 @@ export default function Practice({ initialItemId = null, onInitialConsumed, onCh
           </p>
         )}
 
-        {!mod && (
+        {!mod && !summary && !summaryFailed && <PageSkeleton label="Loading your practice" />}
+        {!mod && (summary || summaryFailed) && (
           <ul className="pr-tracks">
             {tracks.map(t => {
               const solved = t.items.filter(i => solvedIn(stats, i.id)).length

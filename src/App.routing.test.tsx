@@ -24,6 +24,7 @@ beforeEach(() => {
   window.matchMedia = (q: string) => ({ matches: false, media: q, addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {}, dispatchEvent: () => false, onchange: null }) as MediaQueryList
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     if (String(url).endsWith('/profile')) { calls.profile++; return profileReply() }
+    if (String(url).endsWith('/interviews/open-1')) return json({ id: 'open-1', status: 'in_progress', kind: 'interview', role: 'Data Analyst', turns: [], currentQuestion: 'Tell me.', nextQuestionIndex: 0, pendingFollowUp: false })
     return json({ error: 'not found' }, 404)
   }))
   vi.stubGlobal('IntersectionObserver', class { observe() {} unobserve() {} disconnect() {} takeRecords() { return [] } })
@@ -141,5 +142,28 @@ describe('profile states', () => {
     await waitFor(() => expect(calls.profile).toBe(2))
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
     expect(container.querySelector('.workspace-skeleton')).toBeNull()
+  })
+})
+
+describe('smooth loading', () => {
+  it('keeps the page the URL names when an unfinished interview is restored', async () => {
+    session.current = signedIn
+    sessionStorage.setItem('mirror.phase1.sessionId', 'open-1')
+    window.history.replaceState(null, '', '/reports')
+    const { container } = render(<App />)
+    await waitFor(() => expect(active(container)).toBe('Sessions'))
+    await act(async () => { await new Promise(r => setTimeout(r, 50)) })
+    expect(active(container)).toBe('Sessions')
+    expect(window.location.pathname).toBe('/reports')
+    sessionStorage.clear()
+  })
+
+  it('shows a skeleton frame, not "One moment", while the session is checked', () => {
+    session.current = { ...base, status: 'loading' }
+    window.history.replaceState(null, '', '/workspace')
+    const { container } = render(<App />)
+    expect(screen.queryByText(/One moment/)).toBeNull()
+    expect(container.querySelector('.workspace-app .workspace-skeleton')).not.toBeNull()
+    expect(screen.getByRole('status', { name: 'Loading' }).getAttribute('aria-busy')).toBe('true')
   })
 })

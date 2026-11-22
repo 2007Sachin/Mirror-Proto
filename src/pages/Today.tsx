@@ -39,7 +39,7 @@ function TodayBody({ busy, refresh, ...cb }: TodayProps & { refresh: () => void 
   return (
     <div className="today">
       <div className="today-page">
-        <Header model={model} now={now} />
+        <Header model={model} now={now} loading={status.hero === 'loading'} />
         <div className="today-stack">
           {status.hero === 'loading' ? <HeroLoading /> : <Hero model={model} busy={busy} run={run} />}
 

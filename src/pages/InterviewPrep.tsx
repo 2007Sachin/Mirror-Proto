@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import PageSkeleton from '../ui/PageSkeleton'
 import { ArrowRight } from 'lucide-react'
 import './interviewPrep.css'
 import FolderCard from '../components/FolderCard'
@@ -82,6 +83,7 @@ function Jobs({ onOpen }: { onOpen: (id: string) => void }) {
         <li>
           <FolderCard tint={0} label="Your job" title="Bring a job" name="Bring your own job" pill="New" lines={['Paste the job description', 'Your résumé is matched to it', 'Get rounds to practise']} onOpen={() => onOpen('new')} action="Start" />
         </li>
+        {items === null && <li><PageSkeleton label="Loading your jobs" rows={2} /></li>}
         {items?.map((t, i) => (
           <li key={t.id}>
             <FolderCard tint={i + 1} label={t.company} title={t.role} name={t.company} pill={t.status === 'ready' ? 'Understood' : 'Reading the role'} summary={t.role} onOpen={() => onOpen(t.id)} />

@@ -32,12 +32,13 @@ export function SectionError({ id, title, what, nested = false }: { id: string; 
     : <section className="m-card today-card" aria-labelledby={id}>{body}</section>
 }
 
-export function Header({ model, now }: { model: TodayModel; now: Date }) {
+/** While the data is unknown, the greeting and status stay blank: both depend on whether this is a new person. */
+export function Header({ model, now, loading = false }: { model: TodayModel; now: Date; loading?: boolean }) {
   return (
     <header className="today-head">
       <p className="m-kicker">Briefing · {fmt(now, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-      <h1>{model.greeting}</h1>
-      <p className="today-status">{model.status}</p>
+      {loading ? <h1 className="today-sr">Briefing</h1> : <h1>{model.greeting}</h1>}
+      {!loading && <p className="today-status">{model.status}</p>}
     </header>
   )
 }
@@ -66,7 +67,7 @@ export function Hero({ model, busy, run }: { model: TodayModel; busy: boolean; r
         {h.secondary && <button type="button" className="m-btn m-btn--quiet" onClick={() => run(h.secondary!.action)}>{h.secondary.label}</button>}
       </div>
       {model.alternates.length > 0 && (
-        <p className="today-also"><span>Or instead:</span>{model.alternates.map(a => <LinkBtn key={a.label} link={a} run={run} />)}</p>
+        <p className="today-also"><span>Or instead:</span>{model.alternates.map((a, i) => <LinkBtn key={`${i}-${a.label}`} link={a} run={run} />)}</p>
       )}
     </section>
   )

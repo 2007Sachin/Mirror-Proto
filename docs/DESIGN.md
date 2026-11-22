@@ -204,6 +204,33 @@ Items in the original foundation checklist that conflict with the product's rule
 - Editors have no syntax highlighting, line numbers or current-line marker.
 - Foundation tokens are used by only a handful of rules. Most pages still read the page tokens (`--m-*`, `--p-*`), so a change here does not restyle them yet.
 
+## Target spec from the story-system build prompt
+
+Values the product owner asked to have written down. They are a **target**, not what the app does today. Where a value differs from the sections above, the sections above describe the app and this table describes the wish. Nothing here has been applied to the tokens.
+
+| Area | Target | Today |
+|---|---|---|
+| Primary colour | `#1a1a2e` (deep navy) | `#1062fe` blue (`--color-accent`) |
+| Neutral | `#f0f0f0` (light grey) | `#f7f7f8` page, `#f4f4f5` fills |
+| Semantic | green success, red error, orange warning | green, red and amber, tuned for text contrast |
+| Body and code fonts | System fonts for body, IBM Plex Mono for code | Overused Grotesk then system for body, IBM Plex Mono for code |
+| Breakpoints | 390 mobile, 768 tablet, 1440 desktop | Ten page-specific widths (see section 2) |
+| Grid | 12 columns, 16px gutter | No column grid; CSS grid per page, 24px gutter |
+| Sidebar | 240px collapsed, 300px expanded | 216px fixed, off-canvas at 780px and below, no collapsed mode |
+| Buttons | Primary, secondary, ghost, disabled | `.m-btn` filled and `--quiet`, disabled at 50% opacity |
+| Inputs | Focus ring, error state, disabled | Focus ring and disabled; errors as one inline message per form |
+| Cards | Elevation, hover, selected | Hairline cards; folder cards lift on hover and show `aria-current` when selected |
+| Code blocks | Monospace with line numbers | Monospace; line numbers not built |
+| Progress | Percentage bar and completion states | Not used for interview answers (no percentages). Used only in the story completion preview below |
+| Assessments | "Verified-evidence" visual language | Not adopted: "evidence" is a banned word in learner-facing text, and interview answers are not assessed |
+
+### Story system additions (branch `feat/story-bank-gaps`)
+All additive in `src/stories/`; existing calls and tests behave as before.
+- **`themes.ts`:** `themeConfidence(text)` ranks themes with an internal 0 to 1 confidence; `detectThemes(answer)` returns the primary theme, the others, and whether the primary shows up in the setup or the ending. `themesFor` still returns plain theme ids.
+- **`bank.ts`:** `computeRoleRelevance(roles, skills)` ranks themes for a role (a skill counts double a role). `themeMap(stories, profile?)` orders its lists by that ranking. `themeHint(title, needs, roleTag?)` adds the role. `rolesNeedStories(profile, stories)` returns the missing themes most relevant first. `getNextPracticeThemes(profile, stories)` returns up to three `[theme id, reason]` pairs.
+- **`suggest.ts`:** `UserProgress` (completed, open, explored themes, stories per theme). `getSuggestions(progress, stories)` ranks saved stories by gap-filling, then relevance, then recency, then how much of the STAR is filled, each with a `gapAnalysis` line. `suggestStories(question, stories, progress?)` uses the same ordering when progress is given.
+- **`SaveStoryButton.tsx`:** before saving it shows how much of the STAR is filled in ("Complete ✓", or a bar and a percentage) and a **Fill gaps** button that names the missing parts inline ("Add Task and Result for a complete story."). `showCompletion` turns it off. Nothing renders this button yet; the percentage text would need a copy-scan allowance on any page that does.
+
 ## Checking a change
 1. `npm test`: `tokens.test.ts` (every token defined, nothing outside a rule, contrast) and `system.test.ts` (no raw font sizes on redesigned pages).
 2. `npm run build`.

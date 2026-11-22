@@ -35,13 +35,15 @@ function TodayBody({ busy, refresh, ...cb }: TodayProps & { refresh: () => void 
     }
   }
 
+  // The greeting depends on the hero, the week and the replays; hold all of it back until every one has settled, so the copy appears once.
+  const settling = status.hero === 'loading' || status.since === 'loading' || status.replays === 'loading'
   const rowCount = (model.replays || status.replays !== 'ready' ? 1 : 0) + (model.stories || status.stories !== 'ready' ? 1 : 0)
   return (
     <div className="today">
       <div className="today-page">
-        <Header model={model} now={now} loading={status.hero === 'loading'} />
+        <Header model={model} now={now} loading={settling} />
         <div className="today-stack">
-          {status.hero === 'loading' ? <HeroLoading /> : <Hero model={model} busy={busy} run={run} />}
+          {settling ? <HeroLoading /> : <Hero model={model} busy={busy} run={run} />}
 
           {status.comingUp === 'loading' ? <Skeleton id="today-up-h" title="Coming up" line="Checking your dates…" />
             : status.comingUp === 'error' ? <SectionError id="today-up-h" title="Coming up" what="your dates" />
@@ -63,7 +65,7 @@ function TodayBody({ busy, refresh, ...cb }: TodayProps & { refresh: () => void 
             </section>
           )}
 
-          {model.setup && status.hero === 'ready' && <SetupCard s={model.setup} run={run} />}
+          {model.setup && !settling && <SetupCard s={model.setup} run={run} />}
         </div>
         <Footer />
       </div>

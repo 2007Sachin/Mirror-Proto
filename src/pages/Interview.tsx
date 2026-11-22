@@ -65,6 +65,10 @@ export type InterviewProps = {
   flowText: string | null
   /** The last request failed in a way "Try again" can fix. */
   canRetry: boolean
+  /** The server no longer has this interview; offers a way to begin a new one. */
+  onStartNew?: () => void
+  /** The interview was started in typing mode, so the answer box is what the person needs first. */
+  startsTyping?: boolean
   /** The next question is still being made. */
   waiting: boolean
   busy: boolean
@@ -89,7 +93,7 @@ export default function Interview(p: InterviewProps) {
   const { voice, answer, setAnswer } = p
   const sc = p.screen
   const [confirming, setConfirming] = useState(false)
-  const [panel, setPanel] = useState(() => matches(DESKTOP))
+  const [panel, setPanel] = useState(() => matches(DESKTOP) || Boolean(p.startsTyping))
   const [desktop, setDesktop] = useState(() => matches(DESKTOP))
   const [tab, setTab] = useState<'chat' | 'tips' | 'replay'>('chat')
   const [captions, setCaptions] = useState(true)
@@ -162,11 +166,21 @@ export default function Interview(p: InterviewProps) {
     el.style.height = `${el.scrollHeight}px`
   }, [answer, speaking, panel])
 
-  // Moving to typing puts the cursor in the box.
+  // An interview that starts in typing mode opens the panel (shut on a phone) and focuses the box as soon as it can take focus.
+  const focusWhenReady = useRef(Boolean(p.startsTyping))
   useEffect(() => {
-    if (lastMode.current === true && !speaking && panel) area.current?.focus()
+    const el = area.current
+    if (focusWhenReady.current && el && !el.disabled) { el.focus(); focusWhenReady.current = false }
+  })
+
+  // Moving to typing opens the panel if it is closed (the box lives in it, and on a phone it starts shut) and puts the cursor in the box.
+  useEffect(() => {
+    const toTyping = lastMode.current === true && !speaking
     lastMode.current = speaking
-  }, [speaking, panel])
+    if (!toTyping) return
+    setPanel(true)
+    window.setTimeout(() => area.current?.focus(), 0)
+  }, [speaking])
 
   const change = (value: string) => { setAnswer(value); writeDraft(key, value) }
 
@@ -284,7 +298,7 @@ export default function Interview(p: InterviewProps) {
 
   const errorText = voice.error?.message ?? null
   const micBlocked = Boolean(errorText && /permission|microphone|denied|not allowed/i.test(errorText))
-  const statusText = (micBlocked ? null : errorText) ?? p.flowText
+  const statusText = p.onStartNew ? p.flowText : (micBlocked ? null : errorText) ?? p.flowText
   const link = voice.error ? (voice.error.recoverable ? 'Reconnecting' : 'Connection lost') : voice.active ? 'Connected' : speaking ? 'Connecting' : 'Typing'
 
   const cov = coverage(speaking ? spoken : answer)
@@ -395,6 +409,7 @@ export default function Interview(p: InterviewProps) {
           <div className="iv-status" role="status">
             {statusText && <p>{statusText}</p>}
             {voice.nudgeText && <p className="iv-nudge" aria-live="polite">{voice.nudgeText}</p>}
+            {p.onStartNew && !(panel && !desktop) && <button type="button" className="ml-btn ml-btn--sm" onClick={p.onStartNew}>Start a new interview</button>}
             {p.canRetry && <button type="button" className="ml-btn ml-btn--sm" onClick={p.onRetry} disabled={p.busy}>Try again</button>}
           </div>
         </main>
@@ -518,7 +533,9 @@ export default function Interview(p: InterviewProps) {
               </>
             )}
             <div className="iv-actions">
+              {p.onStartNew && p.flowText && <p className="iv-lost" role="alert">{p.flowText}</p>}
               {sendButton}
+              {p.onStartNew && <button type="button" className="ml-btn ml-btn--sm" onClick={p.onStartNew}>Start a new interview</button>}
               {!sc && <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={p.onContinueLater}>Continue later</button>}
               <button type="button" className="ml-btn ml-btn--quiet ml-btn--sm" onClick={endFromSheet}><Square size={14} aria-hidden="true" />{sc ? 'End the call' : 'End session'}</button>
             </div>

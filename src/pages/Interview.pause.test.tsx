@@ -89,3 +89,39 @@ describe('Interview room: pause', () => {
     expect(scanHtml('Interview paused', container.innerHTML)).toEqual([])
   })
 })
+
+describe('Interview room: typing and a lost session', () => {
+  it('opens the panel with the answer box when you switch to typing on a narrow screen', () => {
+    const { rerender } = render(<Interview {...props()} />)
+    expect(screen.queryByLabelText('Your answer')).toBeNull()
+    rerender(<Interview {...props({ voice: makeVoice({ active: false, voiceState: 'idle' }) })} />)
+    expect(screen.getByLabelText('Your answer')).toBeTruthy()
+  })
+  it('offers a way to start a new interview when the session is gone', () => {
+    const onStartNew = vi.fn()
+    render(<Interview {...props({ flowText: 'This interview could not be found.', onStartNew })} />)
+    // Status line when no sheet covers it; the sheet carries its own copy on a phone.
+    expect(screen.getAllByRole('button', { name: 'Start a new interview' })).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Start a new interview' }))
+    expect(onStartNew).toHaveBeenCalled()
+  })
+})
+
+describe('Interview room: starting in typing mode', () => {
+  const typing = () => props({ startsTyping: true, voice: makeVoice({ active: false, voiceState: 'idle' }) })
+  it('opens the panel and focuses the answer box on first render', () => {
+    render(<Interview {...typing()} />)
+    act(() => { vi.advanceTimersByTime(10) })
+    const box = screen.getByLabelText('Your answer')
+    expect(document.activeElement).toBe(box)
+  })
+  it('does not open the panel for an interview that starts by voice', () => {
+    render(<Interview {...props()} />)
+    expect(screen.queryByLabelText('Your answer')).toBeNull()
+  })
+  it('shows the session-lost message next to the button inside the panel and keeps it', () => {
+    render(<Interview {...props({ ...typing(), flowText: 'This interview could not be found.', onStartNew: vi.fn() })} />)
+    act(() => { vi.advanceTimersByTime(10000) })
+    expect(screen.getAllByRole('alert').some(a => /could not be found/.test(a.textContent ?? ''))).toBe(true)
+  })
+})

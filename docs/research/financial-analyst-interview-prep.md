@@ -1,7 +1,7 @@
 # Financial Analyst Interview Prep (Indian Startups)
 
 ## Overview
-Financial Analyst hiring at seed-to-growth stage Indian startups (think Razorpay, CRED, Zerodha, and peers) differs from traditional corporate finance hiring because the role is a generalist hybrid of FP&A, controllership, and strategy, run by a lean 3-10 person finance team with no room for narrow specialists. Interviews weight driver-based modeling under uncertainty, cash burn and runway discipline, and startup-specific unit economics (take rate, CAC/LTV, NPA, GMV vs net revenue) far more heavily than textbook DCF or ratio analysis. Candidates are expected to be Excel-fluent builders who can go from messy, limited-history data to a board-ready number within hours, and to communicate that number convincingly to non-finance founders and product leaders.
+Financial Analyst hiring at Indian startups, especially in fintech and consumer internet (companies such as Razorpay, CRED and Zerodha are typical examples, and stages vary widely), differs from traditional corporate finance hiring because the role is often a generalist hybrid of FP&A, controllership, and strategy, usually in a small finance team with limited room for narrow specialists. Interviews weight driver-based modeling under uncertainty, cash burn and runway discipline, and startup-specific unit economics (take rate, CAC/LTV, NPA, GMV vs net revenue) far more heavily than textbook DCF or ratio analysis. Candidates are expected to be Excel-fluent builders who can go from messy, limited-history data to a board-ready number within hours, and to communicate that number convincingly to non-finance founders and product leaders.
 
 ## Interview Rounds
 

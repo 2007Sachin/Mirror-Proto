@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import PageSkeleton from './ui/PageSkeleton'
 import { api, authApi, ApiError, type Profile, type Reflection } from './lib/api'
 import type { OrbState } from './components/LiveOrb'
@@ -24,6 +24,8 @@ import AccountMenu from './features/auth/AccountMenu'
 import { useScreenClock } from './features/screen/countdown'
 import { ScreenDebriefPage } from './features/screen/ScreenDebrief'
 import { createScreen } from './lib/screenApi'
+import { matchSite, SITE_HOME_LIVE } from './site/router'
+import { SiteProvider } from './site/SiteContext'
 import {
   BookMarked, BookOpen, ClipboardList,
   Circle, Home as HomeIcon,
@@ -78,6 +80,7 @@ const URL_VIEWS: Record<string, View> = {
 function viewFromPath(pathname: string): View {
   const key = pathname.replace(/^\/+|\/+$/g, '')
   if (key in URL_VIEWS) return URL_VIEWS[key]
+  if (matchSite(pathname)) return 'home' // a marketing page (src/site); App renders it before any view logic
   return key ? 'workspace' : 'home'
 }
 
@@ -469,6 +472,21 @@ useEffect(() => {
     document.title = 'MIRROR — Practise for the job you want'
   }, [])
 
+  // Marketing site (src/site): rendered before the normal view logic. Re-render when SiteLink or back/forward changes the path.
+  const [, setPathTick] = useState(0)
+  useEffect(() => {
+    const on = () => setPathTick(n => n + 1)
+    window.addEventListener('popstate', on)
+    return () => window.removeEventListener('popstate', on)
+  }, [])
+  const sitePath = window.location.pathname
+  const siteRoute = matchSite(sitePath)
+  const isAuthRoute = siteRoute?.id === 'login' || siteRoute?.id === 'signup'
+  useEffect(() => {
+    if (authed && isAuthRoute) go('workspace', true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, isAuthRoute])
+
   useEffect(() => {
     if (!authed) return
     const saved = sessionStorage.getItem(SESSION_STORAGE_KEY)
@@ -506,6 +524,22 @@ useEffect(() => {
       })
       .catch(err => setFlowState(classifyApiError(err)))
   }, [view, sessionId])
+
+  if (isAuthRoute) {
+    if (authed) return null // the effect above is sending them to the workspace
+    return <AuthGate session={session} notice={null} onBack={() => go('home')}><></></AuthGate>
+  }
+  // `/` keeps the existing Landing until SITE_HOME_LIVE is flipped (src/site/router.tsx); signed-in visitors always keep it.
+  if (siteRoute?.Component && !(siteRoute.id === 'home' && (authed || !SITE_HOME_LIVE))) {
+    const Page = siteRoute.Component
+    return (
+      <SiteProvider value={{ onTry: () => go(profileStatus === 'none' ? 'firstInterview' : 'workspace') }}>
+        <Suspense fallback={<div role="status" aria-label="Loading the page" style={{ minHeight: '100vh' }} />}>
+          <Page key={sitePath} params={siteRoute.params} />
+        </Suspense>
+      </SiteProvider>
+    )
+  }
 
   if (view === 'home') return <Landing onTry={() => go(profileStatus === 'none' ? 'firstInterview' : 'workspace')} />
 

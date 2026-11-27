@@ -31,7 +31,7 @@ describe('marketing site inside the app', () => {
     render(<App />)
     await screen.findByRole('heading', { level: 1, name: 'Pricing' })
     fireEvent.click(screen.getAllByRole('link', { name: 'Glossary' }).at(-1)!)
-    expect(await screen.findByRole('heading', { level: 1, name: 'Glossary' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Practice glossary' })).toBeTruthy()
     expect(window.location.pathname).toBe('/glossary')
     window.history.back()
     expect(await screen.findByRole('heading', { level: 1, name: 'Pricing' })).toBeTruthy()

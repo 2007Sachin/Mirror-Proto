@@ -37,7 +37,7 @@ describe('marketing site inside the app', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Pricing' })).toBeTruthy()
   })
 
-  it('shows the sign-in gate at /login and keeps the existing landing at /', async () => {
+  it('shows the sign-in gate at /login and the new home at /', async () => {
     window.history.replaceState(null, '', '/login')
     const view = render(<App />)
     expect(view.container.querySelector('.ms')).toBeNull()
@@ -45,7 +45,7 @@ describe('marketing site inside the app', () => {
     view.unmount()
     window.history.replaceState(null, '', '/')
     render(<App />)
-    expect((await screen.findAllByText('Request access')).length).toBeGreaterThan(0)
-    expect(document.querySelector('.ms')).toBeNull()
+    expect(await screen.findByRole('heading', { level: 1, name: /Practice your story out loud/ })).toBeTruthy()
+    expect(document.querySelector('.ms')).not.toBeNull()
   })
 })

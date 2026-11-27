@@ -1,0 +1,17 @@
+/* Page styles for /pricing. Scoped under .ms; site.css is untouched. */
+.ms .ms-pr-hero{text-align:center}
+.ms .ms-pr-hero .ms-phero__eyebrow{color:#fff}
+.ms .ms-pr-hero h1{max-width:900px;margin:0 auto}
+.ms .ms-pr-hero .ms-phero__sub{margin:20px auto 28px}
+.ms .ms-pr-hero .ms-toggle{margin:0 auto 32px}
+/* The shared plan badge says "Most chosen"; these are samples, so say so instead. */
+.ms .ms-pr-hero .ms-plan--featured::before{content:none}
+.ms .ms-pr-flag{position:absolute;top:16px;right:16px;font-size:11px;padding:3px 8px;border-radius:6px;background:var(--ms-violet-100);color:var(--ms-violet-600)}
+.ms .ms-pr-note{font-size:12px;color:var(--ms-white-60);margin:0 0 20px}
+.ms .ms-pr-table{overflow-x:auto}
+.ms .ms-pr-tablewrap{max-width:var(--ms-container);margin:0 auto}
+.ms .ms-pr-tablewrap:focus-visible{outline:2px solid var(--ms-violet-400);outline-offset:2px}
+.ms .ms-pr-help{text-align:center}
+.ms .ms-pr-help .ms-btn{margin-top:16px}
+.ms .ms-pr-badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;background:var(--ms-violet-50);color:var(--ms-violet-600);margin-left:8px;vertical-align:middle}
+@media (max-width:767px){.ms .ms-pr-hero{padding-top:104px}}

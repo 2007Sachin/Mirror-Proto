@@ -1,0 +1,12 @@
+/* Page styles for /get-started (split layout, no footer). Scoped under .ms; site.css is untouched. */
+.ms .ms-gs-sample{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.14);color:#fff;margin-left:8px}
+.ms .ms-gs-who{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ms-white-60)}
+.ms .ms-gs-logos{margin-top:32px}
+.ms .ms-gs-done{display:grid;gap:14px;width:min(420px,100%)}
+.ms .ms-gs-done h2{font-size:28px;line-height:1.1;letter-spacing:-.02em;font-weight:400;margin:0}
+.ms .ms-gs-done p{margin:0;color:var(--ms-n-600);line-height:1.5}
+.ms .ms-gs-done__actions{display:flex;flex-wrap:wrap;gap:12px}
+.ms .ms-gs-error{font-size:12px;color:#b3261e}
+.ms .ms-field input[aria-invalid=true]{border-color:#b3261e}
+/* On small screens the dark panel need not fill the viewport. */
+@media (max-width:991px){.ms .ms-split{min-height:0}}

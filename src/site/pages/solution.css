@@ -1,0 +1,11 @@
+/* Page styles for /for/:persona. Scoped under .ms; site.css is untouched. */
+.ms .ms-sp-hero{max-width:var(--ms-container);margin:0 auto}
+.ms .ms-sp-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:40px;align-items:center}
+.ms .ms-sp-beam{position:relative;height:420px;border-radius:var(--ms-r-16);overflow:hidden;background:#fbfaf9}
+/* The beam is a clip-path polygon over the gradient. */
+.ms .ms-sp-beam__light{position:absolute;inset:0;clip-path:polygon(0 0,100% 0,78% 100%,22% 100%)}
+.ms .ms-sp-beam__figure{position:absolute;left:50%;bottom:12px;width:150px;transform:translateX(-50%)}
+.ms .ms-sp-sample{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;background:var(--ms-violet-50);color:var(--ms-violet-600);margin-left:8px;vertical-align:middle}
+.ms .ms-sp-notfound{min-height:60vh;display:grid;place-content:center}
+.ms .ms-sp-actions{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+@media (max-width:991px){.ms .ms-sp-grid{grid-template-columns:1fr}.ms .ms-sp-beam{height:300px}}

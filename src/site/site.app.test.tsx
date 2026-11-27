@@ -21,7 +21,7 @@ describe('marketing site inside the app', () => {
   it('renders a site page at its path without leaving it', async () => {
     window.history.replaceState(null, '', '/pricing')
     render(<App />)
-    expect((await screen.findByRole('heading', { level: 1, name: 'Pricing' })).textContent).toBe('Pricing')
+    expect((await screen.findByRole('heading', { level: 1, name: /choose how often/i })).textContent).toBe('Choose how often you want to practice')
     expect(window.location.pathname).toBe('/pricing')
     expect(document.querySelector('.ms')).not.toBeNull()
   })
@@ -29,12 +29,12 @@ describe('marketing site inside the app', () => {
   it('moves between site pages with SiteLink (pushState + popstate), and back works', async () => {
     window.history.replaceState(null, '', '/pricing')
     render(<App />)
-    await screen.findByRole('heading', { level: 1, name: 'Pricing' })
+    await screen.findByRole('heading', { level: 1, name: /choose how often/i })
     fireEvent.click(screen.getAllByRole('link', { name: 'Glossary' }).at(-1)!)
     expect(await screen.findByRole('heading', { level: 1, name: 'Glossary' })).toBeTruthy()
     expect(window.location.pathname).toBe('/glossary')
     window.history.back()
-    expect(await screen.findByRole('heading', { level: 1, name: 'Pricing' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { level: 1, name: /choose how often/i })).toBeTruthy()
   })
 
   it('shows the sign-in gate at /login and keeps the existing landing at /', async () => {

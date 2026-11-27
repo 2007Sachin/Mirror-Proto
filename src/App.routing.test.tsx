@@ -77,10 +77,10 @@ describe('URL routing', () => {
     expect(window.location.pathname).toBe('/')
   })
 
-  it('shows the landing at / to a signed-out visitor', async () => {
+  it('shows the new marketing home at / to a signed-out visitor', async () => {
     session.current = signedOut
     render(<App />)
-    expect((await screen.findAllByText('Request access')).length).toBeGreaterThan(0)
+    expect((await screen.findByRole('heading', { level: 1 })).textContent).toContain('Practice your story out loud')
     expect(window.location.pathname).toBe('/')
   })
 

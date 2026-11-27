@@ -18,7 +18,7 @@ export interface SiteRoute {
 }
 
 /** Flip to true when pages/Home.tsx is the real home page. Until then `/` keeps showing src/pages/Landing.tsx. */
-export const SITE_HOME_LIVE = false
+export const SITE_HOME_LIVE = true
 
 /** Every marketing route. Existing app routes (/workspace /targets /practice /reports /stories /prep /profile /settings
  *  /privacy /firstInterview) are deliberately absent; customer stories live at /journeys because /stories is the app's. */

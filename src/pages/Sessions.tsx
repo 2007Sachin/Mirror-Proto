@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import PageSkeleton from '../ui/PageSkeleton'
 import './sessions.css'
+import '../styles/app-shell.css'
 import { api, type InterviewSession, type InterviewSummary } from '../lib/api'
 import { reviewSession, type SessionReview } from '../features/sessions/review'
 import FallbackNote from '../components/FallbackNote'
@@ -28,6 +29,9 @@ export default function Sessions({ openId, refreshKey, onPractise, onSaveStory }
   const [notesFailed, setNotesFailed] = useState(false)
   const [busy, setBusy] = useState(false)
   const [tick, setTick] = useState(0)
+  const [closed, setClosed] = useState(false)
+  const opener = useRef<HTMLElement | null>(null)
+  const drawer = useRef<HTMLElement>(null)
 
   const take = useCallback((page: InterviewSummary[], append: boolean) => {
     const done = page.filter(i => i.status === 'completed')
@@ -43,7 +47,9 @@ export default function Sessions({ openId, refreshKey, onPractise, onSaveStory }
     return () => { live = false }
   }, [take, refreshKey, tick])
 
-  const current = selected ?? openId
+  const current = closed ? null : selected ?? openId
+  const close = useCallback(() => { setClosed(true); opener.current?.focus() }, [])
+  useEffect(() => { if (current) drawer.current?.focus() }, [current])
   useEffect(() => {
     if (!current) return
     let live = true
@@ -108,7 +114,7 @@ export default function Sessions({ openId, refreshKey, onPractise, onSaveStory }
                   compact tint={i} label="Session" title={s.role} name={s.role} pill={when(s.createdAt)}
                   summary={s.notes ? s.notes.keepWorkingOn : 'Notes not written yet.'}
                   current={s.id === current}
-                  onOpen={() => { setSelected(s.id); setNotesFailed(false) }}
+                  onOpen={() => { opener.current = document.activeElement as HTMLElement | null; setSelected(s.id); setClosed(false); setNotesFailed(false) }}
                 />
               </li>
             ))}
@@ -116,7 +122,8 @@ export default function Sessions({ openId, refreshKey, onPractise, onSaveStory }
           {more && <button type="button" className="m-link" onClick={() => void api.listInterviews({ limit: PAGE, before: cursor }).then(page => take(page, true)).catch(() => setListFailed(true))}>Show earlier sessions</button>}
 
           {current && (
-            <article className="m-card m-review" aria-live="polite">
+            <aside ref={drawer} tabIndex={-1} className="m-card m-review sess-drawer" role="dialog" aria-modal="false" aria-label="Session review" aria-live="polite" onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); close() } }}>
+              <div className="sess-drawer__bar"><button type="button" className="sess-drawer__close" onClick={close}>Close</button></div>
               {detailFailed && !shown && (
                 <p role="status">Could not open this session. <button type="button" className="m-link" onClick={() => setTick(t => t + 1)}>Try again</button></p>
               )}
@@ -161,7 +168,7 @@ export default function Sessions({ openId, refreshKey, onPractise, onSaveStory }
                   )}
                 </>
               )}
-            </article>
+            </aside>
           )}
         </div>
       )}

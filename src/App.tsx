@@ -21,6 +21,7 @@ import { KEEP_ON_SIGN_OUT, clearBrowserKeys } from './features/privacy/dataTools
 import { useSession } from './features/auth/useSession'
 import AuthGate from './features/auth/AuthGate'
 import AccountMenu from './features/auth/AccountMenu'
+import './styles/app-shell.css'
 import { useScreenClock } from './features/screen/countdown'
 import { ScreenDebriefPage } from './features/screen/ScreenDebrief'
 import { createScreen } from './lib/screenApi'
@@ -29,7 +30,7 @@ import { SiteProvider } from './site/SiteContext'
 import {
   BookMarked, BookOpen, ClipboardList,
   Circle, Home as HomeIcon,
-  Menu, MessageCircle,
+  Menu, MessageCircle, PanelLeftClose, PanelLeftOpen,
   Settings,
   X,
 } from 'lucide-react'
@@ -68,6 +69,13 @@ function classifyApiError(err: unknown): FlowState {
 const TODAY_V1 = import.meta.env.VITE_TODAY_V1 === '1'
 const QUESTION_COUNT = 4
 const SESSION_STORAGE_KEY = 'mirror.phase1.sessionId'
+
+const NAV_KEY = 'mirror.nav.collapsed'
+function useNavCollapsed(): [boolean, () => void] {
+  const [collapsed, set] = useState(() => { try { return localStorage.getItem(NAV_KEY) === '1' } catch { return false } })
+  const toggle = () => set(c => { try { localStorage.setItem(NAV_KEY, c ? '0' : '1') } catch { /* private mode: the choice lasts this visit */ } return !c })
+  return [collapsed, toggle]
+}
 
 function Brand({ onClick }: { onClick: () => void }) {
   return <button className="brand" onClick={onClick} aria-label="MIRROR home"><span className="brand-mark"><i /><i /></span><span>MIRROR</span></button>
@@ -151,6 +159,7 @@ useEffect(() => {
   const [orbState, setOrbState] = useState<OrbState>('idle')
   const [voiceMode, setVoiceMode] = useState(false)
   const [mobileNav, setMobileNav] = useState(false)
+  const [navCollapsed, toggleNav] = useNavCollapsed()
   const [voiceSpeed, setVoiceSpeed] = useState('Natural')
   const [language, setLanguage] = useState('English')
   const [calmMotion, setCalmMotion] = useState(false)
@@ -600,10 +609,10 @@ useEffect(() => {
     { id: 'stories', label: 'Stories', icon: BookMarked },
     { id: 'prep', label: 'Interview Prep', icon: ClipboardList },
   ]
-  return <div className={`app workspace-app ${calmMotion ? 'reduce-motion' : ''}`}><div className="ambient ambient--two" />
-    <aside className={`sidebar ${mobileNav ? 'sidebar--open' : ''}`}><div className="sidebar-top"><Brand onClick={() => go('home')} /><button className="mobile-close" onClick={() => setMobileNav(false)}><X /></button></div><nav>{navItems.map(item => <button key={item.id} className={view === item.id || (view === 'report' && item.id === 'reports') || (view === 'targets' && item.id === 'prep') ? 'active' : ''} onClick={() => { if (item.id === 'prep') setTargetId(null); go(item.id) }}><item.icon size={18} />{item.label}</button>)}</nav><div className="sidebar-bottom"><button onClick={() => go('settings')} className={view === 'settings' ? 'active' : ''}><Settings size={18} />Settings</button><button className="demo-profile" onClick={() => go('profile')}>{session.status === 'signedIn'
-      ? <><span>{(session.user.email ?? '?').charAt(0).toUpperCase()}</span><div><b>{session.user.email ?? 'Your account'}</b><small>Account</small></div></>
-      : <><span>D</span><div><b>Demo account</b><small>Not saved to an account</small></div></>}</button></div></aside>
+  return <div className={`app workspace-app ${calmMotion ? 'reduce-motion' : ''} ${navCollapsed ? 'shell-collapsed' : ''}`}><div className="ambient ambient--two" />
+    <aside id="app-sidebar" className={`sidebar ${mobileNav ? 'sidebar--open' : ''}`}><div className="sidebar-top"><Brand onClick={() => go('home')} /><button type="button" className="shell-collapse" aria-expanded={!navCollapsed} aria-controls="app-sidebar" aria-label={navCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={toggleNav}>{navCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}</button><button className="mobile-close" onClick={() => setMobileNav(false)}><X /></button></div><nav>{navItems.map(item => <button key={item.id} className={view === item.id || (view === 'report' && item.id === 'reports') || (view === 'targets' && item.id === 'prep') ? 'active' : ''} onClick={() => { if (item.id === 'prep') setTargetId(null); go(item.id) }}><item.icon size={18} /><span className="nav-label">{item.label}</span></button>)}</nav><div className="sidebar-bottom"><button onClick={() => go('settings')} className={view === 'settings' ? 'active' : ''}><Settings size={18} /><span className="nav-label">Settings</span></button><button className="demo-profile" onClick={() => go('profile')}>{session.status === 'signedIn'
+      ? <><span>{(session.user.email ?? '?').charAt(0).toUpperCase()}</span><div className="nav-label"><b>{session.user.email ?? 'Your account'}</b><small>Account</small></div></>
+      : <><span>D</span><div className="nav-label"><b>Demo account</b><small>Not saved to an account</small></div></>}</button></div></aside>
     {mobileNav && <button className="nav-scrim" aria-label="Close navigation" onClick={() => setMobileNav(false)} />}
     <main className="workspace-main"><header className="workspace-header"><button className="mobile-menu" onClick={() => setMobileNav(true)}><Menu size={21} /></button><div /><div className="header-actions">{session.status === 'demo' && <span className="demo-badge"><Circle size={7} fill="currentColor" /> DEMO</span>}<AccountMenu email={session.status === 'signedIn' ? session.user.email : null} onSignOut={() => void signOut()} /></div></header>
       {view === 'workspace' && (profileStatus === 'loading' || profileStatus === 'none') && <PageSkeleton label="Loading your workspace" />}

@@ -61,7 +61,7 @@ export default function Product({ params }: SitePageProps) {
     <SiteLayout title={p.navLabel}>
       <section className="ms-phero">
         <div className="ms-phero__eyebrow"><i />{p.eyebrow}</div>
-        <Reveal><h1 className="ms-h1">{p.h1[0]}<br />{p.h1[1]}</h1></Reveal>
+        <Reveal><h1 className="ms-h1">{p.h1[0]}{" "}<br />{p.h1[1]}</h1></Reveal>
         <Reveal><p className="ms-phero__sub">{p.sub}</p></Reveal>
         <Button onClick={onTry}>{p.cta}</Button>
         <div className="ms-phero__rating">{C.ratingSample}</div>
@@ -83,11 +83,11 @@ export default function Product({ params }: SitePageProps) {
         <p>{C.logosNote}</p>
         <Marquee items={C.logos} label={C.logosLabel} />
       </section>
-      <section className="ms-statement"><Reveal><h2 className="ms-h2">{p.statement[0]}<br /><span style={{ color: 'var(--ms-n-300)' }}>{p.statement[1]}</span></h2></Reveal></section>
+      <section className="ms-statement"><Reveal><h2 className="ms-h2">{p.statement[0]}{" "}<br /><span style={{ color: 'var(--ms-n-300)' }}>{p.statement[1]}</span></h2></Reveal></section>
       <Feature f={p.features[0]} gradient={['#f0c0ff', '#ffeed8', '#c8c4ea']} />
       <Feature f={p.features[1]} flip gradient={['#b7efb2', '#ffeed8', '#79e7dc']} />
       <section className="ms-sec">
-        <div className="ms-sec__head"><h2 className="ms-h2-sm">{p.cardsTitle[0]}<br />{p.cardsTitle[1]}</h2><p>{p.cardsSub}</p></div>
+        <div className="ms-sec__head"><h2 className="ms-h2-sm">{p.cardsTitle[0]}{" "}<br />{p.cardsTitle[1]}</h2><p>{p.cardsSub}</p></div>
         <div className="ms-grid3">
           {p.cards.map(c => <Reveal key={c.h} className="ms-fcard"><h4>{c.h}</h4><p>{c.p}</p></Reveal>)}
         </div>

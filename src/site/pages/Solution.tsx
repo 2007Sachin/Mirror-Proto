@@ -32,7 +32,7 @@ export default function Solution({ params }: SitePageProps) {
         <div className="ms-sp-grid">
           <div>
             <div className="ms-phero__eyebrow"><i style={{ ['--ms-c1' as string]: '#ffbd7e', ['--ms-c2' as string]: '#dc93c3' }} />{p.eyebrow}</div>
-            <Reveal><h1 className="ms-h1">{p.h1[0]}<br />{p.h1[1]}</h1></Reveal>
+            <Reveal><h1 className="ms-h1">{p.h1[0]}{" "}<br />{p.h1[1]}</h1></Reveal>
             <Reveal><p className="ms-phero__sub">{p.sub}</p></Reveal>
             <Button onClick={onTry}>{C.cta}</Button>
           </div>
@@ -51,7 +51,7 @@ export default function Solution({ params }: SitePageProps) {
         <Marquee items={C.logos} label={C.logosLabel} />
       </section>
       <section className="ms-sec">
-        <div className="ms-sec__head"><h2 className="ms-h2-sm">{p.momentsTitle[0]}<br />{p.momentsTitle[1]}</h2><p>{p.momentsSub}</p></div>
+        <div className="ms-sec__head"><h2 className="ms-h2-sm">{p.momentsTitle[0]}{" "}<br />{p.momentsTitle[1]}</h2><p>{p.momentsSub}</p></div>
         <div className="ms-grid2">
           {p.moments.map(m => <Reveal key={m.h} className="ms-scard"><h3 id={m.id}>{m.h}</h3><p className="ms-mock__muted">{m.p}</p></Reveal>)}
         </div>

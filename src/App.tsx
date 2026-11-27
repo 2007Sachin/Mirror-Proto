@@ -539,7 +539,7 @@ useEffect(() => {
     return <AuthGate session={session} notice={null} onBack={() => go('home')}><></></AuthGate>
   }
   // `/` keeps the existing Landing until SITE_HOME_LIVE is flipped (src/site/router.tsx); signed-in visitors always keep it.
-  if (siteRoute?.Component && !(siteRoute.id === 'home' && (authed || !SITE_HOME_LIVE))) {
+  if (siteRoute?.Component && !(siteRoute.id === 'home' && !SITE_HOME_LIVE)) {
     const Page = siteRoute.Component
     return (
       <SiteProvider value={{ onTry: () => go(profileStatus === 'none' ? 'firstInterview' : 'workspace') }}>

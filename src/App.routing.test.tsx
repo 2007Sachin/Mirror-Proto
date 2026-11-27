@@ -73,7 +73,7 @@ describe('URL routing', () => {
   it('keeps the website at / for a signed-in user too', async () => {
     session.current = signedIn
     render(<App />)
-    expect((await screen.findAllByText('Request access')).length).toBeGreaterThan(0)
+    expect((await screen.findByRole('heading', { level: 1 })).textContent).toContain('Practice your story out loud')
     expect(window.location.pathname).toBe('/')
   })
 

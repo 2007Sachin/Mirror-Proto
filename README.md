@@ -1,65 +1,71 @@
-# MIRROR — Interview Studio
+# MIRROR Interview Studio
 
-A lighter, Apple-inspired interactive product prototype for reflective interview practice. Built with React 19, TypeScript, Vite, and orb-ui.
+The working product prototype for MIRROR: interview preparation where you practise out loud and on real problems, then get told plainly what landed and what to work on next.
 
-## Open in Antigravity
+> *Walk in knowing what you will say, and having already done the hard parts once.*
 
-1. Extract `MIRROR-Product-Prototype.zip`.
-2. Open the extracted `MIRROR-Product-Prototype` folder as the project root.
-3. Run the commands below in the project terminal.
+## Problem
+
+Candidates for data, analytics and product roles prepare alone and blind. Practice is scattered across coding sites, flashcards and friends; question banks check the answer but not the idea; nothing is tailored to the job they are interviewing for; and motivation fades without visible progress. The full problem framing is in [`docs/MIRROR-PRD.md`](docs/MIRROR-PRD.md).
+
+## Approach
+
+One place to prepare: it learns who you are and the role you are targeting, guides you day by day, and covers spoken answers, technical skills (SQL first) and timed mock rounds.
+
+```mermaid
+flowchart LR
+    O[Onboarding<br/>profile + target role] --> T[Today<br/>daily plan]
+    T --> R[Interview room<br/>spoken or typed]
+    T --> P[Practice hub<br/>SQL journey, quizzes, mock tests]
+    R --> F[Evidence-linked reflection]
+    P --> X[XP, levels, progress]
+    F & X --> T
+```
+
+## What exists today
+
+- Landing page, first-interview onboarding and a daily "Today" home screen.
+- Interview room for spoken or typed answers, with pause, continue-later and end-session handling.
+- Targets for specific jobs and a story bank of the candidate's own examples.
+- SQL practice built as a guided, game-style journey: animated lessons, about 440 write-a-query questions, 68 concept questions and timed mock tests, run in the browser with `sql.js`.
+- Text interviews persist through a Hono API; voice uses Sarvam speech when a key is configured.
+
+**Honest status:** the product runs in a demo workspace without real accounts, and real-microphone voice testing is still pending. Section 14 of the PRD lists what has been checked in a browser and the known gaps.
+
+## Tech stack
+
+React 19, TypeScript, Vite, Tailwind CSS, Radix UI · Hono API on Node (`server/`) · Supabase (auth and data) · NVIDIA NIM (LLM) · Sarvam (speech) · sql.js · Vitest
+
+## Run locally
 
 ```bash
 npm install
-npm run dev           # Vite dev server (port 3000)
-npm run dev:server    # Phase 1 API server (port 8787, memory mode by default)
+cp .env.example .env     # optional: Supabase, NVIDIA NIM, Sarvam
+npm run dev              # web app, port 3000
+npm run dev:server       # API, port 8787 (memory mode by default)
 ```
 
-Create a production build with:
+Without NVIDIA or Supabase credentials the API runs in memory mode with catalogue follow-ups, and reflection generation returns a retryable provider error. Without `SARVAM_API_KEY`, voice is off and the learner types. Every variable is documented in `.env.example`.
 
-```bash
-npm run build
-```
+| Command | What it does |
+| --- | --- |
+| `npm run build` | Type-check and production build |
+| `npm test` | Vitest suite (UI copy, routing, server API) |
+| `npm run typecheck:server` | Server-only TypeScript check |
+| `npm run smoke` | In-process API smoke test |
 
-Backend tests and type checks:
-
-```bash
-npm test                      # server API suite (vitest)
-npm run typecheck:server      # server-only tsc
-npm run smoke                 # in-process API smoke (memory/mocked)
-```
-
-See `.env.example` for Supabase/NVIDIA NIM configuration. The primary text-interview flow calls the Phase 1 API.
-
-## Project structure
+## Repository
 
 ```text
-MIRROR-Product-Prototype/
-├── public/                  # Static public assets
-├── src/
-│   ├── components/ui/       # Reusable interface primitives
-│   ├── hooks/               # Shared React hooks
-│   ├── lib/                 # Utility functions
-│   ├── App.tsx              # Product screens, state, and interactions
-│   ├── index.css            # Complete visual system and responsive styles
-│   └── main.tsx             # Application entry point
-├── index.html               # HTML entry point
-├── package.json             # Dependencies and project commands
-├── package-lock.json        # Reproducible dependency lockfile
-├── vite.config.ts           # Vite configuration
-└── tsconfig*.json           # TypeScript configuration
+src/            Screens (pages/), practice, prep, stories, targets, voice, UI system
+server/         Hono API: auth, routes, domain logic, providers, voice
+supabase/       Database migrations
+docs/           PRD, design system, flows, SQL curriculum, research
+roast-room/     Vendored decision-review tool (MIT, AI Automation Society), used for product critiques
 ```
 
-## Included product flows
+## Product notes
 
-- Landing page and progressive onboarding
-- Workspace overview and story bank
-- Guided four-question interview prototype
-- Evidence-linked reflection report
-- Role history and role-specific preparation reviews
-- Editable candidate profile
-- Prototype settings
-- Responsive desktop and mobile navigation
-
-## Prototype scope
-
-Phase 1 text interviews persist through the Hono API (`npm run dev:server`). Without NVIDIA/Supabase credentials the API runs in memory mode with catalog follow-ups; reflection generation returns a retryable provider error. Voice remains a Phase 2 preview. No authentication.
+- Feedback is tied to the candidate's own words, not a generic score.
+- SQL comes first because it is the most common technical screen for the target roles and the easiest to check automatically.
+- Design and copy principles live in `docs/DESIGN.md` and `docs/DESIGN-PHILOSOPHY.md`.

@@ -1,0 +1,7 @@
+/* Resources hub: filter chips + search above a three-column card grid. */
+.ms .ms-rs-wrap{max-width:var(--ms-container);margin:0 auto;padding:0 var(--ms-gutter) 96px}
+.ms .ms-rs-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px 24px}
+.ms .ms-rs-list>li{display:flex}
+.ms .ms-rs-list .ms-acard{width:100%}
+@media (max-width:991px){.ms .ms-rs-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:479px){.ms .ms-rs-list{grid-template-columns:1fr}}

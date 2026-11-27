@@ -1,0 +1,4 @@
+/* Legal: a clear placeholder banner and the grey article band. */
+.ms .lg-banner{display:inline-block;margin:0 0 16px;padding:10px 14px;border-radius:8px;background:var(--ms-amber-50);box-shadow:0 0 0 1px var(--ms-ink-08);font-size:14px;font-weight:500}
+.ms .lg-band{background:var(--ms-n-25,var(--ms-n-50))}
+@media (max-width:767px){.ms .lg-banner{display:block}}

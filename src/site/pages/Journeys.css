@@ -1,0 +1,10 @@
+/* Journeys index + detail: small additions on top of the shared .ms-scard / .ms-case styles. */
+.ms .ms-jr-sample{align-self:flex-start}
+.ms .ms-jr-notice{max-width:var(--ms-container);margin:0 auto 24px;font-size:14px;color:var(--ms-n-500)}
+.ms .ms-jr-card{color:inherit;text-decoration:none}
+.ms .ms-jr-card:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+.ms .ms-jr-quote{margin:24px 0;padding-left:20px;border-left:3px solid var(--ms-ink-08);font-size:20px;line-height:1.4}
+.ms .ms-jr-hero-eyebrow{margin-bottom:12px}
+@media (max-width:991px){.ms .ms-case-hero__card{grid-template-columns:1fr;min-height:0;padding:28px}.ms .ms-case{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:479px){.ms .ms-case-hero__stats{grid-template-columns:1fr}}
+.ms .ms-kw-sample{display:inline-block;margin-top:12px;font-size:11px;letter-spacing:.04em;text-transform:uppercase;opacity:.6}

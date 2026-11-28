@@ -111,7 +111,7 @@ export const NOT_SCORED = {
 /** The only privacy and scoring sentences that may appear, word for word (docs/PRIVACY-AUDIT.md rows 1, 5, 6, 7 and 9). */
 export const CLAIMS = [
   "MIRROR doesn't keep your audio. The speech service that turns your voice into text hears it live, while you talk.",
-  'Your interview answers, spoken or typed, never get a score. Practice problems with one right answer, such as SQL, are simply marked correct or not.',
+  'After a session you get an evaluation in plain levels, with the lines you said and one thing to try. Your interview answers, spoken or typed, never get a number or a pass or fail. Practice problems with one right answer, such as SQL, are simply marked correct or not.',
   'MIRROR has no sharing feature. Nothing is sent to employers or recruiters, and nobody else signed in to MIRROR can open your practice.',
   'You can delete your practice data and export it. Your sign-in account stays, and backups held by the database provider are outside our control.',
   'Your answers and résumé text go to a language-model service for notes and questions.',

@@ -71,7 +71,7 @@ describe('Landing: wording', () => {
     expect(t).not.toMatch(/%|\bpercent/i)
     expect(t).not.toMatch(/\b\d+\s*(of|\/)\s*\d+\b/)
     expect(t).not.toMatch(/streak|in a row/i)
-    expect(t).not.toMatch(/\b(agentic|evidence|reflect\w*|evaluat\w*)\b/i)
+    expect(t).not.toMatch(/\b(agentic|evidence|reflect\w*)\b/i)
   })
   it('no competitor, testimonial, logo, "joined by" or pricing', () => {
     const { container } = setup()

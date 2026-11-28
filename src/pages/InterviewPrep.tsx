@@ -97,7 +97,7 @@ function Jobs({ onOpen }: { onOpen: (id: string) => void }) {
 function Picker({ onPick, onOpenJob }: { onPick: (r: PrepRole) => void; onOpenJob?: (id: string | null) => void }) {
   return (
     <>
-      <div className="page-title"><div><p className="eyebrow">Interview Prep</p><h1>Pick the role you are preparing for</h1><p>Every round of the loop is a live mock interview. An interviewer asks, listens and follows up. Nothing is graded.</p></div></div>
+      <div className="page-title"><div><p className="eyebrow">Interview Prep</p><h1>Pick the role you are preparing for</h1><p>Every round of the loop is a live mock interview. An interviewer asks, listens and follows up. No numbers and no pass or fail: you get clear levels and the lines behind them.</p></div></div>
       <ul className="prep-grid">
         {PREP_ROLES.map((r, i) => (
           <li key={r.slug}>

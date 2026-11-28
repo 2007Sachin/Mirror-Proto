@@ -167,7 +167,7 @@ Code uses `--font-family-code`. The SQL, Python and case editors are plain text 
 
 ### Assessment feedback
 - **Exercises with one right answer** (SQL, Python, stats): marked correct or not, with a word and a mark. No partial credit.
-- **Interview answers:** never scored. Notes say what worked, what to strengthen and what to say again, quoting the learner's own words.
+- **Interview answers:** evaluated in levels, never numbers. The evaluation rates structure, specificity, ownership and result as "just starting", "clear" or "strong", each with the learner's own words and one thing to try. No scores, percentages, pass or fail, or readiness verdict. Notes still say what worked, what to strengthen and what to say again.
 - Tone: plain and specific. No praise words.
 
 ### Practice workspace

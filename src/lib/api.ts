@@ -24,7 +24,12 @@ export interface EvidenceItem {
   turnId: string
   quote: string
   observation: string
+  /** For an evaluation item: the dimension (structure, specificity, ownership, result). */
   competency: string
+  /** Evaluation items only: how clear the answer was. Words, never a number. */
+  level?: 'starting' | 'clear' | 'strong'
+  /** Evaluation items only: one concrete change, starting with "Try". */
+  fix?: string
 }
 
 export interface Reflection {
@@ -236,6 +241,9 @@ export const api = {
     request<InterviewSession>(`/interviews/${interviewId}/abandon`, { method: 'POST' }),
   reflect: (interviewId: string) =>
     request<Reflection>(`/interviews/${interviewId}/reflect`, { method: 'POST' }),
+  /** Adds the evaluation (levels with the learner's own words) to a session's notes. */
+  evaluate: (interviewId: string) =>
+    request<Reflection>(`/interviews/${interviewId}/evaluate`, { method: 'POST' }),
   getProfile: () => request<Profile>('/profile'),
   deleteProfile: () => request<null>('/profile', { method: 'DELETE' }),
   saveProfile: (profile: Profile) => request<Profile>('/profile', { method: 'PUT', body: JSON.stringify(profile) }),

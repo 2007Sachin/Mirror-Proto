@@ -34,7 +34,12 @@ export interface EvidenceItem {
   turnId: string
   quote: string
   observation: string
+  /** For an evaluation item: the dimension (structure, specificity, ownership, result). */
   competency: string
+  /** Set on evaluation items only: how clear the answer was on that dimension. Words, never a number. */
+  level?: 'starting' | 'clear' | 'strong'
+  /** Set on evaluation items only: one concrete change, starting with "Try". */
+  fix?: string
 }
 
 export interface ReflectionRow {

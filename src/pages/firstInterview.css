@@ -22,7 +22,7 @@
 .ml-fi-note { min-height: 1.5em; margin: 0; font-size: 14px; color: #6a6865; }
 .ml-fi .ml-fi-tile { position: relative; overflow: hidden; margin: 16px 16px 16px 0; border-radius: 16px; display: flex; align-items: flex-end; padding: 36px; background: #ffeed8; }
 .ml-fi-tile-line { position: relative; z-index: 1; margin: 0; max-width: 22ch; font-size: clamp(24px, 2.6vw, 34px); line-height: 1.15; font-weight: 400; letter-spacing: -.035em; color: #111; }
-@media (max-width: 991px) { .ml-fi { grid-template-columns: 1fr; } .ml-fi-tile { display: none; } }
+@media (max-width: 991px) { .ml-fi { grid-template-columns: 1fr; } .ml-fi .ml-fi-tile { display: none; } }
 @media (prefers-reduced-motion: reduce) { .ml-fi-btn, .ml-fi-composer { transition: none; } }
 @media (prefers-color-scheme: dark) {
   .ml-fi { background: #111; color: #f6f5f3; }

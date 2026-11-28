@@ -1,0 +1,10 @@
+/* Page styles for /product. Scoped under .ms; site.css is shared and untouched. */
+.ms .ms-pp-sample{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;background:var(--ms-violet-50);color:var(--ms-violet-600);margin-left:8px;vertical-align:middle}
+.ms .ms-pp-dot{width:8px;height:8px;border-radius:50%;background:var(--d);flex:none}
+.ms .ms-pp-actions{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.ms .ms-pp-notfound{min-height:60vh;display:grid;place-content:center}
+.ms .ms-pp-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;max-width:var(--ms-container);margin:0 auto}
+.ms .ms-pp-mockwide{width:min(560px,86%)}
+.ms .ms-pp-sub{max-width:620px;margin:0 auto 32px}
+@media (max-width:991px){.ms .ms-pp-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:479px){.ms .ms-pp-stats{grid-template-columns:1fr}}

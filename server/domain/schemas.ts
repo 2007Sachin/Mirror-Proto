@@ -5,6 +5,8 @@ export const createInterviewSchema = z.object({
   industry: z.string().trim().max(120).optional(),
   /** A practice can open on its own question (e.g. the Coach's note). */
   openingQuestion: z.string().trim().min(8).max(300).optional(),
+  /** The app asks for the warm-up ("tell me about yourself") and five questions; other callers keep four. */
+  warmUp: z.boolean().optional(),
   /** A realistic screening call. The route that builds its questions belongs to the screen feature. */
   kind: z.enum(['practice', 'screen']).optional(),
   targetId: z.string().uuid().optional(),

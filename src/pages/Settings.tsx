@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { AudioLines, ChevronDown, Download, Pause, Trash2, Volume2 } from 'lucide-react'
 import { deleteMyData, exportMyData } from '../features/privacy/dataTools'
 import '../features/privacy/privacy.css'
+import '../styles/app-shell.css'
 
 export interface SettingsProps {
   voiceSpeed: string
@@ -23,6 +24,7 @@ export default function Settings(p: SettingsProps) {
   const [asking, setAsking] = useState(false)
   const [typed, setTyped] = useState('')
   const [busy, setBusy] = useState(false)
+  const [active, setActive] = useState('set-voice')
 
   const doExport = async () => {
     setBusy(true); setStatus('')
@@ -46,9 +48,10 @@ export default function Settings(p: SettingsProps) {
   }
 
   return <div className="workspace-content settings-content"><div className="page-title"><div><p className="eyebrow">Settings</p><h1>Settings</h1><p>Voice, comfort, and the data MIRROR keeps for you.</p></div></div>
-    <section className="settings-section"><div><h3>Voice experience</h3><p>Choose how MIRROR speaks and listens.</p></div><div className="setting-row"><span><Volume2 size={18} /><b>Voice playback speed</b></span><div className="segmented">{['Slow', 'Natural', 'Fast'].map(item => <button key={item} className={p.voiceSpeed === item ? 'active' : ''} onClick={() => { p.setVoiceSpeed(item); p.notify(`Voice speed set to ${item.toLowerCase()} for this preview.`) }}>{item}</button>)}</div></div><div className="setting-row"><span><AudioLines size={18} /><b>Conversation language</b></span><div className="select-wrap small-select"><select value={p.language} onChange={e => p.setLanguage(e.target.value)}><option>English</option><option>हिन्दी</option><option>தமிழ்</option><option>తెలుగు</option></select><ChevronDown size={16} /></div></div></section>
-    <section className="settings-section"><div><h3>Comfort</h3><p>Reduce motion in the app.</p></div><div className="setting-row"><span><Pause size={18} /><b>Calm motion</b></span><button className={`switch ${p.calmMotion ? 'on' : ''}`} onClick={() => p.setCalmMotion(!p.calmMotion)} role="switch" aria-checked={p.calmMotion}><i /></button></div></section>
-    <section className="settings-section" aria-labelledby="your-data-title"><div><h3 id="your-data-title">Your data</h3><p>Take a copy of what MIRROR keeps for you, or remove it. <button type="button" className="pv-link" onClick={p.onOpenPrivacy}>Your privacy</button></p></div>
+    <div className="set-layout"><nav className="set-subnav" aria-label="Settings sections">{[['set-voice', 'Voice'], ['set-comfort', 'Comfort'], ['your-data-title', 'Your data'], ['set-reset', 'Reset']].map(([id, label]) => <a key={id} href={`#${id}`} onClick={e => { e.preventDefault(); document.getElementById(id)?.scrollIntoView({ block: 'start' }); setActive(id) }} aria-current={active === id ? 'true' : undefined}>{label}</a>)}</nav><div className="set-body">
+    <section className="settings-section" id="set-voice"><div><h3>Voice experience</h3><p>Choose how MIRROR speaks and listens.</p></div><div className="setting-row"><span><Volume2 size={18} /><b>Voice playback speed</b></span><div className="segmented">{['Slow', 'Natural', 'Fast'].map(item => <button key={item} className={p.voiceSpeed === item ? 'active' : ''} onClick={() => { p.setVoiceSpeed(item); p.notify(`Voice speed set to ${item.toLowerCase()} for this preview.`) }}>{item}</button>)}</div></div><div className="setting-row"><span><AudioLines size={18} /><b>Conversation language</b></span><div className="select-wrap small-select"><select value={p.language} onChange={e => p.setLanguage(e.target.value)}><option>English</option><option>हिन्दी</option><option>தமிழ்</option><option>తెలుగు</option></select><ChevronDown size={16} /></div></div></section>
+    <section className="settings-section" id="set-comfort"><div><h3>Comfort</h3><p>Reduce motion in the app.</p></div><div className="setting-row"><span><Pause size={18} /><b>Calm motion</b></span><button className={`switch ${p.calmMotion ? 'on' : ''}`} onClick={() => p.setCalmMotion(!p.calmMotion)} role="switch" aria-checked={p.calmMotion}><i /></button></div></section>
+    <section className="settings-section" aria-labelledby="your-data-title" id="your-data-title-s"><div><h3 id="your-data-title">Your data</h3><p>Take a copy of what MIRROR keeps for you, or remove it. <button type="button" className="pv-link" onClick={p.onOpenPrivacy}>Your privacy</button></p></div>
       <div className="pv-actions">
         <button type="button" className="m-btn" onClick={() => void doExport()} disabled={busy}><Download size={15} /> Export my data</button>
         <button type="button" className="m-btn m-btn--quiet" onClick={() => { setAsking(true); setStatus('') }} disabled={busy || asking}><Trash2 size={15} /> Delete all my data</button>
@@ -63,5 +66,5 @@ export default function Settings(p: SettingsProps) {
       </div>}
       <p className="pv-note" role="status" aria-live="polite">{status}</p>
     </section>
-    <section className="settings-section danger-section"><div><h3>Reset prototype</h3><p>Clear your profile, stories and replay answers. To remove everything, use Delete all my data above.</p></div><button type="button" className="m-btn m-btn--quiet" onClick={p.onResetDemo}><Trash2 size={15} /> Reset demo data</button></section></div>
+    <section className="settings-section danger-section" id="set-reset"><div><h3>Reset prototype</h3><p>Clear your profile, stories and replay answers. To remove everything, use Delete all my data above.</p></div><button type="button" className="m-btn m-btn--quiet" onClick={p.onResetDemo}><Trash2 size={15} /> Reset demo data</button></section></div></div></div>
 }

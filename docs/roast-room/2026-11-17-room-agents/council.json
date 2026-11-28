@@ -1,0 +1,20 @@
+{
+  "title": "Agents that live in MIRROR's interview call",
+  "decision": "How should MIRROR build the live brain of the interview room, as a complete system?",
+  "mode": "quick",
+  "options": [
+    { "id": "A", "label": "The Room: persistent Interviewer + silent Observer + code Director, event-driven" },
+    { "id": "B", "label": "Per-turn orchestrator + one fast call, bank fallback (earlier verdict)" },
+    { "id": "C", "label": "Full panel of speaking agents from day one" },
+    { "id": "D", "label": "End-to-end realtime voice model as the live brain" }
+  ],
+  "weights": {
+    "graham": { "weight": 3, "reason": "Will testers feel listened to, and does it change what they do next" },
+    "musk": { "weight": 3, "reason": "Real constraint, simplest architecture, what to delete" },
+    "blakely": { "weight": 2, "reason": "Does it feel alive and loved enough that people tell friends, without scaring them" },
+    "buffett": { "weight": 2, "reason": "Downside: latency, quota, vendor, privacy and the no-scores trust promise" }
+  },
+  "seats": ["graham", "musk", "blakely", "buffett"],
+  "brief": "The founder wants agents that live in the interview call, not a question list. The earlier council backed a per-turn orchestrator and rejected serial agents on every turn. This session tests persistent event-driven agents (A), the earlier verdict (B), a full panel (C) and an end-to-end realtime voice model (D), and asks for the complete build.",
+  "assumptions": ["A handful of testers, no revenue (assumed)", "Free-tier hosted model with rate limits (assumed)", "Two weeks to something that works at beta, more time for the full build (assumed)"]
+}

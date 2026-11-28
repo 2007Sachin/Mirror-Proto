@@ -1,0 +1,20 @@
+{
+  "title": "A landing page built around MIRROR's moat",
+  "decision": "What should MIRROR's landing page say, show and sequence, and what is the moat it is built around?",
+  "mode": "quick",
+  "options": [
+    { "id": "A", "label": "Moat-first story page with a distinct look" },
+    { "id": "B", "label": "Feature-parity page like HiringAnt's breadth" },
+    { "id": "C", "label": "Keep today's calm page and polish it" },
+    { "id": "D", "label": "Demo-first page: a real try-it in the hero, moat story below" }
+  ],
+  "weights": {
+    "hormozi": { "weight": 3, "reason": "The offer, the headline, the proof and the call to action decide whether the page converts" },
+    "blakely": { "weight": 3, "reason": "Brand and feel: does a nervous candidate feel safe and want to tell a friend" },
+    "graham": { "weight": 2, "reason": "Is the page for real users with real demand, and honest about a pre-beta product" },
+    "buffett": { "weight": 2, "reason": "What is the durable moat, and does every claim stay literally true (trust)" }
+  },
+  "seats": ["hormozi", "blakely", "graham", "buffett"],
+  "brief": "The founder wants a landing page of the same kind as hiringant.ai but built around MIRROR's moat, in a creative look of its own. MIRROR is pre-beta with no testimonials or numbers. Options A to D range from a moat-first story page to a demo-first page.",
+  "assumptions": ["A handful of testers, no revenue (assumed)", "Invite-only beta next (assumed)", "A few days to build (assumed)"]
+}

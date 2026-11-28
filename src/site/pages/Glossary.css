@@ -1,0 +1,7 @@
+/* Glossary: shared .ms-az / .ms-gloss / .ms-term; this resets the definition list and pads the wrapper. */
+.ms .gl-wrap{padding:0 var(--ms-gutter) 96px}
+.ms .ms-terms dd{margin:0}
+.ms .ms-terms dt{margin:0}
+.ms .ms-az a:focus-visible{outline:2px solid var(--ms-ink);outline-offset:1px}
+@media (max-width:767px){.ms .ms-terms{grid-template-columns:1fr}}
+@media (max-width:479px){.ms .ms-az .ms-search{margin-left:0;width:100%}.ms .ms-az .ms-search input{width:100%}}

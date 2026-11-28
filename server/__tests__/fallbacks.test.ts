@@ -101,7 +101,7 @@ describe('slow or failing model on each call', () => {
     expect(res.status).toBe(201)
     const body = await j(res)
     expect(body.source).toBe('fallback')
-    expect(body.nextQuestion).toBe(FALLBACK_QUESTIONS[1])
+    expect(body.nextQuestion).toContain(FALLBACK_QUESTIONS[1])
     expect(body.nextQuestion).not.toContain('You said')
   })
 

@@ -1,0 +1,8 @@
+/* Page styles for /careers. Scoped under .ms; site.css is untouched. */
+.ms .ms-cr-sample{max-width:var(--ms-container);margin:12px auto 0}
+.ms .ms-cr-badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;background:var(--ms-violet-50);color:var(--ms-violet-600);margin-left:8px;vertical-align:middle}
+.ms .ms-dark .ms-cr-badge{background:rgba(255,255,255,.14);color:#fff}
+.ms .ms-cr-dark{background:#1c1b1a;color:#fff}
+.ms .ms-cr-dark p{color:var(--ms-white-60)}
+.ms .ms-cr-mosaic{grid-auto-rows:140px}
+@media (max-width:991px){.ms .ms-cr-mosaic{grid-template-columns:repeat(3,1fr)}.ms .ms-cr-mosaic i{grid-column:span 1!important}}

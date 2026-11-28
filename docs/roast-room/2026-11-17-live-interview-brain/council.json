@@ -1,0 +1,20 @@
+{
+  "title": "A dynamic brain for MIRROR's live interview practice",
+  "decision": "Build a multi-agent orchestration system for live interview practice, or something simpler?",
+  "mode": "quick",
+  "options": [
+    { "id": "A", "label": "Full multi-agent orchestration, live every turn" },
+    { "id": "B", "label": "One interviewer LLM with structured state" },
+    { "id": "C", "label": "Hybrid: deterministic orchestrator + one fast LLM call, analysts off the live path" },
+    { "id": "D", "label": "Keep sequential, fix repeats with a tagged bank and asked-history" }
+  ],
+  "weights": {
+    "graham": { "weight": 3, "reason": "Do testers get a better practice session, and does it show in what they do next" },
+    "musk": { "weight": 3, "reason": "What is the real constraint, and what is the simplest thing that removes it" },
+    "bezos": { "weight": 2, "reason": "Is it a one-way door, and does it work backwards from the candidate's experience" },
+    "buffett": { "weight": 2, "reason": "Downside: latency, cost, failure modes and the no-scores trust promise" }
+  },
+  "seats": ["graham", "musk", "bezos", "buffett"],
+  "brief": "MIRROR's live interview questions repeat because a fixed four-line script is the fallback and nothing remembers what was asked. The founder leans toward a multi-agent orchestration system. Options A to D range from full agents to a minimal fix.",
+  "assumptions": ["A handful of testers, no revenue (assumed)", "About two weeks to beta invites (assumed)", "Free-tier hosted model with rate limits (assumed)"]
+}

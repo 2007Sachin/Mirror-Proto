@@ -1,0 +1,7 @@
+/* Page styles for /why-mirror. Scoped under .ms; site.css is untouched. */
+.ms .ms-wm-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;max-width:var(--ms-container);margin:0 auto}
+.ms .ms-wm-dark{background:#1c1b1a;color:#fff}
+.ms .ms-wm-dark p{color:var(--ms-white-60)}
+.ms .ms-vs{font-size:15px}
+@media (max-width:991px){.ms .ms-wm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:479px){.ms .ms-wm-grid{grid-template-columns:1fr}.ms .ms-vs__row{font-size:14px}.ms .ms-vs__row>*{padding:12px}}

@@ -2,6 +2,7 @@ import { useId, useRef, useState, type FormEvent } from 'react'
 import '../../landing.css'
 import './auth.css'
 import { ApiError, authApi } from '../../lib/api'
+import { MeshGradient } from '../../site/MeshGradient'
 
 interface Props {
   googleEnabled: boolean
@@ -41,8 +42,8 @@ export default function SignIn({ googleEnabled, notice, onBack }: Props) {
   }
 
   return (
-    <div className="mirror-landing auth-screen">
-      <main className="auth-card" aria-labelledby={`${id}-h`}>
+    <div className="mirror-landing auth-split">
+      <div className="auth-split__form"><main className="auth-card" aria-labelledby={`${id}-h`}>
         {sentTo ? (
           <>
             <h1 id={`${id}-h`}>Check your email</h1>
@@ -54,20 +55,24 @@ export default function SignIn({ googleEnabled, notice, onBack }: Props) {
             <h1 id={`${id}-h`}>Sign in to MIRROR</h1>
             <p>We will email you a link. No password to remember.</p>
             {notice && <p className="auth-error" role="alert">{notice}</p>}
-            <form onSubmit={submit} noValidate>
+            <form onSubmit={submit} onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void submit(e as unknown as FormEvent) } }} noValidate>
               <label htmlFor={`${id}-email`}>Email</label>
               <input
                 id={`${id}-email`} ref={input} type="email" inputMode="email" autoComplete="email" autoFocus required
                 value={email} onChange={e => setEmail(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-err` : undefined}
               />
               {error && <p id={`${id}-err`} className="auth-error" role="alert">{error}</p>}
-              <button type="submit" className="auth-primary" disabled={busy || !email.trim()}>{busy ? 'Sending…' : 'Send me a link'}</button>
+              <button type="submit" className="auth-primary" disabled={busy || !email.trim()}>{busy ? 'Sending…' : 'Send me a link'}<kbd className="auth-kbd" aria-hidden="true">Ctrl+Enter</kbd></button>
             </form>
             {googleEnabled && <a className="auth-secondary" href="/auth/google">Continue with Google</a>}
           </>
         )}
         {onBack && <button type="button" className="auth-link" onClick={onBack}>Back to the start</button>}
-      </main>
+      </main></div>
+      <aside className="auth-split__side" aria-hidden="true">
+        <div className="auth-split__tile"><MeshGradient colors={['#f0c0ff', '#ffbd7e', '#79e7dc']} ground="#ffe4ff" /></div>
+        <p className="auth-split__note"><b>Practice that stays yours.</b>Say your answers out loud, then read calm notes on what to strengthen.</p>
+      </aside>
     </div>
   )
 }

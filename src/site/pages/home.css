@@ -1,0 +1,20 @@
+/* Home page extras. Scoped under .ms like site.css; only what the shared stylesheet does not already cover. */
+.ms .ms-home-sample{margin-left:auto}
+.ms .ms-home-sample-note{margin:12px 0 0;font-size:12px;color:var(--ms-n-300);text-align:center}
+.ms .ms-hero__cta{display:flex;justify-content:center}
+/* h3 / h4 sit one level under their section h2 (no skipped levels), styled like the scaffold's h4 */
+.ms .ms-card--row h3{margin:0 0 4px;font-weight:500;font-size:16px}
+.ms .ms-dk h3{margin:0 0 8px;font-weight:500;font-size:16px}
+.ms .ms-q .ms-badge-soft,.ms .ms-pillar-card .ms-badge-soft{position:relative;z-index:2}
+.ms .ms-pillar-card .ms-home-sample{position:absolute;left:16px;top:16px;margin:0}
+.ms .ms-pillar-card .ms-bars{position:relative}
+.ms .ms-home-stack{display:flex;flex-direction:column;gap:12px}
+.ms .ms-home-pane-note{position:absolute;left:16px;bottom:12px;margin:0;font-size:12px;color:var(--ms-n-500);z-index:2}
+.ms .ms-video-ph{position:relative;flex-direction:column;gap:8px}
+.ms .ms-video-ph small{font-size:12px}
+.ms .ms-home-faq{max-width:55rem;margin:0 auto}
+.ms .ms-home-faq .ms-h2-sm{margin-bottom:32px;text-align:center}
+@media (max-width:767px){
+  .ms .ms-home-pane-note{position:static;padding:0 16px 12px}
+  .ms .ms-hs-head .ms-home-sample{display:none}
+}

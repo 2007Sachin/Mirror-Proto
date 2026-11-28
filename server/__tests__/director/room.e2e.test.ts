@@ -22,7 +22,7 @@ describe('the Room with no provider and no key', () => {
       }
       const asked = (await repo.getInterview('dev', id))!.askedQuestions
       expect(asked).toHaveLength(4)
-      expect(asked[0]).toBe(OPENING_QUESTION) // the one fixed opener, shared by design
+      expect(asked[0]).toContain(OPENING_QUESTION) // the one fixed opener, shared by design
       for (const q of asked.slice(1)) {
         expect(q).not.toMatch(/^You said/)
         expect(isRepeat(q, [], seen)).toBe(false)
@@ -51,7 +51,7 @@ describe('REST and voice both go through the Director', () => {
     const { id } = await j<{ id: string }>(await app.request('/interviews', { method: 'POST', headers: H, body: JSON.stringify({ role: 'Data Analyst' }) }))
     const res = await app.request(`/interviews/${id}/turns`, { method: 'POST', headers: H, body: JSON.stringify({ questionIndex: 0, answer: ANSWER }) })
     const body = await j(res)
-    expect(body.nextQuestion).toBe('Model question number 1 about the report?')
+    expect(body.nextQuestion).toContain('Model question number 1 about the report?')
     expect(body.source).toBe('ai')
     expect(calls).toHaveLength(1)
     expect(Number(calls[0].split(':')[1])).toBeGreaterThanOrEqual(3)
@@ -63,7 +63,7 @@ describe('REST and voice both go through the Director', () => {
     await repo.ensureWorkspace('dev')
     const interview = await repo.createInterview('dev', { role: 'Data Analyst', openingQuestion: OPENING_QUESTION })
     const r = await submitVoiceTurn(repo, 'dev', interview.id, 0, ANSWER, provider)
-    expect(r.ok && r.nextQuestion).toBe('Model question number 1 about the report?')
+    expect(r.ok && r.nextQuestion).toContain('Model question number 1 about the report?')
     expect(calls).toHaveLength(1)
   })
 

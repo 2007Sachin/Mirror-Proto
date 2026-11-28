@@ -1,0 +1,5 @@
+/* Kind words: the shared .ms-wall already uses CSS columns; this only adds the sample badge and spacing. */
+.ms .ms-kw-sample{display:inline-block;margin-top:12px;font-size:11px;letter-spacing:.04em;text-transform:uppercase;opacity:.6}
+.ms .ms-kw-hero{text-align:center;padding-bottom:40px}
+.ms .ms-kw-band{padding-top:0}
+@media (max-width:767px){.ms .ms-kw-hero{padding-top:120px}}

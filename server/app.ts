@@ -13,6 +13,7 @@ import { createMockStt } from './voice/stt/mockStt.js'
 import { sttProviderName } from './voice/sttProvider.js'
 import { createRestSarvamStt } from './voice/stt/createStt.js'
 import type { SttProvider } from './voice/providers/types.js'
+import { bridge, greet, PRACTICE_QUESTIONS, warmUp } from './domain/frame.js'
 import { addTurn, canAbandon, canComplete, validateEvidence } from './domain/stateMachine.js'
 import { PHASE1_TABLES } from './repo/supabase.js'
 import type { AgentEvent, Debrief, InterviewRow, ProfileRow, ReflectionRow, Repository, Target, TurnRow } from './repo/types.js'
@@ -306,10 +307,16 @@ export function buildApp(deps: AppDeps): Hono {
     }
     // A practice round started from a Target keeps the job's id, so the Director can aim follow-ups at that job's gaps (director/state.ts).
     if (body.targetId) await loadTarget(repo, workspace, body.targetId)
+    // A practice opens like a real interview: a greeting and "tell me about yourself", then the question this practice is really about.
+    // The very first one, right after onboarding, skips the warm-up: the person just said who they are, so it greets and goes to its question.
+    const main = body.openingQuestion ?? (queued ? profile.firstQuestion : await firstQuestion(profile, body.role, body.industry))
+    const warm = body.warmUp === true && !queued
+    const intro = greet(body.role, warm ? warmUp(body.role) : main)
     const interview = await repo.createInterview(workspace, {
       role: body.role,
       industry: body.industry,
-      openingQuestion: body.openingQuestion ?? (queued ? profile.firstQuestion : await firstQuestion(profile, body.role, body.industry)),
+      openingQuestion: intro,
+      ...(warm ? { askedQuestions: [intro, bridge(main, 1, PRACTICE_QUESTIONS)], questionCap: PRACTICE_QUESTIONS } : {}),
       targetId: body.targetId ?? null,
     })
     return c.json(serializeInterview(interview, [], null), 201)

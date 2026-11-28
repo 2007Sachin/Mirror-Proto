@@ -132,7 +132,7 @@ describe('profile', () => {
     await app.request('/profile', { method: 'PUT', headers: JSON_HEADERS, body: JSON.stringify(profile) })
 
     const created = await j<{ currentQuestion: string; id: string }>(await post(app, '/interviews', { role: profile.role }))
-    expect(created.currentQuestion).toBe(profile.firstQuestion)
+    expect(created.currentQuestion).toContain(profile.firstQuestion)
 
     const turn = await post(app, `/interviews/${created.id}/turns`, {
       questionIndex: 0,
@@ -161,7 +161,7 @@ describe('profile', () => {
     await app.request('/profile', { method: 'PUT', headers: JSON_HEADERS, body: JSON.stringify({ ...profile, resumeText: 'R'.repeat(4000) }) })
     await post(app, '/interviews', { role: profile.role }) // uses the queued opener
     const second = await j<{ currentQuestion: string }>(await post(app, '/interviews', { role: profile.role }))
-    expect(second.currentQuestion).toBe('You said two teams pushed back on the billing move. What did you tell them?')
+    expect(second.currentQuestion).toContain('You said two teams pushed back on the billing move. What did you tell them?')
     const first = asked.find(r => r.nextIndex === 0) as { profile: { primaryStory: string; resumeSummary: string } }
     expect(first.profile.primaryStory).toBe(profile.story)
     expect(first.profile.resumeSummary.length).toBe(1500) // resume is trimmed context, server-side only
@@ -178,7 +178,7 @@ describe('profile', () => {
     await post(app, '/interviews', { role: profile.role }) // queued opener
     const res = await post(app, '/interviews', { role: profile.role })
     expect(res.status).toBe(201)
-    expect((await j<{ currentQuestion: string }>(res)).currentQuestion).toBe(OPENING_QUESTION)
+    expect((await j<{ currentQuestion: string }>(res)).currentQuestion).toContain(OPENING_QUESTION)
   })
 
   it('gives the reflection the agreed focus and story', async () => {
@@ -202,11 +202,11 @@ describe('profile', () => {
     const { app } = makeApp()
     await app.request('/profile', { method: 'PUT', headers: JSON_HEADERS, body: JSON.stringify(profile) })
     const other = await j<{ currentQuestion: string }>(await post(app, '/interviews', { role: 'Business Analyst' }))
-    expect(other.currentQuestion).toBe(OPENING_QUESTION)
+    expect(other.currentQuestion).toContain(OPENING_QUESTION)
     const first = await j<{ currentQuestion: string }>(await post(app, '/interviews', { role: profile.role }))
-    expect(first.currentQuestion).toBe(profile.firstQuestion)
+    expect(first.currentQuestion).toContain(profile.firstQuestion)
     const again = await j<{ currentQuestion: string }>(await post(app, '/interviews', { role: profile.role }))
-    expect(again.currentQuestion).toBe(OPENING_QUESTION)
+    expect(again.currentQuestion).toContain(OPENING_QUESTION)
   })
 
   it('DELETE clears the profile', async () => {
@@ -225,6 +225,6 @@ describe('profile', () => {
   it('keeps the standard opener when there is no profile', async () => {
     const { app } = makeApp()
     const created = await j<{ currentQuestion: string }>(await post(app, '/interviews', { role: 'Analyst' }))
-    expect(created.currentQuestion).toBe(OPENING_QUESTION)
+    expect(created.currentQuestion).toContain(OPENING_QUESTION)
   })
 })

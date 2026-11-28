@@ -144,7 +144,6 @@ export default function FirstInterview({
       </header>
       <main className="ml-fi-main" aria-labelledby="fi-q">
         <div className="ml-fi-stage" aria-hidden="true">
-          <i className="ml-fi-ring ml-fi-ring--1" /><i className="ml-fi-ring ml-fi-ring--2" /><i className="ml-fi-ring ml-fi-ring--3" />
           <div className="ml-fi-orb"><LiveOrb state={orb} inputLevel={typing} /></div>
         </div>
         <p className="ml-fi-hello" aria-live="polite">

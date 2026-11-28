@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import FluidOrb from './FluidOrb'
+import DotOrb from './DotOrb'
 
 export type OrbState = 'idle' | 'listening' | 'thinking' | 'speaking'
 
@@ -32,6 +32,6 @@ export function LiveOrb({ state = 'idle', compact = false, label, inputLevel, ou
   const energy = state === 'speaking' ? Math.max(.45, level) : state === 'listening' ? .15 + level * .85 : state === 'thinking' ? .3 : .1
 
   return <div className={`orb-wrap ${compact ? 'orb-wrap--compact' : ''} orb--${state}`} role="img" aria-label={label || `MIRROR orb, ${state}`}>
-    <FluidOrb size={compact ? 130 : 420} color="#993dca" energy={energy} aria-hidden="true" style={{ width: '100%', height: '100%', transform: `scale(${scale})`, transition: 'transform .16s ease-out' }} />
+    <div style={{ width: '100%', height: '100%', color: 'var(--p-ink, #111)', transform: `scale(${scale})`, transition: 'transform .16s ease-out' }}><DotOrb energy={energy} /></div>
   </div>
 }

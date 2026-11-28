@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { j, makeApp, WS } from './helpers.js'
 import { bridge, greet } from '../domain/frame.js'
 
 describe('interview frame', () => {
@@ -18,5 +19,22 @@ describe('interview frame', () => {
   })
   it('never adds a score, percentage or count', () => {
     for (let i = 1; i < 4; i++) expect(bridge('Why?', i, 4)).not.toMatch(/\d|%|score/i)
+  })
+})
+
+describe('POST /interviews with warmUp', () => {
+  it('opens with a greeting and tell-me-about-yourself, then the real question, over five questions', async () => {
+    const { app } = makeApp()
+    const res = await app.request('/interviews', { method: 'POST', headers: { ...WS, 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'Data Analyst · Behavioural round', openingQuestion: 'Tell me about a time you led a decision.', warmUp: true }) })
+    const body = await j<{ questionCap: number; questions: string[]; currentQuestion: string }>(res)
+    expect(body.questionCap).toBe(5)
+    expect(body.currentQuestion).toMatch(/^Hi, thanks for making time/)
+    expect(body.currentQuestion).toContain('tell me a little about yourself')
+    expect(body.questions[1]).toContain('Tell me about a time you led a decision.')
+  })
+  it('keeps four questions when warmUp is not asked for', async () => {
+    const { app } = makeApp()
+    const res = await app.request('/interviews', { method: 'POST', headers: { ...WS, 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'Analyst', openingQuestion: 'Tell me about a time you led a decision.' }) })
+    expect((await j<{ questionCap: number | null }>(res)).questionCap).toBeNull()
   })
 })

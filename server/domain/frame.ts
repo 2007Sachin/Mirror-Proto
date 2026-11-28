@@ -27,3 +27,12 @@ export function bridge(question: string, index: number, total: number): string {
   if (index >= total - 1) return `Last question for today, and then we'll wrap up. ${q}`
   return `${BRIDGES[(index - 1) % BRIDGES.length]} ${q}`
 }
+
+/** Practice is a warm-up plus four questions. */
+export const PRACTICE_QUESTIONS = 5
+
+/** The opening question of every practice: the way a real interview starts, and what the later questions can build on. */
+export function warmUp(role: string): string {
+  const { job } = parts(role)
+  return `Before we get into the questions, tell me a little about yourself: your background, and what draws you to ${job === 'this role' ? 'this role' : `the ${job} role`}.`
+}

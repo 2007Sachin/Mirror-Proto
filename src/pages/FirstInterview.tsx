@@ -162,7 +162,7 @@ export default function FirstInterview({
       </div>
       <aside className="ml-fi-tile" aria-hidden="true" data-state={orb}>
         <MeshGradient colors={['#e2ddfd', '#ffeed8', '#f0c0ff']} ground="#ffeed8" />
-        <p className="ml-fi-tile-line">A calm room, someone on your side, and nobody keeping score.</p>
+        <p className="ml-fi-tile-line">A calm room, and someone on your side.</p>
       </aside>
     </div>
   )

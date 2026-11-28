@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import '../landing.css'
 import './firstInterview.css'
 import { api, type Profile } from '../lib/api'
-import { LiveOrb, type OrbState } from '../components/LiveOrb'
+import type { OrbState } from '../components/LiveOrb'
+import { MeshGradient } from '../site/MeshGradient'
 import FallbackNote from '../components/FallbackNote'
 import { AudioCapture, pcm16ToBytes } from '../voice/audioCapture'
 
@@ -120,48 +121,49 @@ export default function FirstInterview({
 
   return (
     <div className="mirror-landing ml-fi">
-      <header className="ml-nav">
-        <div className="ml-glass ml-nav-bar">
-          <button type="button" className="ml-logo ml-fi-logo" onClick={onBack}>MIRROR</button>
-        </div>
-      </header>
-      <main className="ml-wrap ml-fi-main">
-        <div className="ml-orb ml-fi-orb" data-state={orb} aria-hidden="true"><LiveOrb state={orb} /></div>
-        <p className="ml-fi-purpose">MIRROR is practice before the interview. Tell it a little about you, then you are in the room.</p>
-        <p className="ml-eyebrow">Start here</p>
-        <div aria-live="polite">
-          <div className="ml-glass ml-fi-agent">{ONE_QUESTION}</div>
-        </div>
-        <div className="ml-glass ml-fi-composer">
-          <textarea
-            autoFocus
-            value={text}
-            onChange={e => setText(e.target.value)}
-            placeholder="Take your time. Say it the way you’d say it out loud."
-            aria-label="About you"
-            readOnly={busy}
-            maxLength={5000}
-          />
-          <div className="ml-fi-row">
-            <button
-              type="button"
-              className="ml-btn ml-btn--quiet"
-              aria-pressed={dictation.state === 'recording'}
-              disabled={busy || dictation.state === 'transcribing'}
-              onClick={() => void dictation.toggle()}
-            >
-              {dictation.state === 'recording' ? 'Stop' : dictation.state === 'transcribing' ? 'Listening back…' : 'Speak instead'}
-            </button>
-            <button type="button" className="ml-btn" disabled={!ready || busy} onClick={() => void send()}>
-              {busy ? 'One moment…' : 'Start practising'}
-            </button>
+      <div className="ml-fi-form">
+        <header className="ml-fi-top">
+          <button type="button" className="ml-fi-logo" onClick={onBack}>MIRROR</button>
+        </header>
+        <main className="ml-fi-main" aria-labelledby="fi-q">
+          <p className="ml-fi-eyebrow">Start here</p>
+          <h1 id="fi-q" className="ml-fi-question" aria-live="polite">{ONE_QUESTION}</h1>
+          <p className="ml-fi-purpose">MIRROR is practice before the interview. Tell it a little about you, then you are in the room.</p>
+          <div className="ml-fi-composer">
+            <textarea
+              autoFocus
+              value={text}
+              onChange={e => setText(e.target.value)}
+              placeholder="Take your time. Say it the way you’d say it out loud."
+              aria-label="About you"
+              readOnly={busy}
+              maxLength={5000}
+            />
+            <div className="ml-fi-row">
+              <button
+                type="button"
+                className="ml-fi-btn ml-fi-btn--quiet"
+                aria-pressed={dictation.state === 'recording'}
+                disabled={busy || dictation.state === 'transcribing'}
+                onClick={() => void dictation.toggle()}
+              >
+                {dictation.state === 'recording' ? 'Stop' : dictation.state === 'transcribing' ? 'Listening back…' : 'Speak instead'}
+              </button>
+              <button type="button" className="ml-fi-btn" disabled={!ready || busy} onClick={() => void send()}>
+                {busy ? 'One moment…' : 'Start practising'}
+              </button>
+            </div>
           </div>
-        </div>
-        <p className="ml-fi-note" role="status">
-          {dictation.error || note || (text.length > 0 && !ready ? 'A little more, so I have something real to work with.' : '')}
-        </p>
-        <FallbackNote source={fellBack ? 'fallback' : null} />
-      </main>
+          <p className="ml-fi-note" role="status">
+            {dictation.error || note || (text.length > 0 && !ready ? 'A little more, so I have something real to work with.' : '')}
+          </p>
+          <FallbackNote source={fellBack ? 'fallback' : null} />
+        </main>
+      </div>
+      <aside className="ml-fi-tile" aria-hidden="true" data-state={orb}>
+        <MeshGradient colors={['#e2ddfd', '#ffeed8', '#f0c0ff']} ground="#ffeed8" />
+        <p className="ml-fi-tile-line">A calm room, someone on your side, and nobody keeping score.</p>
+      </aside>
     </div>
   )
 }

@@ -181,6 +181,7 @@ export default function FirstInterview({
         <div className="ml-fi-stage" aria-hidden="true">
           <div className="ml-fi-orb"><LiveOrb state={orb} inputLevel={Math.max(typing, dictation.level)} /></div>
         </div>
+        <div className="ml-fi-center">
         <p className="ml-fi-hello" aria-live="polite">
           <span className="ml-fi-line is-on">Hi, I’m MIRROR.</span>
           <span className={`ml-fi-line${beat >= 1 ? ' is-on' : ''}`}>No one is judging this. It’s just a conversation.</span>
@@ -188,6 +189,7 @@ export default function FirstInterview({
         <h1 id="fi-q" className={`ml-fi-question${beat >= 2 ? ' is-on' : ''}`} aria-label={ONE_QUESTION}>
           {words.map((w, i) => <span key={i} aria-hidden="true" style={{ ['--i' as string]: i }}>{w} </span>)}
         </h1>
+        </div>
         <div className={`ml-fi-dock${beat >= 3 ? ' is-on' : ''}`}>
           <p className="ml-fi-caption" role="status">{dictation.error || note || (text.length > 0 && !ready ? 'A little more, so I have something real to work with.' : caption)}</p>
           <div className="ml-fi-bar">

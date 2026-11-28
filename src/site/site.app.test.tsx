@@ -45,7 +45,7 @@ describe('marketing site inside the app', () => {
     view.unmount()
     window.history.replaceState(null, '', '/')
     render(<App />)
-    expect(await screen.findByRole('heading', { level: 1, name: /Practice your story out loud/ })).toBeTruthy()
+    expect(await screen.findByRole('heading', { level: 1, name: /Practice the interview/ })).toBeTruthy()
     expect(document.querySelector('.ms')).not.toBeNull()
   })
 })

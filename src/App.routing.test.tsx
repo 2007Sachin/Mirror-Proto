@@ -73,14 +73,14 @@ describe('URL routing', () => {
   it('keeps the website at / for a signed-in user too', async () => {
     session.current = signedIn
     render(<App />)
-    expect((await screen.findByRole('heading', { level: 1 })).textContent).toContain('Practice your story out loud')
+    expect((await screen.findByRole('heading', { level: 1 })).textContent).toContain('Practice the interview')
     expect(window.location.pathname).toBe('/')
   })
 
   it('shows the new marketing home at / to a signed-out visitor', async () => {
     session.current = signedOut
     render(<App />)
-    expect((await screen.findByRole('heading', { level: 1 })).textContent).toContain('Practice your story out loud')
+    expect((await screen.findByRole('heading', { level: 1 })).textContent).toContain('Practice the interview')
     expect(window.location.pathname).toBe('/')
   })
 

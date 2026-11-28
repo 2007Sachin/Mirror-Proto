@@ -1,20 +1,66 @@
-/* Home page extras. Scoped under .ms like site.css; only what the shared stylesheet does not already cover. */
-.ms .ms-home-sample{margin-left:auto}
-.ms .ms-home-sample-note{margin:12px 0 0;font-size:12px;color:var(--ms-n-300);text-align:center}
+/* Home page extras. Scoped under .ms like site.css. The pictures are the app's own components (orb, folder cards,
+   evaluation) inside a simple window frame; app tokens (--p-*) keep them in the app's colours, light and dark. */
 .ms .ms-hero__cta{display:flex;justify-content:center}
-/* h3 / h4 sit one level under their section h2 (no skipped levels), styled like the scaffold's h4 */
-.ms .ms-card--row h3{margin:0 0 4px;font-weight:500;font-size:16px}
 .ms .ms-dk h3{margin:0 0 8px;font-weight:500;font-size:16px}
-.ms .ms-q .ms-badge-soft,.ms .ms-pillar-card .ms-badge-soft{position:relative;z-index:2}
-.ms .ms-pillar-card .ms-home-sample{position:absolute;left:16px;top:16px;margin:0}
-.ms .ms-pillar-card .ms-bars{position:relative}
-.ms .ms-home-stack{display:flex;flex-direction:column;gap:12px}
-.ms .ms-home-pane-note{position:absolute;left:16px;bottom:12px;margin:0;font-size:12px;color:var(--ms-n-500);z-index:2}
-.ms .ms-video-ph{position:relative;flex-direction:column;gap:8px}
-.ms .ms-video-ph small{font-size:12px}
 .ms .ms-home-faq{max-width:55rem;margin:0 auto}
 .ms .ms-home-faq .ms-h2-sm{margin-bottom:32px;text-align:center}
+
+/* A window around a piece of the app */
+.ms .ms-app{position:relative;z-index:1;text-align:left;color:var(--p-ink);background:var(--p-surface);border:1px solid var(--p-line);border-radius:20px;overflow:hidden;
+  box-shadow:0 1px 3px rgba(17,17,17,.05),0 30px 60px -30px rgba(17,17,17,.3)}
+.ms .ms-app__bar{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--p-line);font-size:13px;color:var(--p-ink-3)}
+.ms .ms-app__dots{display:flex;gap:6px}
+.ms .ms-app__dots i{width:10px;height:10px;border-radius:50%;background:var(--p-line)}
+.ms .ms-app__title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms .ms-app__body{padding:clamp(18px,3vw,32px)}
+.ms .ms-app--wide{width:min(980px,100%)}
+.ms .ms-app :is(.orb-wrap){position:absolute;inset:0;width:100%;max-width:none;min-width:0;height:100%}
+.ms .ms-app .orb-wrap>div{width:100%!important;height:100%!important}
+
+/* Hero: the interview room */
+.ms .ms-room{max-width:880px;margin:56px auto 0}
+.ms .ms-room__orb{position:relative;width:min(340px,64vw);aspect-ratio:1;margin:12px auto 0}
+.ms .ms-room__talk{display:grid;align-content:start;gap:16px;min-height:13.5em;padding:0 clamp(20px,5vw,56px) 36px}
+.ms .ms-room__line{margin:0;font-size:clamp(16px,1.7vw,20px);line-height:1.5;letter-spacing:-.01em;text-wrap:pretty}
+.ms .ms-room__line span{display:block;margin-bottom:4px;font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:#7a20a6}
+.ms .ms-room__line--you{color:var(--p-ink-2);opacity:0;transition:opacity .5s}
+.ms .ms-room__line--you span{color:var(--p-ink-3)}
+.ms .ms-room__line--you.ms-is-on{opacity:1}
+
+/* Feature sections: the app panel on the section's colour field */
+.ms .ms-pillar-card--app{height:auto;min-height:0;padding:clamp(16px,5vw,64px);grid-template-columns:minmax(0,1fr);justify-items:center}
+.ms .ms-app-grid{list-style:none;margin:0;padding:18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.ms .ms-app-grid .fc{height:100%}
+.ms .ms-app .ev h2{margin:0;font-size:24px;font-weight:400;letter-spacing:-.03em}
+.ms .ms-room-steps{display:grid;grid-template-columns:minmax(160px,280px) 1fr;align-items:center}
+.ms .ms-room-steps>.ms-app__bar{grid-column:1/-1}
+.ms .ms-room-steps__orb{position:relative;aspect-ratio:1;margin:24px}
+.ms .ms-room-steps__list{margin:0;padding:24px 32px 24px 8px;list-style:none;counter-reset:step;display:grid;gap:18px}
+.ms .ms-room-steps__list li{counter-increment:step;display:grid;grid-template-columns:32px 1fr;column-gap:12px}
+.ms .ms-room-steps__list li::before{content:counter(step);grid-row:span 2;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:13px;background:var(--p-chip);color:var(--p-ink-2)}
+.ms .ms-room-steps__list h3{margin:2px 0 2px;font-size:17px;font-weight:500;letter-spacing:-.01em}
+.ms .ms-room-steps__list p{margin:0;color:var(--p-ink-3)}
+.ms .ms-stories{display:grid;gap:14px}
+.ms .ms-stories__themes{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.ms .ms-stories__themes li{padding:5px 12px;border-radius:999px;border:1px solid var(--p-line);font-size:13px;color:var(--p-ink-2)}
+.ms .ms-stories__card{padding:16px 18px;border:1px solid var(--p-line);border-radius:14px;display:grid;gap:6px}
+.ms .ms-stories__card h3{margin:0;font-size:18px;font-weight:500;letter-spacing:-.02em}
+.ms .ms-stories__card blockquote{margin:0;padding:10px 14px;border-radius:10px;background:var(--p-chip);line-height:1.5}
+.ms .ms-stories__theme{justify-self:start;font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:#7a20a6}
+
+/* Overview cards: a small real piece of each part on its colour field */
+.ms .ms-pillar__ui{position:absolute;inset:0;display:grid;place-items:center;padding:14px}
+.ms .fc.fc.fc.ms-mini-fc{width:82%;padding:8px;border-radius:16px;box-shadow:none}
+.ms .fc.fc .ms-mini-fc .fc-folder,.ms .ms-mini-fc .fc-folder{min-height:96px;padding:12px}
+.ms .ms-mini-orb{position:relative;width:132px;aspect-ratio:1}
+.ms .ms-mini-ev{width:84%;display:grid;gap:6px}
+.ms .ms-mini-ev .ev-item{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;font-size:13px;text-transform:capitalize;border-radius:10px}
+.ms .ms-mini-ev .ev-level{font-size:10px;padding:2px 8px}
+.ms .ms-mini-story{width:84%;display:grid;gap:6px;padding:12px 14px;border-radius:14px;background:var(--p-surface);font-size:13px;line-height:1.45;color:var(--p-ink)}
+
 @media (max-width:767px){
-  .ms .ms-home-pane-note{position:static;padding:0 16px 12px}
-  .ms .ms-hs-head .ms-home-sample{display:none}
+  .ms .ms-room-steps{grid-template-columns:minmax(0,1fr)}
+  .ms .ms-room-steps__orb{width:180px;margin:20px auto 0}
+  .ms .ms-room-steps__list{padding:16px 20px 24px}
+  .ms .ms-room__talk{min-height:18em}
 }

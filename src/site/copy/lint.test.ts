@@ -3,7 +3,8 @@
 // no percentage, no streak words, no "x of y". Scans every string exported from src/site/copy/*.ts (hrefs included).
 import { describe, expect, it } from 'vitest'
 
-const BANNED = /\b(?:evidence|diagnostics?|assessments?|assessor|skeptic|scor(?:e|ed|es|ing)|weakness(?:es)?|gaps?|deficienc(?:y|ies)|fail(?:ed|ure|s|ing)?|incorrect|wrong|red flag|critical|candidates?|verdict|evaluat(?:e|ion|ed)|analys(?:is|ed|e)|audit|test(?:ed|s|ing)?|verif(?:y|ied)|proof|performance|scrutiny|substantiate|flag(?:s|ged)?)\b/i
+// "evaluation" and "assessment" are allowed: the product gives an evaluation in plain levels (never a number).
+const BANNED = /\b(?:evidence|diagnostics?|assessor|skeptic|scor(?:e|ed|es|ing)|weakness(?:es)?|gaps?|deficienc(?:y|ies)|fail(?:ed|ure|s|ing)?|incorrect|wrong|red flag|critical|candidates?|verdict|analys(?:is|ed|e)|audit|test(?:ed|s|ing)?|verif(?:y|ied)|proof|performance|scrutiny|substantiate|flag(?:s|ged)?)\b/i
 const SOFT = /\b(?:claims?|benchmark|thesis|inquiry|prob(?:e|ing)|challenged|unproven|bottleneck)\b/i
 const BRAND = /\b(?:amplemarket|duo copilot)\b/i
 const PRODUCT: [string, RegExp][] = [

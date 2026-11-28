@@ -20,7 +20,7 @@
 .ml-fi-btn--quiet[aria-pressed="true"] { border-color: #993dca; color: #7a20a6; }
 .ml-fi-btn:focus-visible, .ml-fi-logo:focus-visible { outline: 2px solid #8e44c3; outline-offset: 3px; }
 .ml-fi-note { min-height: 1.5em; margin: 0; font-size: 14px; color: #6a6865; }
-.ml-fi .ml-fi-tile { position: relative; overflow: hidden; margin: 16px 16px 16px 0; border-radius: 16px; display: flex; align-items: flex-end; padding: 36px; background: #ffeed8; }
+.ml-fi .ml-fi-tile { position: relative; overflow: hidden; margin: 16px 16px 16px 0; border-radius: 16px; display: flex; align-items: flex-end; padding: 36px; background: radial-gradient(120% 90% at 15% 20%, #e2ddfd 0%, transparent 60%), radial-gradient(100% 80% at 90% 30%, #f0c0ff 0%, transparent 55%), radial-gradient(120% 100% at 50% 100%, #ffdfbd 0%, #ffeed8 70%); }
 .ml-fi-tile-line { position: relative; z-index: 1; margin: 0; max-width: 22ch; font-size: clamp(24px, 2.6vw, 34px); line-height: 1.15; font-weight: 400; letter-spacing: -.035em; color: #111; }
 @media (max-width: 991px) { .ml-fi { grid-template-columns: 1fr; } .ml-fi .ml-fi-tile { display: none; } }
 @media (prefers-reduced-motion: reduce) { .ml-fi-btn, .ml-fi-composer { transition: none; } }
@@ -33,6 +33,5 @@
   .ml-fi-row { border-color: #2e2d2b; }
   .ml-fi-btn { background: #f6f5f3; color: #111; border-color: #f6f5f3; }
   .ml-fi-btn--quiet { background: transparent; color: #f6f5f3; border-color: #52504d; }
-  .ml-fi-tile { background: #232221; }
   .ml-fi-tile-line { color: #111; }
 }

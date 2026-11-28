@@ -3,7 +3,6 @@ import '../landing.css'
 import './firstInterview.css'
 import { api, type Profile } from '../lib/api'
 import type { OrbState } from '../components/LiveOrb'
-import { MeshGradient } from '../site/MeshGradient'
 import FallbackNote from '../components/FallbackNote'
 import { AudioCapture, pcm16ToBytes } from '../voice/audioCapture'
 
@@ -161,7 +160,6 @@ export default function FirstInterview({
         </main>
       </div>
       <aside className="ml-fi-tile" aria-hidden="true" data-state={orb}>
-        <MeshGradient colors={['#e2ddfd', '#ffeed8', '#f0c0ff']} ground="#ffeed8" />
         <p className="ml-fi-tile-line">A calm room, and someone on your side.</p>
       </aside>
     </div>

@@ -2,7 +2,9 @@
 // the interview room (LiveOrb + the interviewer's lines), Interview Prep (FolderCard + the bundled interview loops),
 // Your evaluation (EvaluationSection) and Stories. Plus the side dot-nav. No libraries.
 import { useEffect, useState } from 'react'
+import { ArrowRight, Captions, MessageSquare, Mic, MicOff, Pause, Repeat, Square, X } from 'lucide-react'
 import { LiveOrb, type OrbState } from '../../components/LiveOrb'
+import { splitLead } from '../../lib/lead'
 import DotOrb from '../../components/DotOrb'
 import FolderCard from '../../components/FolderCard'
 import EvaluationSection from '../../features/sessions/EvaluationSection'
@@ -24,16 +26,20 @@ function AppFrame({ bar, note, className, children }: { bar: string; note?: stri
   )
 }
 
-/** The interview room: the interviewer speaks its line word by word (orb speaking), then listens while a sample answer
- *  appears (orb listening), thinks, and asks the next question. Under reduced motion: the last exchange, still. */
+const CONTROL_ICONS = [MicOff, Captions, MessageSquare, Repeat, Pause]
+const clock = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+
+/** The interview room, laid out like the app's room (timer, progress, orb, lead-in, question, captions, call controls,
+ *  chat panel). The interviewer's line reveals word by word (orb speaking), then a sample answer appears in the captions
+ *  (orb listening), MIRROR thinks and asks the next question. Under reduced motion: the second exchange, still. */
 export function RoomScene() {
   const reduced = useReducedMotion()
   const [viewRef, inView] = useInView<HTMLDivElement>({ threshold: 0.1 })
   const [step, setStep] = useState(reduced ? 3 : 0)
   const [words, setWords] = useState(reduced ? Infinity : 0)
+  const [sec, setSec] = useState(14)
   const cur = SCRIPT[step]
-  const total = wordsOf(cur.text).length
-  const done = words >= total
+  const done = words >= wordsOf(cur.text).length
   const running = inView && !reduced
 
   useEffect(() => {
@@ -41,25 +47,57 @@ export function RoomScene() {
     const t = window.setTimeout(() => {
       if (!done) setWords(w => w + 1)
       else { setStep(s => (s + 1) % SCRIPT.length); setWords(0) }
-    }, done ? (cur.who === 'you' ? 2200 : 1200) : cur.who === 'mirror' ? 80 : 150)
+    }, done ? (cur.who === 'you' ? 2200 : 1400) : cur.who === 'mirror' ? 90 : 160)
     return () => clearTimeout(t)
   }, [running, done, cur.who, words, step])
+  useEffect(() => {
+    if (!running) return
+    const t = window.setInterval(() => setSec(s => s + 1), 1000)
+    return () => clearInterval(t)
+  }, [running])
 
   const state: OrbState = !running ? 'idle' : done ? (cur.who === 'you' ? 'thinking' : 'listening') : cur.who === 'mirror' ? 'speaking' : 'listening'
-  const asked = cur.who === 'mirror' ? cur : SCRIPT[step - 1]
-  const answer = cur.who === 'you' ? cur : null
-  const part = (text: string, live: boolean) => (live ? wordsOf(text).slice(0, words).join(' ') : text)
+  const askIdx = cur.who === 'mirror' ? step : step - 1
+  const [lead, ask] = splitLead(SCRIPT[askIdx].text)
+  const leadN = wordsOf(lead).length
+  const revealed = (i: number) => askIdx !== step || i < words
+  const answer = cur.who === 'you' ? wordsOf(cur.text).slice(0, words).join(' ') : ''
+  const qn = askIdx / 2
+  const chat = SCRIPT.slice(0, step + 1).map((s, i) => ({ ...s, text: i === step && s.who === 'you' ? answer : s.text, live: i === step && s.who === 'you' }))
 
   return (
-    <div ref={viewRef} role="group" aria-label={ROOM.label}>
-      <AppFrame bar={ROOM.bar} note={ROOM.sampleNote} className="ms-room">
-        <div className="ms-room__orb"><LiveOrb state={state} /></div>
-        <div className="ms-room__talk" aria-hidden="true">
-          <p className="ms-room__line"><span>{ROOM.interviewer}</span>{part(asked.text, asked === cur)}</p>
-          <p className={`ms-room__line ms-room__line--you${answer ? ' ms-is-on' : ''}`}><span>{ROOM.you}</span>{answer ? part(answer.text, true) : ' '}</p>
+    <div ref={viewRef} role="group" aria-label={ROOM.label} className="ms-room-wrap">
+      <div className="ms-app ms-room" aria-hidden="true">
+        <div className="ms-room__stage">
+          <header className="ms-room__top">
+            <div className="ms-room__top-l"><span className="ms-room__clock">{clock(sec)}</span><span className="ms-room__link"><i />{ROOM.connected}</span><span className="ms-room__brand">{ROOM.brand}</span></div>
+            <div className="ms-room__top-r">
+              <ol className="ms-room__dots">{Array.from({ length: 5 }, (_, i) => <li key={i} className={i <= qn ? 'ms-is-on' : ''} />)}</ol>
+              <span>Question {qn + 1} · {ROOM.focus[qn]}</span><span className="ms-badge-soft">{ROOM.sampleNote}</span>
+            </div>
+          </header>
+          <div className="ms-room__center">
+            <div className="ms-room__orb"><LiveOrb state={state} /></div>
+            <p className="ms-room__chip" data-state={state}><i />{state === 'idle' ? ROOM.status.listening : ROOM.status[state as keyof typeof ROOM.status]}</p>
+            {lead && <p className="ms-room__lead">{wordsOf(lead).map((w, i) => <span key={i} className={revealed(i) ? 'ms-is-in' : ''}>{w} </span>)}</p>}
+            <p className="ms-room__q">{wordsOf(ask).map((w, i) => <span key={i} className={revealed(leadN + i) ? 'ms-is-in' : ''}>{w} </span>)}</p>
+            <p className={`ms-room__cap${answer ? ' ms-is-on' : ''}`}><b>{ROOM.you}</b>{answer || ' '}</p>
+          </div>
+          <div className="ms-room__bar">
+            <div className="ms-room__ctrls">{ROOM.controls.map((c, i) => { const I = CONTROL_ICONS[i]; return <span key={c} className={`ms-room__cb${i === 1 || i === 2 ? ' ms-is-on' : ''}`}><i><I size={18} /></i>{c}</span> })}</div>
+            <div className="ms-room__acts"><span className="ms-room__send">{ROOM.send} <ArrowRight size={15} /></span><span className="ms-room__btn">{ROOM.later} <ArrowRight size={15} /></span><span className="ms-room__btn"><Square size={13} /> {ROOM.end}</span></div>
+          </div>
         </div>
-        <ol className="ms-sr">{SCRIPT.map(s => <li key={s.text}>{s.who === 'mirror' ? ROOM.interviewer : ROOM.you}: {s.text}</li>)}</ol>
-      </AppFrame>
+        <aside className="ms-room__panel">
+          <div className="ms-room__tabs">{ROOM.tabs.map((t, i) => <span key={t} className={i === 0 ? 'ms-is-on' : ''}>{t}</span>)}<X size={16} /></div>
+          <div className="ms-room__chat">
+            {chat.map((m, i) => <div key={i} className={`ms-room__b ms-room__b--${m.who}`}><span>{m.who === 'mirror' ? ROOM.interviewer : m.live ? `${ROOM.you} · speaking` : ROOM.you}</span><p>{m.text}</p></div>)}
+          </div>
+          <div className="ms-room__mode">{ROOM.modes.map((m, i) => <span key={m} className={i === 0 ? 'ms-is-on' : ''}>{i === 0 && <Mic size={14} />}{m}</span>)}</div>
+          <p className="ms-room__foot">{ROOM.foot}</p>
+        </aside>
+      </div>
+      <ol className="ms-sr">{SCRIPT.map(s => <li key={s.text}>{s.who === 'mirror' ? ROOM.interviewer : ROOM.you}: {s.text}</li>)}</ol>
     </div>
   )
 }
@@ -81,7 +119,7 @@ export function PrepPanel() {
 /** The room's steps beside a quiet orb. */
 export function RoomSteps() {
   return (
-    <AppFrame bar={ROOM.bar} note="How a session runs" className="ms-app--wide ms-room-steps">
+    <AppFrame bar="Interview room · How a session runs" note="From the app" className="ms-app--wide ms-room-steps">
       <div className="ms-room-steps__orb"><LiveOrb state="idle" /></div>
       <ol className="ms-room-steps__list">
         {ROOM_STEPS.map(([h, t]) => <li key={h}><h3>{h}</h3><p>{t}</p></li>)}

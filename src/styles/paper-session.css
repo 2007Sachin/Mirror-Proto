@@ -33,10 +33,14 @@
 .iv-confirm h2 { font-size: 22px; letter-spacing: -.03em; }
 .iv-confirm .iv-row { margin-top: 10px; }
 
-.iv-center { gap: 10px; padding: 8px 8px 16px; }
-.iv-orbbox { margin-bottom: 22px; }
+/* "safe" keeps the orb on screen when the content is taller than the room: it scrolls instead of clipping the top. */
+.iv-center { gap: 10px; padding: 16px 8px 16px; justify-content: safe center; }
+.iv-orbbox { margin-bottom: 14px; }
 .iv-ring { border: 1px solid var(--p-line-strong); opacity: .7; }
-.iv-question { font-family: var(--p-sans); font-weight: 500; font-size: clamp(26px, 3.4vw, 42px); letter-spacing: -.04em; line-height: 1.12; max-width: 22ch; margin: 6px 0 4px; color: var(--p-ink); }
+.iv-lead { margin: 4px 0 0; max-width: 58ch; font-family: var(--p-sans); font-size: clamp(15px, 1.2vw, 17px); line-height: 1.55; color: var(--p-ink-2); text-wrap: pretty; }
+.iv-lead > span { opacity: .15; transition: opacity .2s ease; }
+.iv-lead > span.is-in { opacity: 1; }
+.iv-question { font-family: var(--p-sans); font-weight: 400; font-size: clamp(24px, 2.8vw, 38px); letter-spacing: -.035em; line-height: 1.15; max-width: 28ch; margin: 6px 0 4px; color: var(--p-ink); }
 .iv-hint { font-family: var(--p-mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--p-ink-3); max-width: 46ch; line-height: 1.6; }
 .iv-card { padding: 14px 18px; max-width: 520px; }
 .iv-card p { color: var(--p-ink); }

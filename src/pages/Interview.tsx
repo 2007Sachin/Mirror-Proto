@@ -6,6 +6,7 @@ import { CHANGED, DID, countWords } from '../lib/analyse'
 import ReplayPanel from '../features/replay/ReplayPanel'
 import type { VoiceSessionApi } from '../voice/useVoiceSession'
 import { screenLine, screenMilestone } from '../features/screen/countdown'
+import { splitLead } from '../lib/lead'
 import { ArrowRight, Captions, CircleHelp, Mic, MicOff, MessageSquare, Pause, Play, Repeat, RotateCcw, Square, Volume2, VolumeX, X } from 'lucide-react'
 
 const MIN = 20 // characters; matches the interview's own minimum
@@ -204,7 +205,10 @@ export default function Interview(p: InterviewProps) {
   const hint = p.orb === 'speaking' ? 'Listen first, then answer in your own words.' : speaking ? 'Say what happened, what you did, what changed.' : 'Write what happened, what you did, what changed.'
 
   const { shown, replay } = useReveal(p.question, p.orb === 'speaking')
-  const qWords = p.question.split(/\s+/).filter(Boolean)
+  // The greeting or bridge is read in full, but shown small; the heading is only the question.
+  const [lead, ask] = splitLead(p.question)
+  const leadWords = lead.split(/\s+/).filter(Boolean)
+  const qWords = ask.split(/\s+/).filter(Boolean)
 
   const openConfirm = () => setConfirming(true)
   const closeConfirm = () => { setConfirming(false); window.setTimeout(() => endBtn.current?.focus(), 0) }
@@ -390,8 +394,9 @@ export default function Interview(p: InterviewProps) {
           <div className="iv-wave" data-state={muted ? 'idle' : orbShown} aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /></div>
           <p className="iv-chip" data-state={thinking ? 'thinking' : muted ? 'muted' : p.orb}><i aria-hidden="true" />{chip}</p>
 
-          <h1 className="iv-question" aria-label={p.question}>
-            <span aria-hidden="true">{qWords.map((w, i) => <span key={i} className={i < shown ? 'is-in' : ''}>{w} </span>)}</span>
+          {lead && <p className="iv-lead">{leadWords.map((w, i) => <span key={i} className={i < shown ? 'is-in' : ''}>{w} </span>)}</p>}
+          <h1 className="iv-question" aria-label={ask}>
+            <span aria-hidden="true">{qWords.map((w, i) => <span key={i} className={leadWords.length + i < shown ? 'is-in' : ''}>{w} </span>)}</span>
           </h1>
           {!sc && <p className="iv-hint">{hint}</p>}
 

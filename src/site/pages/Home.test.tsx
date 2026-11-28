@@ -29,7 +29,7 @@ describe('Home', () => {
     for (const r of PREP_ROLES.slice(0, 3)) expect(screen.getByRole('heading', { name: r.title })).toBeTruthy()
     expect(screen.getByRole('heading', { level: 2, name: 'Your evaluation' })).toBeTruthy()
     expect(container.textContent).toContain('Just starting')
-    expect(container.textContent).toContain("I'm MIRROR, and I'll be your interviewer")
+    expect(container.textContent).toContain("I'm MIRROR, and I'll be interviewing you")
     expect(container.textContent).not.toMatch(/Mirror Voice|Reflection Guide|Deeper Questions|Experience library|Found your footing/)
   })
 

@@ -47,8 +47,7 @@
 .ml-fi-round:focus-visible, .ml-fi-logo:focus-visible { outline: 2px solid #8e44c3; outline-offset: 3px; }
 .ml-fi-hint { margin: 12px 0 0; font-size: 13px; color: #787673; }
 
-@media (max-width: 600px) { .ml-fi-hint { display: none; } @keyframes ml-fi-rise { from { opacity: 0; transform: scale(.9); } }
-.ml-fi-stage { position: relative; z-index: 0; width: min(1180px, 100vw, 112vh); aspect-ratio: 1; margin-top: -4vh; display: grid; place-items: center; pointer-events: none; animation: ml-fi-rise 1.6s cubic-bezier(.23, 1, .32, 1) both; }
+@media (max-width: 600px) { .ml-fi-hint { display: none; } .ml-fi-center { width: 86vw; } }
 @media (prefers-reduced-motion: reduce) {
   .ml-fi *, .ml-fi *::before { animation: none !important; transition: none !important; }
   .ml-fi-line, .ml-fi-question span, .ml-fi-dock { opacity: 1; transform: none; filter: none; }

@@ -1,9 +1,10 @@
-/* The first question. Same look as the website: warm paper, light tight headings, violet accent, a gradient tile. */
-.ml-fi { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); background: #fbfaf9; color: #111; font-family: var(--p-sans, system-ui, sans-serif); }
-.ml-fi-form { display: flex; flex-direction: column; padding: 28px clamp(20px, 5vw, 64px) 56px; }
+/* The first question. Same look as the website: warm paper, light tight headings, violet accent. One screen, no panels. */
+/* One screen, no panels: a soft violet and amber glow behind the orb fades into the warm page. */
+.ml-fi { position: relative; min-height: 100vh; background: radial-gradient(70% 55% at 50% 22%, rgba(218, 143, 255, .28) 0%, rgba(255, 223, 189, .22) 45%, transparent 75%), #fbfaf9; color: #111; font-family: var(--p-sans, system-ui, sans-serif); }
+.ml-fi-form { display: flex; flex-direction: column; min-height: 100vh; padding: 28px clamp(20px, 5vw, 64px) 56px; }
 .ml-fi-top { display: flex; align-items: center; min-height: 40px; }
 .ml-fi-logo { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-weight: 500; font-size: 15px; letter-spacing: .13em; color: #111; }
-.ml-fi .ml-fi-main { width: 100%; max-width: 560px; margin: auto; display: flex; flex-direction: column; gap: 18px; padding: 32px 0 0; }
+.ml-fi .ml-fi-main { width: 100%; max-width: 600px; margin: auto; align-items: center; text-align: center; display: flex; flex-direction: column; gap: 18px; padding: 32px 0 0; }
 .ml-fi-eyebrow { margin: 0; font-size: 12px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: #6a6865; }
 .ml-fi-question { margin: 0; font-size: clamp(30px, 4.2vw, 44px); line-height: 1.1; font-weight: 400; letter-spacing: -.04em; color: #111; text-wrap: balance; }
 .ml-fi-purpose { margin: 0; max-width: 46ch; font-size: 16px; line-height: 1.5; color: rgba(17, 17, 17, .6); }
@@ -20,12 +21,8 @@
 .ml-fi-btn--quiet[aria-pressed="true"] { border-color: #993dca; color: #7a20a6; }
 .ml-fi-btn:focus-visible, .ml-fi-logo:focus-visible { outline: 2px solid #8e44c3; outline-offset: 3px; }
 .ml-fi-note { min-height: 1.5em; margin: 0; font-size: 14px; color: #6a6865; }
-.ml-fi .ml-fi-tile { position: relative; overflow: hidden; margin: 16px 16px 16px 0; border-radius: 16px; display: flex; align-items: flex-end; padding: 36px; background: radial-gradient(120% 90% at 15% 20%, #e2ddfd 0%, transparent 60%), radial-gradient(100% 80% at 90% 30%, #f0c0ff 0%, transparent 55%), radial-gradient(120% 100% at 50% 100%, #ffdfbd 0%, #ffeed8 70%); }
-.ml-fi-tile-line { position: relative; z-index: 1; margin: 0; max-width: 22ch; font-size: clamp(24px, 2.6vw, 34px); line-height: 1.15; font-weight: 400; letter-spacing: -.035em; color: #111; }
-@media (max-width: 991px) { .ml-fi { grid-template-columns: 1fr; } .ml-fi .ml-fi-tile { display: none; } }
-@media (prefers-reduced-motion: reduce) { .ml-fi-btn, .ml-fi-composer { transition: none; } }
 @media (prefers-color-scheme: dark) {
-  .ml-fi { background: #111; color: #f6f5f3; }
+  .ml-fi { background: radial-gradient(70% 55% at 50% 22%, rgba(187, 105, 234, .30) 0%, transparent 70%), #111; color: #f6f5f3; }
   .ml-fi-logo, .ml-fi-question { color: #f6f5f3; }
   .ml-fi-purpose { color: rgba(246, 245, 243, .65); }
   .ml-fi-composer { background: #1c1b1a; border-color: #2e2d2b; }
@@ -33,5 +30,9 @@
   .ml-fi-row { border-color: #2e2d2b; }
   .ml-fi-btn { background: #f6f5f3; color: #111; border-color: #f6f5f3; }
   .ml-fi-btn--quiet { background: transparent; color: #f6f5f3; border-color: #52504d; }
-  .ml-fi-tile-line { color: #111; }
-}
+  }
+
+.ml-fi .ml-fi-orb { width: clamp(150px, 22vw, 210px); aspect-ratio: 1; margin: 0 auto 4px; }
+.ml-fi .ml-fi-orb .orb-wrap { width: 100%; height: 100%; }
+.ml-fi .ml-fi-composer { width: 100%; text-align: left; }
+.ml-fi-purpose, .ml-fi-question { margin-inline: auto; }

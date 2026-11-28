@@ -29,9 +29,9 @@ export function LiveOrb({ state = 'idle', compact = false, label, inputLevel, ou
   // The orb breathes with the voice: bigger while someone is talking.
   const scale = state === 'thinking' ? 1.02 : 1 + level * .16
   // How lively the swirl is. While MIRROR speaks it never drops below a visible floor, so it always moves; thinking is a steady slow swirl.
-  const energy = state === 'speaking' ? Math.max(.45, level) : state === 'listening' ? .15 + level * .85 : state === 'thinking' ? .3 : 0
+  const energy = state === 'speaking' ? Math.max(.45, level) : state === 'listening' ? .15 + level * .85 : state === 'thinking' ? .3 : .1
 
   return <div className={`orb-wrap ${compact ? 'orb-wrap--compact' : ''} orb--${state}`} role="img" aria-label={label || `MIRROR orb, ${state}`}>
-    <FluidOrb size={compact ? 130 : 420} color="#1A73F2" energy={energy} aria-hidden="true" style={{ width: '100%', height: '100%', transform: `scale(${scale})`, transition: 'transform .16s ease-out' }} />
+    <FluidOrb size={compact ? 130 : 420} color="#993dca" energy={energy} aria-hidden="true" style={{ width: '100%', height: '100%', transform: `scale(${scale})`, transition: 'transform .16s ease-out' }} />
   </div>
 }

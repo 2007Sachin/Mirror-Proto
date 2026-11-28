@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import '../landing.css'
 import './firstInterview.css'
 import { api, type Profile } from '../lib/api'
-import type { OrbState } from '../components/LiveOrb'
+import { LiveOrb, type OrbState } from '../components/LiveOrb'
 import FallbackNote from '../components/FallbackNote'
 import { AudioCapture, pcm16ToBytes } from '../voice/audioCapture'
 
@@ -79,7 +79,14 @@ export default function FirstInterview({
   const inflight = useRef(false)
   const dictation = useDictation(t => setText(prev => (prev.trim() ? `${prev.trim()} ${t}` : t)))
 
-  const orb: OrbState = dictation.state === 'recording' ? 'listening' : busy || dictation.state === 'transcribing' ? 'thinking' : 'idle'
+  // The orb reacts to you: each keystroke or word gives it a push that fades, so it is alive while you type.
+  const [typing, setTyping] = useState(0)
+  useEffect(() => {
+    if (typing <= 0) return
+    const id = window.setTimeout(() => setTyping(t => Math.max(0, t - 0.12)), 80)
+    return () => window.clearTimeout(id)
+  }, [typing])
+  const orb: OrbState = dictation.state === 'recording' || typing > 0 ? 'listening' : busy || dictation.state === 'transcribing' ? 'thinking' : 'idle'
   const ready = text.trim().length >= MIN
 
   // One answer is enough: it gives the role, the first focus and the first question, and then the practice starts.
@@ -125,6 +132,7 @@ export default function FirstInterview({
           <button type="button" className="ml-fi-logo" onClick={onBack}>MIRROR</button>
         </header>
         <main className="ml-fi-main" aria-labelledby="fi-q">
+          <div className="ml-fi-orb" aria-hidden="true"><LiveOrb state={orb} inputLevel={typing} /></div>
           <p className="ml-fi-eyebrow">Start here</p>
           <h1 id="fi-q" className="ml-fi-question" aria-live="polite">{ONE_QUESTION}</h1>
           <p className="ml-fi-purpose">MIRROR is practice before the interview. Tell it a little about you, then you are in the room.</p>
@@ -132,7 +140,7 @@ export default function FirstInterview({
             <textarea
               autoFocus
               value={text}
-              onChange={e => setText(e.target.value)}
+              onChange={e => { setText(e.target.value); setTyping(0.9) }}
               placeholder="Take your time. Say it the way you’d say it out loud."
               aria-label="About you"
               readOnly={busy}
@@ -159,9 +167,6 @@ export default function FirstInterview({
           <FallbackNote source={fellBack ? 'fallback' : null} />
         </main>
       </div>
-      <aside className="ml-fi-tile" aria-hidden="true" data-state={orb}>
-        <p className="ml-fi-tile-line">A calm room, and someone on your side.</p>
-      </aside>
     </div>
   )
 }

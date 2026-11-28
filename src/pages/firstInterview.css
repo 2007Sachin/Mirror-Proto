@@ -1,6 +1,6 @@
-/* The first question, as a room that wakes up: a large orb of dots, a hello, the question word by word,
+/* The first question, as a room that wakes up: a large, high-resolution orb of dots, a hello, the question word by word,
    then a floating input. One screen, warm paper, nothing boxed. Colours match the website. */
-.ml-fi { position: relative; min-height: 100vh; overflow: hidden; background: #fbfaf9; color: #111; font-family: var(--p-sans, system-ui, sans-serif); display: flex; flex-direction: column; }
+.ml-fi { position: relative; min-height: 100vh; overflow-x: hidden; background: #fbfaf9; color: #111; font-family: var(--p-sans, system-ui, sans-serif); display: flex; flex-direction: column; }
 .ml-fi-glow { position: absolute; inset: -20% -10% auto; height: 90%; pointer-events: none; background:
   radial-gradient(45% 50% at 50% 38%, rgba(187, 105, 234, calc(.20 + var(--lvl, 0) * .22)) 0%, transparent 70%),
   radial-gradient(60% 45% at 25% 55%, rgba(255, 189, 126, .22) 0%, transparent 70%),
@@ -11,7 +11,7 @@
 .ml-fi-logo { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-weight: 500; font-size: 15px; letter-spacing: .13em; color: #111; }
 .ml-fi .ml-fi-main { position: relative; z-index: 1; flex: 1; width: 100%; max-width: 760px; margin: 0 auto; padding: 0 clamp(20px, 5vw, 48px) 40px; display: flex; flex-direction: column; align-items: center; text-align: center; }
 
-.ml-fi-stage { position: relative; width: clamp(280px, 46vw, 480px); aspect-ratio: 1; margin-top: clamp(-8px, 1vh, 12px); display: grid; place-items: center; animation: ml-fi-rise 1.4s cubic-bezier(.23, 1, .32, 1) both; }
+.ml-fi-stage { position: relative; width: min(600px, 92vw, 48vh); aspect-ratio: 1; margin-top: clamp(-8px, 1vh, 12px); display: grid; place-items: center; animation: ml-fi-rise 1.4s cubic-bezier(.23, 1, .32, 1) both; }
 @keyframes ml-fi-rise { from { opacity: 0; transform: translateY(24px) scale(.88); } }
 .ml-fi-orb { width: 100%; aspect-ratio: 1; transition: transform .3s cubic-bezier(.23, 1, .32, 1); transform: scale(calc(1 + var(--lvl, 0) * .06)); }
 .ml-fi-orb .orb-wrap { width: 100%; height: 100%; }

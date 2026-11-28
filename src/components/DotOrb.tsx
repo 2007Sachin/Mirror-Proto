@@ -2,11 +2,10 @@ import { useEffect, useRef } from 'react'
 
 /**
  * MIRROR's orb: a sphere made of dots, tilted and turning, drawn on a 2D canvas (no library).
- * It takes its colour from the surrounding text colour, so it is ink on paper, not a gradient. A touch of the site's violet
- * shows on the near side when it is lively. `energy` 0..1 is how alive it is: it swells, ripples and turns faster.
+ * Colour comes from lighting: each dot is coloured by how much it faces a lamp at the upper left, through a dusk ramp. `energy` 0..1 is how alive it is: it swells, ripples and turns faster.
  * Under reduced motion it draws one still frame.
  */
-const DOTS = 1100
+const DOTS = 3400
 const TILT = (22 * Math.PI) / 180
 const GOLDEN = Math.PI * (3 - Math.sqrt(5))
 
@@ -18,11 +17,17 @@ const POINTS = Array.from({ length: DOTS }, (_, i) => {
   return { x: Math.cos(a) * r, y, z: Math.sin(a) * r, seed: (i * 7919) % 97 / 97 }
 })
 
-const parse = (css: string): [number, number, number] => {
-  const m = css.match(/\d+(\.\d+)?/g)
-  return m && m.length >= 3 ? [Number(m[0]), Number(m[1]), Number(m[2])] : [17, 17, 17]
-}
-const VIOLET: [number, number, number] = [153, 61, 202]
+// A lit sphere in dusk colours: shadow indigo, plum, ember, amber light. Brightness picks the colour, so it reads as one object under one lamp.
+const STOPS: [number, [number, number, number]][] = [[0, [43, 33, 96]], [0.4, [138, 58, 122]], [0.72, [212, 105, 58]], [1, [255, 208, 138]]]
+const RAMP = Array.from({ length: 256 }, (_, i) => {
+  const t = i / 255
+  let k = 1
+  while (k < STOPS.length - 1 && t > STOPS[k][0]) k++
+  const [t0, a] = STOPS[k - 1], [t1, b] = STOPS[k]
+  const u = Math.min(1, Math.max(0, (t - t0) / (t1 - t0)))
+  return [0, 1, 2].map(j => Math.round(a[j] + (b[j] - a[j]) * u))
+})
+const LIGHT = (() => { const v = [-0.55, -0.6, 0.58]; const n = Math.hypot(...v); return v.map(x => x / n) })()
 
 export function DotOrb({ energy = 0, className }: { energy?: number; className?: string }) {
   const ref = useRef<HTMLCanvasElement>(null)
@@ -35,15 +40,13 @@ export function DotOrb({ energy = 0, className }: { energy?: number; className?:
     if (!cv || !ctx) return
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
     let w = 0, h = 0, raf = 0, last = 0, spin = Math.random() * 6, pulse = 0, e = target.current
-    let ink = parse(getComputedStyle(cv).color)
     let visible = true
 
     const size = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      const dpr = Math.min(Math.max(window.devicePixelRatio || 1, 2), 3) // always sharp: at least 2x
       w = cv.clientWidth; h = cv.clientHeight
       cv.width = Math.max(1, Math.round(w * dpr)); cv.height = Math.max(1, Math.round(h * dpr))
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      ink = parse(getComputedStyle(cv).color)
     }
     const draw = () => {
       ctx.clearRect(0, 0, w, h)
@@ -61,12 +64,12 @@ export function DotOrb({ energy = 0, className }: { energy?: number; className?:
         const wave = 1 + Math.sin(p.y * 5 + pulse + p.seed * 2) * 0.035 * (0.3 + e * 2.2)
         const depth = (z2 + 1) / 2 // 0 far side, 1 near side
         const rr = R * wave
-        const r = (0.55 + depth * 1.35) * (Math.min(w, h) / 420 + 0.35)
-        const a = 0.12 + depth * 0.88
-        // near-side dots lean toward violet as it comes alive; the rest stay ink
-        const t = depth > 0.7 ? Math.max(0, live * (depth - 0.7) / 0.3) * (0.4 + p.seed * 0.6) : 0
-        const c0 = Math.round(ink[0] + (VIOLET[0] - ink[0]) * t), c1 = Math.round(ink[1] + (VIOLET[1] - ink[1]) * t), c2 = Math.round(ink[2] + (VIOLET[2] - ink[2]) * t)
-        ctx.fillStyle = `rgba(${c0},${c1},${c2},${a.toFixed(3)})`
+        const r = (0.5 + depth * 1.1) * (Math.min(w, h) / 560 + 0.3)
+        const a = 0.1 + depth * 0.9
+        // lamp from the upper left: how much this dot faces it, nudged brighter when the orb is lively
+        const lit = (x1 * LIGHT[0] + y2 * LIGHT[1] + z2 * LIGHT[2] + 1) / 2
+        const c = RAMP[Math.round(Math.min(1, Math.max(0, lit * 0.92 + live * 0.08 * (0.5 + p.seed * 0.5))) * 255)]
+        ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${a.toFixed(3)})`
         ctx.beginPath()
         ctx.arc(cx + x1 * rr, cy + y2 * rr, r, 0, 6.2832)
         ctx.fill()
@@ -98,7 +101,7 @@ export function DotOrb({ energy = 0, className }: { energy?: number; className?:
     }
   }, [])
 
-  return <canvas ref={ref} className={className} aria-hidden="true" style={{ width: '100%', height: '100%', display: 'block', color: 'inherit' }} />
+  return <canvas ref={ref} className={className} aria-hidden="true" style={{ width: '100%', height: '100%', display: 'block' }} />
 }
 
 export default DotOrb

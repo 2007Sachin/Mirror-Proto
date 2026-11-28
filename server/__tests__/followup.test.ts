@@ -35,7 +35,7 @@ describe('NIM follow-up generation', () => {
       }),
     })
     expect(res.status).toBe(201)
-    expect((await j(res)).nextQuestion).toBe('How did you decide to run that pilot?')
+    expect((await j(res)).nextQuestion).toContain('How did you decide to run that pilot?')
     expect(prompt).toContain('Product Analyst')
     expect(prompt).toContain('Candidates:') // the Room's Interviewer prompt lists the Director's candidates
   })

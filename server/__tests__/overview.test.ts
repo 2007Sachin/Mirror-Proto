@@ -53,7 +53,7 @@ describe('POST /interviews with an opening question', () => {
     const created = await j<{ currentQuestion: string }>(
       await post(app, '/interviews', { role: profile.role, openingQuestion: 'Start from the finance side: what did they need from you?' }),
     )
-    expect(created.currentQuestion).toBe('Start from the finance side: what did they need from you?')
+    expect(created.currentQuestion).toContain('Start from the finance side: what did they need from you?')
   })
 })
 

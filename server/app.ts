@@ -13,6 +13,7 @@ import { createMockStt } from './voice/stt/mockStt.js'
 import { sttProviderName } from './voice/sttProvider.js'
 import { createRestSarvamStt } from './voice/stt/createStt.js'
 import type { SttProvider } from './voice/providers/types.js'
+import { greet } from './domain/frame.js'
 import { addTurn, canAbandon, canComplete, validateEvidence } from './domain/stateMachine.js'
 import { PHASE1_TABLES } from './repo/supabase.js'
 import type { AgentEvent, Debrief, InterviewRow, ProfileRow, ReflectionRow, Repository, Target, TurnRow } from './repo/types.js'
@@ -309,7 +310,7 @@ export function buildApp(deps: AppDeps): Hono {
     const interview = await repo.createInterview(workspace, {
       role: body.role,
       industry: body.industry,
-      openingQuestion: body.openingQuestion ?? (queued ? profile.firstQuestion : await firstQuestion(profile, body.role, body.industry)),
+      openingQuestion: greet(body.role, body.openingQuestion ?? (queued ? profile.firstQuestion : await firstQuestion(profile, body.role, body.industry))),
       targetId: body.targetId ?? null,
     })
     return c.json(serializeInterview(interview, [], null), 201)

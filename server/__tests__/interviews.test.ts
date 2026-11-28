@@ -45,8 +45,8 @@ describe('POST /interviews', () => {
     expect(res.status).toBe(201)
     const body = await j(res)
     expect(body.status).toBe('in_progress')
-    expect(body.currentQuestion).toBe(OPENING_QUESTION)
-    expect(body.questions).toEqual([OPENING_QUESTION])
+    expect(body.currentQuestion).toContain(OPENING_QUESTION)
+    expect(body.questions).toHaveLength(1); expect(body.questions[0]).toContain(OPENING_QUESTION)
     expect(body.nextQuestionIndex).toBe(0)
     expect(body.turns).toEqual([])
     expect(body.workspace).toBe('dev')
@@ -72,7 +72,7 @@ describe('POST /interviews/:id/turns', () => {
       expect(res.status).toBe(201)
       const body = await j(res)
       expect(body.turn.questionIndex).toBe(i)
-      expect(body.turn.question).toBe(FALLBACK_QUESTIONS[i])
+      expect(body.turn.question).toContain(FALLBACK_QUESTIONS[i])
       expect(body.status).toBe(i === 3 ? 'completed' : 'in_progress')
       expect(body.nextQuestionIndex).toBe(i === 3 ? null : i + 1)
     }
@@ -157,7 +157,7 @@ describe('GET /interviews/:id', () => {
     expect(body.status).toBe('completed')
     expect(body.turns.length).toBe(4)
     expect(body.reflection).toBeNull()
-    expect(body.questions).toEqual(FALLBACK_QUESTIONS)
+    body.questions.forEach((q: string, i: number) => expect(q).toContain(FALLBACK_QUESTIONS[i]))
   })
 
   it('rejects completion before four answers', async () => {
@@ -220,7 +220,7 @@ describe('GET /interviews/:id', () => {
     await postTurn(app, id, 0, answers[0])
     const retry = await app.request(`/interviews/${id}/next-question`, { method: 'POST', headers: WS })
     expect(retry.status).toBe(200)
-    expect((await j(retry)).nextQuestion).toBe('What decision did you personally own?')
+    expect((await j(retry)).nextQuestion).toContain('What decision did you personally own?')
     expect((await repo.getTurns('dev', id)).length).toBe(1)
   })
 

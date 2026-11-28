@@ -4,6 +4,7 @@ import { buildRoomState } from './director/state.js'
 import type { Interviewer, RoomLog } from './director/types.js'
 import { ProviderFailure } from '../providers/nim.js'
 import { quotedFollowUp } from './fallbacks.js'
+import { bridge } from './frame.js'
 import type { InterviewRow, Repository, TurnRow } from '../repo/types.js'
 import type { InterviewContext, ReflectionProvider } from '../providers/types.js'
 import type { ProfileRow } from '../repo/types.js'
@@ -111,7 +112,7 @@ export async function persistFollowUp(
       if (callsByInterview.size >= COUNTER_CAP) callsByInterview.delete(callsByInterview.keys().next().value as string)
       callsByInterview.set(interview.id, (callsByInterview.get(interview.id) ?? 0) + out.calls)
     }
-    question = out.question
+    question = bridge(out.question, turns.length, total)
     source = out.source === 'model' ? 'ai' : 'fallback'
   }
   const updated = await repo.appendAskedQuestion(interview.workspaceId, interview.id, question)

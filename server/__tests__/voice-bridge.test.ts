@@ -31,12 +31,12 @@ describe('submitVoiceTurn', () => {
     if (!result.ok) return
     expect(result.turn.transcriptSource).toBe('voice')
     expect(result.turn.answer).toContain('onboarding')
-    expect(result.nextQuestion).toBe('What was specifically yours to own?')
+    expect(result.nextQuestion).toContain('What was specifically yours to own?')
     const stored = await repo.getTurns('dev', interview.id)
     expect(stored).toHaveLength(1)
     expect(stored[0].transcriptSource).toBe('voice')
     const reloaded = await repo.getInterview('dev', interview.id)
-    expect(reloaded?.askedQuestions).toEqual([OPENING_QUESTION, 'What was specifically yours to own?'])
+    expect(reloaded?.askedQuestions[0]).toContain(OPENING_QUESTION); expect(reloaded?.askedQuestions[1]).toContain('What was specifically yours to own?')
   })
 
   it('retry after a follow-up failure does not save the answer twice', async () => {

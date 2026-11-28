@@ -9,27 +9,25 @@
 @keyframes ml-fi-drift { from { transform: translate3d(-2%, 0, 0) scale(1); } to { transform: translate3d(2%, 2%, 0) scale(1.06); } }
 .ml-fi-top { position: relative; z-index: 2; display: flex; align-items: center; padding: 24px clamp(20px, 4vw, 48px); }
 .ml-fi .ml-fi-logo { text-transform: uppercase; background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit; font-weight: 500; font-size: 15px; letter-spacing: .13em; color: #111; }
-/* The orb is the room: it fills the screen and the question sits inside it. The input floats over its lower edge. */
-.ml-fi .ml-fi-main { position: relative; z-index: 1; flex: 1; width: 100%; max-width: none; margin: 0; padding: 0; display: grid; place-items: center; min-height: calc(100vh - 72px); }
-.ml-fi .ml-fi-main > * { grid-area: 1 / 1; }
-.ml-fi-center { position: relative; z-index: 2; width: min(720px, 80vw); display: flex; flex-direction: column; align-items: center; text-align: center; text-shadow: 0 0 18px #fbfaf9, 0 0 36px #fbfaf9, 0 0 6px #fbfaf9; }
+/* A big orb in the middle that reacts to you, the question under it, and the input at the bottom. */
+.ml-fi .ml-fi-main { position: relative; z-index: 1; flex: 1; width: 100%; max-width: 980px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 40px) clamp(16px, 3vh, 28px); display: flex; flex-direction: column; align-items: center; text-align: center; min-height: calc(100vh - 72px); }
+.ml-fi-center { position: relative; z-index: 2; width: 100%; max-width: 900px; display: flex; flex-direction: column; align-items: center; text-align: center; }
 
 @keyframes ml-fi-rise { from { opacity: 0; transform: scale(.9); } }
-.ml-fi-stage { position: relative; z-index: 0; width: min(1180px, 100vw, 112vh); aspect-ratio: 1; margin-top: -4vh; display: grid; place-items: center; pointer-events: none; animation: ml-fi-rise 1.6s cubic-bezier(.23, 1, .32, 1) both; }
-.ml-fi-orb { width: 100%; aspect-ratio: 1; transition: transform .3s cubic-bezier(.23, 1, .32, 1); transform: scale(calc(1 + var(--lvl, 0) * .06)); }
-.ml-fi .ml-fi-orb .orb-wrap { width: 100%; max-width: none; min-width: 0; height: 100%; aspect-ratio: 1; }
+.ml-fi-stage { position: relative; flex: none; width: min(680px, 92vw, 52vh); aspect-ratio: 1; margin: 0 auto; animation: ml-fi-rise 1.6s cubic-bezier(.23, 1, .32, 1) both; }
+.ml-fi-orb { position: absolute; inset: 0; transition: transform .3s cubic-bezier(.23, 1, .32, 1); transform: scale(calc(1 + var(--lvl, 0) * .06)); }
+.ml-fi .ml-fi-orb .orb-wrap { position: absolute; inset: 0; width: 100%; max-width: none; min-width: 0; height: 100%; }
 .ml-fi .ml-fi-orb .orb-wrap > div { width: 100% !important; height: 100% !important; }
 .ml-fi[data-state="listening"] .ml-fi[data-state="thinking"] 
-.ml-fi-hello { margin: 0; display: grid; gap: 4px; min-height: 3.2em; }
+.ml-fi-hello { margin: 14px 0 0; display: grid; gap: 4px; min-height: 3.2em; }
 .ml-fi-line { display: block; opacity: 0; transform: translateY(8px); transition: opacity .9s cubic-bezier(.23, 1, .32, 1), transform .9s cubic-bezier(.23, 1, .32, 1); font-size: 15px; letter-spacing: .01em; color: rgba(17, 17, 17, .6); }
 .ml-fi-line:first-child { font-size: clamp(22px, 2.6vw, 28px); letter-spacing: -.03em; color: #111; }
 .ml-fi-line.is-on { opacity: 1; transform: none; }
-.ml-fi-question { margin: 12px 0 0; font-size: clamp(30px, 5vw, 64px); line-height: 1.06; font-weight: 400; letter-spacing: -.045em; text-wrap: balance; min-height: 2.2em; }
+.ml-fi-question { margin: 10px 0 0; font-size: clamp(24px, 3.6vw, 44px); line-height: 1.1; font-weight: 400; letter-spacing: -.04em; text-wrap: balance; min-height: 2.2em; }
 .ml-fi-question span { display: inline-block; opacity: 0; transform: translateY(10px); filter: blur(6px); transition: opacity .7s cubic-bezier(.23, 1, .32, 1), transform .7s cubic-bezier(.23, 1, .32, 1), filter .7s; transition-delay: calc(var(--i) * 70ms); white-space: pre; }
 .ml-fi-question.is-on span { opacity: 1; transform: none; filter: none; }
 
-/* the input floats over the lower edge of the orb */
-.ml-fi-dock { position: absolute; left: 50%; bottom: clamp(16px, 3vh, 32px); z-index: 3; width: min(720px, calc(100vw - 32px)); margin-left: calc(min(720px, calc(100vw - 32px)) / -2); align-self: end; padding-top: 0; opacity: 0; transform: translateY(24px); pointer-events: none; transition: opacity .9s cubic-bezier(.23, 1, .32, 1), transform .9s cubic-bezier(.23, 1, .32, 1); }
+.ml-fi-dock { position: relative; z-index: 3; width: min(720px, 100%); margin-top: auto; padding-top: 20px; opacity: 0; transform: translateY(24px); pointer-events: none; transition: opacity .9s cubic-bezier(.23, 1, .32, 1), transform .9s cubic-bezier(.23, 1, .32, 1); }
 .ml-fi-dock.is-on { opacity: 1; transform: none; pointer-events: auto; }
 .ml-fi-caption { min-height: 1.5em; margin: 0 0 10px; font-size: 14px; color: #6a6865; }
 .ml-fi-bar { display: flex; align-items: flex-end; gap: 8px; padding: 10px 10px 10px 22px; text-align: left; background: rgba(255, 255, 255, .85); border: 1px solid #eae8e5; border-radius: 28px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
@@ -54,7 +52,6 @@
 }
 @media (prefers-color-scheme: dark) {
   .ml-fi { background: #111; color: #f6f5f3; }
-  .ml-fi-center { text-shadow: 0 0 18px #111, 0 0 36px #111, 0 0 6px #111; }
   .ml-fi-logo, .ml-fi-line:first-child { color: #f6f5f3; }
   .ml-fi-line { color: rgba(246, 245, 243, .65); }
   .ml-fi-caption, .ml-fi-hint { color: #a09e9b; }

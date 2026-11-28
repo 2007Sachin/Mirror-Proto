@@ -1,0 +1,84 @@
+/* The app, in the same language as the website, the sign-in page and the first question:
+   warm paper, light tight headings, small spaced labels, one violet accent, a dot-sphere for the brand, calm rounded cards.
+   Loaded last (main.tsx). Selectors repeat a class where the older page and theme sheets would otherwise win. */
+
+/* ---------- Shell ---------- */
+.workspace-app.app { background: var(--p-bg); }
+.workspace-app.app .sidebar { background: var(--p-bg); border-right: 1px solid var(--p-line); padding: 20px 14px 16px; }
+.workspace-app.app .sidebar-top { padding: 0 6px 18px; }
+.workspace-app .brand { gap: 10px; }
+.workspace-app .brand-mark { position: relative; width: 24px; height: 24px; border-radius: 50%; flex: none; display: block;
+  background: radial-gradient(circle at 34% 30%, #ffd08a 0, #d4693a 38%, #8a3a7a 68%, #2b2160 100%);
+  -webkit-mask: radial-gradient(circle, #000 52%, transparent 58%) 0 0 / 4px 4px; mask: radial-gradient(circle, #000 52%, transparent 58%) 0 0 / 4px 4px; }
+.workspace-app .brand-mark i { display: none; }
+.workspace-app.app .sidebar nav { gap: 2px; }
+.workspace-app.app .sidebar :is(nav button, .sidebar-bottom > button) { position: relative; min-height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid transparent; font-size: 14.5px; font-weight: 450; color: var(--p-ink-2); gap: 12px; }
+.workspace-app.app .sidebar :is(nav button, .sidebar-bottom > button):hover { background: var(--p-chip); color: var(--p-ink); }
+.workspace-app.app .sidebar :is(nav button, .sidebar-bottom > button).active { background: var(--p-surface); border-color: var(--p-line); color: var(--p-ink); box-shadow: 0 1px 2px rgba(17, 17, 17, .05); }
+.workspace-app.app .sidebar :is(nav button, .sidebar-bottom > button).active svg { color: #993dca; }
+.workspace-app.app .sidebar :is(nav button, .sidebar-bottom > button).active::before { content: ""; position: absolute; left: -15px; top: 50%; width: 3px; height: 18px; margin-top: -9px; border-radius: 0 3px 3px 0; background: #993dca; }
+.workspace-app.app .demo-profile { border-radius: 12px; }
+.workspace-app.app .workspace-header { background: transparent; border-bottom: 0; backdrop-filter: none; -webkit-backdrop-filter: none; height: 56px; padding: 0 clamp(16px, 3vw, 32px); }
+.workspace-app .demo-badge { font-family: var(--p-sans); font-size: 11px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; padding: 5px 12px; background: var(--p-surface); border: 1px solid var(--p-line); color: var(--p-ink-3); }
+.workspace-app .avatar-button { width: 36px; height: 36px; border-radius: 50%; background: #111; color: #fff; font-weight: 500; }
+.workspace-app .workspace-content { max-width: 1240px; padding: 8px clamp(20px, 4vw, 48px) 72px; }
+.workspace-app .prep-page, .workspace-app .prep-jobs, .workspace-app .prep-plan { padding-inline: clamp(20px, 4vw, 48px); max-width: 1240px; margin-inline: auto; box-sizing: border-box; width: 100%; }
+
+/* ---------- Type: labels, titles ---------- */
+.workspace-app :is(.m-kicker, .eyebrow, .today-eyebrow, [class*="kicker"], [class*="eyebrow"]) { font-family: var(--p-sans); font-size: 12px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--p-ink-3); }
+.workspace-app :is(.page-title h1, .m-page-head h1, .today-head h1, .tg-top h1, .pr-top h1, .prep-page h1) { font-size: clamp(32px, 3.8vw, 52px); font-weight: 400; letter-spacing: -.035em; line-height: 1.06; margin: 10px 0 12px; }
+.workspace-app .today-hero h2 { font-size: clamp(28px, 3.2vw, 44px); font-weight: 400; letter-spacing: -.035em; line-height: 1.1; max-width: 22ch; }
+.workspace-app :is(.page-title, .m-page-head, .today-head) p { max-width: 56ch; font-size: 17px; line-height: 1.5; color: var(--p-ink-2); }
+
+/* ---------- Cards and the Briefing hero ---------- */
+.workspace-app :is(.m-card, .today-card, .today-hero) { background: var(--p-surface); border: 1px solid var(--p-line); border-radius: 20px; box-shadow: 0 1px 3px rgba(17, 17, 17, .04), 0 10px 30px -18px rgba(17, 17, 17, .18); }
+.workspace-app .today-hero { padding: clamp(22px, 3vw, 36px); min-height: 300px; align-content: center;
+  background: radial-gradient(60% 90% at 88% 20%, rgba(218, 143, 255, .20), transparent 70%), radial-gradient(50% 70% at 70% 90%, rgba(255, 189, 126, .2), transparent 70%), var(--p-surface); }
+.workspace-app .today-orb { position: absolute; right: clamp(16px, 5vw, 64px); top: 50%; width: clamp(150px, 20vw, 260px); aspect-ratio: 1; transform: translateY(-50%); }
+.workspace-app .today-orb .orb-wrap { position: absolute; inset: 0; width: 100%; max-width: none; min-width: 0; height: 100%; }
+.workspace-app .today-orb .orb-wrap > div { width: 100% !important; height: 100% !important; }
+@media (max-width: 760px) { .workspace-app .today-orb { display: none; } }
+
+/* ---------- Folder cards (Interview Prep): paper cards with a soft tinted panel ---------- */
+.fc.fc.fc { --tint: #f0c0ff; --deep: #7a20a6; --wash: #fcf0ff; background: var(--p-surface); border: 1px solid var(--p-line); border-radius: 22px; padding: 14px 14px 18px; gap: 12px;
+  box-shadow: 0 1px 3px rgba(17, 17, 17, .04), 0 12px 30px -20px rgba(17, 17, 17, .25); }
+.fc.fc.fc--1 { --tint: #b7efb2; --deep: #2f6b3a; --wash: #effbec; }
+.fc.fc.fc--2 { --tint: #ffbd7e; --deep: #9a4a12; --wash: #fff3e4; }
+.fc.fc.fc--3 { --tint: #c8c4ea; --deep: #3f3a8c; --wash: #f1effc; }
+.fc.fc.fc--4 { --tint: #dc93c3; --deep: #8a2f66; --wash: #fcedf6; }
+button.fc.fc.fc:hover { border-color: var(--p-line-strong); transform: translateY(-3px); box-shadow: 0 2px 4px rgba(17, 17, 17, .05), 0 22px 40px -22px rgba(17, 17, 17, .35); }
+.fc.fc .fc-folder { min-height: 168px; margin: 0; padding: 18px; border-radius: 16px; color: var(--p-ink); box-shadow: none;
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--deep) 34%, transparent) 1.1px, transparent 1.6px) 0 0 / 13px 13px,
+    radial-gradient(75% 85% at 82% 18%, var(--tint) 0, transparent 70%),
+    var(--wash); }
+.fc.fc .fc-folder::before { font: 500 11px var(--p-sans); letter-spacing: .14em; color: color-mix(in srgb, var(--deep) 80%, #111); opacity: 1; }
+.fc.fc .fc-folder::after { font: 400 clamp(24px, 2.4vw, 32px) / 1.08 var(--p-sans); letter-spacing: -.04em; color: #111; }
+.fc.fc .fc-tab { display: none; }
+.fc.fc .fc-pill { font: 500 11px var(--p-sans); letter-spacing: .12em; border-radius: 999px; padding: 4px 11px; background: var(--wash); color: var(--deep); }
+.fc.fc .fc-name { font-size: 20px; font-weight: 500; letter-spacing: -.02em; }
+.fc.fc .fc-foot { font-weight: 500; color: var(--p-ink); }
+
+/* ---------- Prep page rhythm ---------- */
+.workspace-app .prep-page { display: grid; gap: 28px; padding-top: 8px; }
+.workspace-app .prep-jobs { margin-top: 12px; }
+.workspace-app .prep-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+/* the big title is already in the tinted panel; the heading underneath stays for screen readers only */
+.fc.fc:not(.fc--compact) .fc-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (prefers-color-scheme: dark) {
+  .fc.fc.fc { --wash: #232221; }
+  .fc.fc .fc-folder::after { color: #f6f5f3; }
+  .workspace-app .today-hero { background: radial-gradient(60% 90% at 88% 20%, rgba(187, 105, 234, .22), transparent 70%), var(--p-surface); }
+  .workspace-app.app .sidebar :is(nav button, .sidebar-bottom > button).active { box-shadow: none; }
+}
+.workspace-app .prep-page .prep-jobs, .workspace-app .prep-page .prep-plan { padding-inline: 0; }
+.workspace-app :is(.prep-jobs, .prep-plan) :is(h2, h3) { font-size: clamp(24px, 2.4vw, 32px); font-weight: 400; letter-spacing: -.03em; }
+
+/* Sign-in: the same room as the first question: warm glow and the dot orb */
+.auth-split .auth-split__side { background: radial-gradient(70% 60% at 30% 25%, rgba(255, 189, 126, .35), transparent 70%), radial-gradient(70% 60% at 75% 70%, rgba(200, 196, 234, .7), transparent 70%), #fbf5ee; }
+.auth-split__orb { position: absolute; inset: 0; margin: auto; width: min(78%, 520px); aspect-ratio: 1; height: auto; color: #111; }
+.auth-split__orb .orb-wrap { position: absolute; inset: 0; width: 100%; max-width: none; min-width: 0; height: 100%; }
+.auth-split__orb .orb-wrap > div { width: 100% !important; height: 100% !important; }
+.workspace-app .page-title { margin-bottom: 32px; }
+.auth-split :is(label, .auth-label) { font-family: var(--p-sans); font-size: 12px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--p-ink-3); }

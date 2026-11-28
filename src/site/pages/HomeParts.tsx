@@ -102,7 +102,7 @@ export function RoomScene() {
   )
 }
 
-/** Interview Prep as the app shows it: the bundled interview loops and "Bring your own job". */
+/** Interview Prep as the app shows it: the bundled interview loops and "Your target job". */
 export function PrepPanel() {
   return (
     <AppFrame bar="Interview Prep · Pick the role you are preparing for" note="From the app" className="ms-app--wide">
@@ -110,7 +110,7 @@ export function PrepPanel() {
         {PREP_ROLES.slice(0, 3).map((r, i) => (
           <li key={r.slug}><FolderCard tint={i} label="Interview loop" title={r.title} name={r.title} pill={`${r.rounds.length} rounds`} lines={r.rounds.slice(0, 3).map(x => x.name)} level="h3" /></li>
         ))}
-        <li><FolderCard tint={3} label="Your job" title="Bring a job" name="Bring your own job" pill="New" lines={['Paste the job description', 'Your résumé is matched to it', 'Get rounds to practise']} level="h3" /></li>
+        <li><FolderCard tint={3} label="Custom prep" title="Your target job" name="Your target job" pill="New" lines={['Paste the job description', 'Matched to your résumé', 'Rounds built for this role']} level="h3" /></li>
       </ul>
     </AppFrame>
   )

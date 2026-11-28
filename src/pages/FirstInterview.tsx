@@ -117,6 +117,30 @@ export default function FirstInterview({
   const ready = text.trim().length >= MIN
 
   // One answer is enough: it gives the role, the first focus and the first question, and then the practice starts.
+  // Skipping saves a plain starter profile, so the app has something to open with. You can say more about yourself in your first practice.
+  const skip = async () => {
+    if (inflight.current) return
+    inflight.current = true
+    setBusy(true)
+    const profile: Profile = {
+      role: 'Interview practice',
+      story: 'Skipped the introduction.',
+      pressureQuestion: ONE_QUESTION,
+      pressureAnswer: 'Skipped.',
+      summary: 'You skipped the introduction, so practice starts with a general question.',
+      focus: 'Getting started',
+      firstQuestion: 'Tell me about a project or moment at work that you’re genuinely proud of.',
+      resumeText: null,
+      resumeName: null,
+      mode: 'text',
+    }
+    let saved = true
+    try { await api.saveProfile(profile) } catch { saved = false }
+    onDone(profile, saved)
+    inflight.current = false
+    setBusy(false)
+  }
+
   const send = async () => {
     if (inflight.current) return
     inflight.current = true
@@ -176,6 +200,10 @@ export default function FirstInterview({
       <div className="ml-fi-glow" aria-hidden="true" />
       <header className="ml-fi-top">
         <button type="button" className="ml-fi-logo" onClick={onBack}>MIRROR</button>
+        <nav className="ml-fi-exit" aria-label="Leave this page">
+          <button type="button" className="ml-fi-link" onClick={onBack}>Back</button>
+          <button type="button" className="ml-fi-link ml-fi-link--strong" disabled={busy} onClick={() => void skip()}>Skip for now</button>
+        </nav>
       </header>
       <main className="ml-fi-main" aria-labelledby="fi-q">
         <div className="ml-fi-stage" aria-hidden="true">

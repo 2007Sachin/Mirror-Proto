@@ -7,7 +7,13 @@
   radial-gradient(55% 45% at 78% 45%, rgba(200, 196, 234, .5) 0%, transparent 70%);
   animation: ml-fi-drift 16s ease-in-out infinite alternate; }
 @keyframes ml-fi-drift { from { transform: translate3d(-2%, 0, 0) scale(1); } to { transform: translate3d(2%, 2%, 0) scale(1.06); } }
-.ml-fi-top { position: relative; z-index: 2; display: flex; align-items: center; padding: 24px clamp(20px, 4vw, 48px); }
+.ml-fi-top { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px clamp(20px, 4vw, 48px); }
+.ml-fi-exit { display: flex; align-items: center; gap: 6px; }
+.ml-fi-link { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid transparent; background: transparent; color: #494846; font: inherit; font-size: 14px; cursor: pointer; transition: background-color .25s, color .25s, border-color .25s; }
+.ml-fi-link:hover:not(:disabled) { background: rgba(17, 17, 17, .06); color: #111; }
+.ml-fi-link--strong { border-color: #dcdbda; color: #111; background: rgba(255, 255, 255, .7); }
+.ml-fi-link:disabled { opacity: .4; cursor: not-allowed; }
+.ml-fi-link:focus-visible { outline: 2px solid #8e44c3; outline-offset: 3px; }
 .ml-fi .ml-fi-logo { text-transform: uppercase; background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit; font-weight: 500; font-size: 15px; letter-spacing: .13em; color: #111; }
 /* A big orb in the middle that reacts to you, the question under it, and the input at the bottom. */
 .ml-fi .ml-fi-main { position: relative; z-index: 1; flex: 1; width: 100%; max-width: 980px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 40px) clamp(16px, 3vh, 28px); display: flex; flex-direction: column; align-items: center; text-align: center; min-height: calc(100vh - 72px); }
@@ -53,6 +59,9 @@
 @media (prefers-color-scheme: dark) {
   .ml-fi { background: #111; color: #f6f5f3; }
   .ml-fi-logo, .ml-fi-line:first-child { color: #f6f5f3; }
+  .ml-fi-link { color: #c4c2bf; }
+  .ml-fi-link:hover:not(:disabled) { background: rgba(246, 245, 243, .1); color: #f6f5f3; }
+  .ml-fi-link--strong { color: #f6f5f3; border-color: #52504d; background: rgba(28, 27, 26, .7); }
   .ml-fi-line { color: rgba(246, 245, 243, .65); }
   .ml-fi-caption, .ml-fi-hint { color: #a09e9b; }
   .ml-fi-bar { background: rgba(28, 27, 26, .85); border-color: #2e2d2b; }

@@ -28,3 +28,17 @@ describe('FirstInterview live transcript', () => {
     expect(transcribe).toHaveBeenCalledTimes(2)
   })
 })
+
+describe('FirstInterview leaving', () => {
+  it('shows Back and Skip for now, and skipping saves a starter profile and moves on', async () => {
+    const saveProfile = (await import('../lib/api')).api.saveProfile as unknown as ReturnType<typeof vi.fn>
+    saveProfile.mockResolvedValue(undefined)
+    const onDone = vi.fn(); const onBack = vi.fn()
+    render(<FirstInterview onDone={onDone} onBack={onBack} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+    expect(onBack).toHaveBeenCalled()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Skip for now' })) })
+    expect(saveProfile).toHaveBeenCalledWith(expect.objectContaining({ role: 'Interview practice' }))
+    expect(onDone).toHaveBeenCalledWith(expect.objectContaining({ focus: 'Getting started' }), true)
+  })
+})

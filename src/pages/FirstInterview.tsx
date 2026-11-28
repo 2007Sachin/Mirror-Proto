@@ -11,34 +11,69 @@ const MIN = 20 // characters; matches the interview's own minimum
 const ONE_QUESTION = 'Tell me a little about yourself: what you do now, and the kind of role you want next.'
 
 
-/** Tap the mic to talk, tap again to turn speech into text for the answer box. The text stays editable. */
+/** RMS loudness of a PCM chunk, 0..1 (speech is usually well under 0.3, so it is boosted for display). */
+const loudness = (c: Int16Array) => {
+  let sum = 0
+  for (let i = 0; i < c.length; i++) sum += (c[i] / 32768) ** 2
+  return Math.min(1, Math.sqrt(sum / Math.max(1, c.length)) * 5)
+}
+const LIVE_EVERY_MS = 3500 // how often what you have said so far is turned into text while you speak
+
+/**
+ * Tap the mic to talk, tap again to stop. While you speak, every few seconds the newest audio is turned into text and added
+ * to the answer box, so you can see what MIRROR heard. `level` is how loud you are right now (it drives the orb). The text stays editable.
+ */
 function useDictation(onText: (text: string) => void) {
   const [state, setState] = useState<'idle' | 'recording' | 'transcribing'>('idle')
   const [error, setError] = useState('')
+  const [level, setLevel] = useState(0)
   const capture = useRef<AudioCapture | null>(null)
   const chunks = useRef<Int16Array[]>([])
   const used = useRef(false)
   const alive = useRef(true)
+  const timer = useRef(0)
+  const queue = useRef<Promise<void>>(Promise.resolve()) // sends go one after another, so the text stays in order
+  const onTextRef = useRef(onText)
+  useEffect(() => { onTextRef.current = onText })
 
   useEffect(() => {
     alive.current = true
     return () => {
       alive.current = false
+      window.clearInterval(timer.current)
       capture.current?.stop()
     }
   }, [])
+
+  /** Sends what has been recorded since the last send. Resolves when its text has been added. */
+  const flush = () => {
+    const part = chunks.current.splice(0)
+    if (part.length === 0) return queue.current
+    queue.current = queue.current.then(async () => {
+      const bytes = new Uint8Array(await new Blob(part.map(pcm16ToBytes)).arrayBuffer())
+      if (bytes.length < 3200) return // under 0.1 second: nothing to hear
+      try {
+        const { text } = await api.transcribe(bytes)
+        if (text && alive.current) { used.current = true; onTextRef.current(text) }
+      } catch {
+        if (alive.current) setError('I missed a bit. You can fix it in the box or say it again.')
+      }
+    })
+    return queue.current
+  }
 
   const toggle = async () => {
     setError('')
     if (state === 'transcribing') return
     if (state === 'idle') {
       chunks.current = []
-      const mic = new AudioCapture({ onChunk: chunk => chunks.current.push(chunk) })
+      const mic = new AudioCapture({ onChunk: chunk => { chunks.current.push(chunk); setLevel(loudness(chunk)) } })
       capture.current = mic
       try {
         await mic.start()
         if (!alive.current) return mic.stop() // left the page while the permission prompt was open
         setState('recording')
+        timer.current = window.setInterval(() => { void flush() }, LIVE_EVERY_MS)
       } catch {
         mic.stop()
         capture.current = null
@@ -46,23 +81,15 @@ function useDictation(onText: (text: string) => void) {
       }
       return
     }
+    window.clearInterval(timer.current)
     capture.current?.stop()
     capture.current = null
+    setLevel(0)
     setState('transcribing') // before any await, so a second tap can't stop and send twice
-    const bytes = new Uint8Array(await new Blob(chunks.current.map(pcm16ToBytes)).arrayBuffer())
-    if (bytes.length === 0) return setState('idle')
-    try {
-      const { text } = await api.transcribe(bytes)
-      if (text) {
-        used.current = true
-        onText(text)
-      } else setError('I didn’t catch that. Try again, or type it.')
-    } catch {
-      setError('I couldn’t hear that. Try again, or type it.')
-    }
-    setState('idle')
+    await flush()
+    if (alive.current) { if (!used.current) setError('I didn’t catch that. Try again, or type it.'); setState('idle') }
   }
-  return { state, error, toggle, usedVoice: () => used.current }
+  return { state, error, level, toggle, usedVoice: () => used.current }
 }
 
 export default function FirstInterview({
@@ -133,18 +160,26 @@ export default function FirstInterview({
     const id = window.setTimeout(() => setBeat(b => b + 1), beat === 0 ? 1500 : beat === 1 ? 1700 : 2400)
     return () => window.clearTimeout(id)
   }, [beat])
+  const box = useRef<HTMLTextAreaElement>(null)
+  useEffect(() => {
+    const el = box.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 180)}px`
+    el.scrollTop = el.scrollHeight // keep the newest words in view while you speak
+  }, [text])
   const words = ONE_QUESTION.split(' ')
-  const caption = dictation.state === 'recording' ? 'I’m listening.' : busy ? 'One moment.' : typing > 0 ? 'I’m with you.' : beat >= 3 ? 'Take your time.' : ''
+  const caption = dictation.state === 'recording' ? (text.trim() ? 'I’m listening. Your words appear below.' : 'I’m listening. Go ahead.') : dictation.state === 'transcribing' ? 'Writing down the last bit…' : busy ? 'One moment.' : typing > 0 ? 'I’m with you.' : beat >= 3 ? 'Take your time.' : ''
 
   return (
-    <div className="mirror-landing ml-fi" data-state={orb} data-beat={beat} style={{ ['--lvl' as string]: String(Math.min(1, typing + (dictation.state === 'recording' ? 0.5 : 0))) }}>
+    <div className="mirror-landing ml-fi" data-state={orb} data-beat={beat} style={{ ['--lvl' as string]: String(Math.min(1, Math.max(typing, dictation.level))) }}>
       <div className="ml-fi-glow" aria-hidden="true" />
       <header className="ml-fi-top">
         <button type="button" className="ml-fi-logo" onClick={onBack}>MIRROR</button>
       </header>
       <main className="ml-fi-main" aria-labelledby="fi-q">
         <div className="ml-fi-stage" aria-hidden="true">
-          <div className="ml-fi-orb"><LiveOrb state={orb} inputLevel={typing} /></div>
+          <div className="ml-fi-orb"><LiveOrb state={orb} inputLevel={Math.max(typing, dictation.level)} /></div>
         </div>
         <p className="ml-fi-hello" aria-live="polite">
           <span className="ml-fi-line is-on">Hi, I’m MIRROR.</span>
@@ -157,6 +192,7 @@ export default function FirstInterview({
           <p className="ml-fi-caption" role="status">{dictation.error || note || (text.length > 0 && !ready ? 'A little more, so I have something real to work with.' : caption)}</p>
           <div className="ml-fi-bar">
             <textarea
+              ref={box}
               autoFocus
               rows={2}
               value={text}

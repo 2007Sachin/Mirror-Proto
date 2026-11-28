@@ -51,3 +51,37 @@
 .workspace-app .sidebar nav button.active,
 .workspace-app .sidebar-bottom > button.active { color: var(--p-blue-ink); }
 .workspace-app .brand, .workspace-app .brand span:last-child { font-family: var(--p-sans); font-weight: 500; letter-spacing: .13em; text-transform: uppercase; font-size: 15px; }
+
+/* ---------- Details: the small things that make it feel finished ---------- */
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-tap-highlight-color: transparent; text-rendering: optimizeLegibility; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+::selection { background: rgba(153, 61, 202, .22); color: inherit; }
+input, textarea, select, progress { accent-color: #993dca; caret-color: #993dca; }
+:where(h1, h2, h3) { text-wrap: balance; }
+:where(p, li) { text-wrap: pretty; }
+:where(time, [class*="timer"], [class*="clock"], .m-meta) { font-variant-numeric: tabular-nums; }
+/* One focus ring everywhere */
+:where(a, button, [role="button"], summary, input, textarea, select, [tabindex]):focus-visible { outline: 2px solid #8e44c3; outline-offset: 3px; border-radius: 6px; }
+/* Press and hover feel */
+:where(button, [role="button"], .m-btn, .ml-btn):not(:disabled):active { transform: translateY(1px) scale(.985); }
+:where(button, a, [role="button"]) { transition: transform .35s var(--p-ease), background-color .25s, border-color .25s, color .25s, box-shadow .25s, opacity .25s; }
+:where(button, [role="button"]):disabled { cursor: not-allowed; }
+.m-card, .workspace-app .m-card { transition: border-color .25s, box-shadow .35s var(--p-ease), transform .35s var(--p-ease); }
+.workspace-app a.m-card:hover, .workspace-app button.m-card:hover, .workspace-app .m-card[role="button"]:hover { border-color: var(--p-line-strong); box-shadow: 0 1px 3px rgba(17, 17, 17, .06), 0 14px 28px -14px rgba(17, 17, 17, .18); transform: translateY(-2px); }
+/* Pages arrive instead of snapping in */
+@keyframes ms-arrive { from { opacity: 0; transform: translateY(8px); } }
+.workspace-app .workspace-content > * { animation: ms-arrive .5s var(--p-ease) both; }
+/* Quiet, warm scrollbars */
+* { scrollbar-width: thin; scrollbar-color: var(--p-line-strong) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--p-line-strong); border-radius: 10px; border: 3px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--p-ink-3); background-clip: content-box; border: 3px solid transparent; }
+/* Text fields */
+:where(input, textarea)::placeholder { color: var(--p-ink-3); opacity: .8; }
+:where(input, textarea):disabled { cursor: not-allowed; opacity: .6; }
+:where(img, svg, canvas) { max-width: 100%; }
+@media (prefers-reduced-motion: reduce) {
+  .workspace-app .workspace-content > * { animation: none; }
+  :where(button, a, [role="button"]), .m-card { transition: none; }
+  :where(button, [role="button"], .m-btn, .ml-btn):not(:disabled):active { transform: none; }
+}

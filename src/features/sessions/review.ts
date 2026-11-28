@@ -102,7 +102,7 @@ export function patternAcross(current: InterviewSession, previous: InterviewSess
 }
 
 export function reviewSession(session: InterviewSession, previous: InterviewSession | null, reflection: Reflection | null): SessionReview {
-  const byTurn = new Map((reflection?.evidence ?? []).map(e => [e.turnId, e.observation]))
+  const byTurn = new Map((reflection?.evidence ?? []).filter(e => e.level === undefined).map(e => [e.turnId, e.observation]))
   const questions: QuestionNote[] = [...session.turns]
     .filter(t => t.answer.trim())
     .sort((a, b) => a.questionIndex - b.questionIndex)

@@ -3,6 +3,7 @@ import PageSkeleton from '../ui/PageSkeleton'
 import './sessions.css'
 import '../styles/app-shell.css'
 import { api, type InterviewSession, type InterviewSummary } from '../lib/api'
+import EvaluationSection from '../features/sessions/EvaluationSection'
 import { reviewSession, type SessionReview } from '../features/sessions/review'
 import FallbackNote from '../components/FallbackNote'
 import FolderCard from '../components/FolderCard'
@@ -73,6 +74,16 @@ export default function Sessions({ openId, refreshKey, onPractise, onSaveStory }
     setBusy(false)
   }
 
+  const [evalBusy, setEvalBusy] = useState(false)
+  const [evalFailed, setEvalFailed] = useState(false)
+  const addEvaluation = async () => {
+    if (!current || evalBusy) return
+    setEvalBusy(true)
+    setEvalFailed(false)
+    try { await api.evaluate(current); setTick(t => t + 1) } catch { setEvalFailed(true) }
+    setEvalBusy(false)
+  }
+
   const shown = detail && detail.id === current ? detail : null
   const prior = previous && previous.id === olderId ? previous : null
   const review: SessionReview | null = shown ? reviewSession(shown, prior, shown.reflection) : null
@@ -135,6 +146,7 @@ export default function Sessions({ openId, refreshKey, onPractise, onSaveStory }
                     {shown.reflection && <FallbackNote source={shown.reflection.source} />}
                     {shown.id === openId && shown.turns.some(t => t.transcriptSource === 'voice') && <FollowedTap interviewId={shown.id} />}
                   </header>
+                  <EvaluationSection reflection={shown.reflection} busy={evalBusy} failed={evalFailed} onAdd={() => void addEvaluation()} />
                   <section aria-labelledby="sess-q">
                     <h2 id="sess-q">Each question</h2>
                     {review.questions.length === 0 && <p className="m-quiet">No answer was saved in this session.</p>}

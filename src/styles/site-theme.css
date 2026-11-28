@@ -1,0 +1,53 @@
+/* Marketing-site look for the whole app: warm neutrals, violet accent, light headings, 16px cards.
+   Loaded after paper*.css on purpose. It re-points the paper tokens, so every page follows without markup changes.
+   Values come from src/site/site.css (--ms-*). */
+:root {
+  --p-bg: #fbfaf9;
+  --p-surface: #fff;
+  --p-chip: #f6f5f3;
+  --p-hover: #f0eeeb;
+  --p-line: #eae8e5;
+  --p-line-strong: #cfcdca;
+  --p-ink: #111;
+  --p-ink-2: #494846;
+  --p-ink-3: #6a6865;
+  --p-blue: #993dca;
+  --p-blue-ink: #7a20a6;
+  --p-btn: #111;
+  --p-btn-ink: #fff;
+  --p-card-shadow: 0 1px 3px rgba(17, 17, 17, .05), 0 6px 6px rgba(17, 17, 17, .03);
+  --p-ease: cubic-bezier(.23, 1, .32, 1);
+  --color-accent: #7a20a6;
+  --color-ring: #993dca;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --p-bg: #111;
+    --p-surface: #1c1b1a;
+    --p-chip: #232221;
+    --p-hover: #2a2928;
+    --p-line: #2e2d2b;
+    --p-line-strong: #52504d;
+    --p-ink: #f6f5f3;
+    --p-ink-2: #c4c2bf;
+    --p-ink-3: #a09e9b;
+    --p-blue: #bb69ea;
+    --p-blue-ink: #da8fff;
+    --p-btn: #f6f5f3;
+    --p-btn-ink: #111;
+    --p-card-shadow: 0 1px 2px rgba(0, 0, 0, .4);
+    --color-accent: #da8fff;
+    --color-ring: #bb69ea;
+  }
+}
+/* Headings: light and tight, as on the site. */
+.workspace-app :where(h1, h2, h3),
+.mirror-auth :where(h1, h2, h3) { font-weight: 400; letter-spacing: -.04em; }
+.workspace-app .page-title h1, .workspace-app .m-page-head h1, .workspace-app .today-head h1,
+.workspace-app .tg-top h1, .workspace-app .pr-top h1 { font-weight: 400; letter-spacing: -.05em; }
+/* Cards and buttons: site radii and easing. */
+.m-card, .workspace-app .m-card, .workspace-app .ml-glass { border-radius: 16px; }
+.workspace-app .m-btn, .workspace-app .button, .workspace-app .ml-btn { border-radius: 10px; transition-timing-function: var(--p-ease); }
+.workspace-app .sidebar nav button.active,
+.workspace-app .sidebar-bottom > button.active { color: var(--p-blue-ink); }
+.workspace-app .brand, .workspace-app .brand span:last-child { font-family: var(--p-sans); font-weight: 500; letter-spacing: .13em; text-transform: uppercase; font-size: 15px; }

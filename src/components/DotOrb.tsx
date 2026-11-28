@@ -50,7 +50,7 @@ export function DotOrb({ energy = 0, className }: { energy?: number; className?:
     }
     const draw = () => {
       ctx.clearRect(0, 0, w, h)
-      const R = Math.min(w, h) * 0.4 * (1 + e * 0.05)
+      const R = Math.min(w, h) * 0.46 * (1 + e * 0.05)
       const cx = w / 2, cy = h / 2
       const cs = Math.cos(spin), sn = Math.sin(spin), ct = Math.cos(TILT), st = Math.sin(TILT)
       const live = Math.min(1, e * 1.4)

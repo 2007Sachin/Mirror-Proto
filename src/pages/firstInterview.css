@@ -1,38 +1,66 @@
-/* The first question. Same look as the website: warm paper, light tight headings, violet accent. One screen, no panels. */
-/* One screen, no panels: a soft violet and amber glow behind the orb fades into the warm page. */
-.ml-fi { position: relative; min-height: 100vh; background: radial-gradient(70% 55% at 50% 22%, rgba(218, 143, 255, .28) 0%, rgba(255, 223, 189, .22) 45%, transparent 75%), #fbfaf9; color: #111; font-family: var(--p-sans, system-ui, sans-serif); }
-.ml-fi-form { display: flex; flex-direction: column; min-height: 100vh; padding: 28px clamp(20px, 5vw, 64px) 56px; }
-.ml-fi-top { display: flex; align-items: center; min-height: 40px; }
+/* The first question, as a room that wakes up: a large violet orb with rings that breathe, a hello, the question word by word,
+   then a floating input. One screen, warm paper, nothing boxed. Colours match the website. */
+.ml-fi { position: relative; min-height: 100vh; overflow: hidden; background: #fbfaf9; color: #111; font-family: var(--p-sans, system-ui, sans-serif); display: flex; flex-direction: column; }
+.ml-fi-glow { position: absolute; inset: -20% -10% auto; height: 90%; pointer-events: none; background:
+  radial-gradient(45% 50% at 50% 38%, rgba(187, 105, 234, calc(.20 + var(--lvl, 0) * .22)) 0%, transparent 70%),
+  radial-gradient(60% 45% at 25% 55%, rgba(255, 189, 126, .22) 0%, transparent 70%),
+  radial-gradient(55% 45% at 78% 45%, rgba(200, 196, 234, .5) 0%, transparent 70%);
+  animation: ml-fi-drift 16s ease-in-out infinite alternate; }
+@keyframes ml-fi-drift { from { transform: translate3d(-2%, 0, 0) scale(1); } to { transform: translate3d(2%, 2%, 0) scale(1.06); } }
+.ml-fi-top { position: relative; z-index: 2; display: flex; align-items: center; padding: 24px clamp(20px, 4vw, 48px); }
 .ml-fi-logo { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-weight: 500; font-size: 15px; letter-spacing: .13em; color: #111; }
-.ml-fi .ml-fi-main { width: 100%; max-width: 600px; margin: auto; align-items: center; text-align: center; display: flex; flex-direction: column; gap: 18px; padding: 32px 0 0; }
-.ml-fi-eyebrow { margin: 0; font-size: 12px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: #6a6865; }
-.ml-fi-question { margin: 0; font-size: clamp(30px, 4.2vw, 44px); line-height: 1.1; font-weight: 400; letter-spacing: -.04em; color: #111; text-wrap: balance; }
-.ml-fi-purpose { margin: 0; max-width: 46ch; font-size: 16px; line-height: 1.5; color: rgba(17, 17, 17, .6); }
-.ml-fi-composer { background: #fff; border: 1px solid #eae8e5; border-radius: 16px; padding: 14px 16px 16px; box-shadow: 0 1px 3px rgba(17, 17, 17, .05), 0 6px 6px rgba(17, 17, 17, .03); transition: border-color .25s cubic-bezier(.23, 1, .32, 1); }
-.ml-fi-composer:focus-within { border-color: #993dca; }
-.ml-fi-composer textarea { display: block; width: 100%; min-height: 150px; resize: vertical; padding: 6px; border: 0; background: transparent; color: #111; font: inherit; font-size: 17px; line-height: 1.55; }
-.ml-fi-composer textarea:focus-visible { outline: none; }
-.ml-fi-composer textarea::placeholder { color: #787673; }
-.ml-fi-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 10px; border-top: 1px solid #eae8e5; }
-.ml-fi-btn { min-height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid #111; background: #111; color: #fff; font: inherit; font-size: 15px; font-weight: 500; cursor: pointer; transition: transform .5s cubic-bezier(.23, 1, .32, 1), opacity .25s; }
-.ml-fi-btn:hover:not(:disabled) { transform: translateY(-1px); }
-.ml-fi-btn:disabled { opacity: .4; cursor: not-allowed; }
-.ml-fi-btn--quiet { background: transparent; color: #111; border-color: #dcdbda; }
-.ml-fi-btn--quiet[aria-pressed="true"] { border-color: #993dca; color: #7a20a6; }
-.ml-fi-btn:focus-visible, .ml-fi-logo:focus-visible { outline: 2px solid #8e44c3; outline-offset: 3px; }
-.ml-fi-note { min-height: 1.5em; margin: 0; font-size: 14px; color: #6a6865; }
-@media (prefers-color-scheme: dark) {
-  .ml-fi { background: radial-gradient(70% 55% at 50% 22%, rgba(187, 105, 234, .30) 0%, transparent 70%), #111; color: #f6f5f3; }
-  .ml-fi-logo, .ml-fi-question { color: #f6f5f3; }
-  .ml-fi-purpose { color: rgba(246, 245, 243, .65); }
-  .ml-fi-composer { background: #1c1b1a; border-color: #2e2d2b; }
-  .ml-fi-composer textarea { color: #f6f5f3; }
-  .ml-fi-row { border-color: #2e2d2b; }
-  .ml-fi-btn { background: #f6f5f3; color: #111; border-color: #f6f5f3; }
-  .ml-fi-btn--quiet { background: transparent; color: #f6f5f3; border-color: #52504d; }
-  }
+.ml-fi .ml-fi-main { position: relative; z-index: 1; flex: 1; width: 100%; max-width: 760px; margin: 0 auto; padding: 0 clamp(20px, 5vw, 48px) 40px; display: flex; flex-direction: column; align-items: center; text-align: center; }
 
-.ml-fi .ml-fi-orb { width: clamp(150px, 22vw, 210px); aspect-ratio: 1; margin: 0 auto 4px; }
-.ml-fi .ml-fi-orb .orb-wrap { width: 100%; height: 100%; }
-.ml-fi .ml-fi-composer { width: 100%; text-align: left; }
-.ml-fi-purpose, .ml-fi-question { margin-inline: auto; }
+.ml-fi-stage { position: relative; width: clamp(220px, 34vw, 340px); aspect-ratio: 1; margin-top: clamp(0px, 3vh, 28px); display: grid; place-items: center; animation: ml-fi-rise 1.4s cubic-bezier(.23, 1, .32, 1) both; }
+@keyframes ml-fi-rise { from { opacity: 0; transform: translateY(24px) scale(.88); } }
+.ml-fi-orb { width: 66%; aspect-ratio: 1; filter: drop-shadow(0 24px 50px rgba(153, 61, 202, .35)); transition: transform .3s cubic-bezier(.23, 1, .32, 1); transform: scale(calc(1 + var(--lvl, 0) * .06)); }
+.ml-fi-orb .orb-wrap { width: 100%; height: 100%; }
+.ml-fi-ring { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(153, 61, 202, .22); animation: ml-fi-breathe 6s ease-in-out infinite; }
+.ml-fi-ring--2 { inset: -14%; border-color: rgba(153, 61, 202, .14); animation-delay: -2s; }
+.ml-fi-ring--3 { inset: -30%; border-color: rgba(153, 61, 202, .08); animation-delay: -4s; }
+@keyframes ml-fi-breathe { 0%, 100% { transform: scale(.94); opacity: .6; } 50% { transform: scale(1.04); opacity: 1; } }
+.ml-fi[data-state="listening"] .ml-fi-ring { animation-duration: 2.6s; }
+.ml-fi[data-state="thinking"] .ml-fi-ring { animation-duration: 1.6s; }
+
+.ml-fi-hello { margin: 18px 0 0; display: grid; gap: 4px; min-height: 3.4em; }
+.ml-fi-line { opacity: 0; transform: translateY(8px); transition: opacity .9s cubic-bezier(.23, 1, .32, 1), transform .9s cubic-bezier(.23, 1, .32, 1); font-size: 15px; letter-spacing: .01em; color: rgba(17, 17, 17, .6); }
+.ml-fi-line:first-child { font-size: clamp(22px, 2.6vw, 28px); letter-spacing: -.03em; color: #111; }
+.ml-fi-line.is-on { opacity: 1; transform: none; }
+.ml-fi-question { margin: 14px 0 0; font-size: clamp(28px, 4.4vw, 46px); line-height: 1.12; font-weight: 400; letter-spacing: -.04em; text-wrap: balance; min-height: 2.3em; }
+.ml-fi-question span { display: inline-block; opacity: 0; transform: translateY(10px); filter: blur(6px); transition: opacity .7s cubic-bezier(.23, 1, .32, 1), transform .7s cubic-bezier(.23, 1, .32, 1), filter .7s; transition-delay: calc(var(--i) * 70ms); white-space: pre; }
+.ml-fi-question.is-on span { opacity: 1; transform: none; filter: none; }
+
+.ml-fi-dock { width: 100%; margin-top: auto; padding-top: 28px; opacity: 0; transform: translateY(24px); pointer-events: none; transition: opacity .9s cubic-bezier(.23, 1, .32, 1), transform .9s cubic-bezier(.23, 1, .32, 1); }
+.ml-fi-dock.is-on { opacity: 1; transform: none; pointer-events: auto; }
+.ml-fi-caption { min-height: 1.5em; margin: 0 0 10px; font-size: 14px; color: #6a6865; }
+.ml-fi-bar { display: flex; align-items: flex-end; gap: 8px; padding: 10px 10px 10px 22px; text-align: left; background: rgba(255, 255, 255, .85); border: 1px solid #eae8e5; border-radius: 28px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 1px 3px rgba(17, 17, 17, .05), 0 12px 30px -10px rgba(122, 32, 166, .25); transition: border-color .3s, box-shadow .3s; }
+.ml-fi-bar:focus-within { border-color: #993dca; box-shadow: 0 1px 3px rgba(17, 17, 17, .05), 0 16px 40px -10px rgba(153, 61, 202, .45); }
+.ml-fi-bar textarea { flex: 1; min-width: 0; resize: none; max-height: 160px; padding: 10px 0; border: 0; background: transparent; color: #111; font: inherit; font-size: 17px; line-height: 1.5; }
+.ml-fi-bar textarea:focus-visible { outline: none; }
+.ml-fi-bar textarea::placeholder { color: #787673; }
+.ml-fi-round { flex: none; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; border: 1px solid #dcdbda; background: #fff; color: #111; cursor: pointer; transition: transform .5s cubic-bezier(.23, 1, .32, 1), background-color .25s, opacity .25s; }
+.ml-fi-round:hover:not(:disabled) { transform: scale(1.06); }
+.ml-fi-round[aria-pressed="true"] { background: #993dca; border-color: #993dca; color: #fff; animation: ml-fi-pulse 1.4s ease-in-out infinite; }
+.ml-fi-round--go { background: #111; border-color: #111; color: #fff; }
+.ml-fi-round:disabled { opacity: .35; cursor: not-allowed; }
+@keyframes ml-fi-pulse { 50% { box-shadow: 0 0 0 10px rgba(153, 61, 202, .18); } }
+.ml-fi-round:focus-visible, .ml-fi-logo:focus-visible { outline: 2px solid #8e44c3; outline-offset: 3px; }
+.ml-fi-hint { margin: 12px 0 0; font-size: 13px; color: #787673; }
+
+@media (max-width: 600px) { .ml-fi-hint { display: none; } .ml-fi-stage { width: 200px; } }
+@media (prefers-reduced-motion: reduce) {
+  .ml-fi *, .ml-fi *::before { animation: none !important; transition: none !important; }
+  .ml-fi-line, .ml-fi-question span, .ml-fi-dock { opacity: 1; transform: none; filter: none; }
+}
+@media (prefers-color-scheme: dark) {
+  .ml-fi { background: #111; color: #f6f5f3; }
+  .ml-fi-logo, .ml-fi-line:first-child { color: #f6f5f3; }
+  .ml-fi-line { color: rgba(246, 245, 243, .65); }
+  .ml-fi-caption, .ml-fi-hint { color: #a09e9b; }
+  .ml-fi-bar { background: rgba(28, 27, 26, .85); border-color: #2e2d2b; }
+  .ml-fi-bar textarea { color: #f6f5f3; }
+  .ml-fi-round { background: #232221; border-color: #52504d; color: #f6f5f3; }
+  .ml-fi-round--go { background: #f6f5f3; border-color: #f6f5f3; color: #111; }
+  .ml-fi-ring { border-color: rgba(218, 143, 255, .28); }
+}

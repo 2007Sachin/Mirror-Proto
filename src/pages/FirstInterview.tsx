@@ -125,48 +125,61 @@ export default function FirstInterview({
     setBusy(false)
   }
 
+  // The room wakes up in beats: a hello, a calm line, then the question word by word, then the input rises.
+  const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  const [beat, setBeat] = useState(reduce ? 3 : 0)
+  useEffect(() => {
+    if (beat >= 3) return
+    const id = window.setTimeout(() => setBeat(b => b + 1), beat === 0 ? 1500 : beat === 1 ? 1700 : 2400)
+    return () => window.clearTimeout(id)
+  }, [beat])
+  const words = ONE_QUESTION.split(' ')
+  const caption = dictation.state === 'recording' ? 'I’m listening.' : busy ? 'One moment.' : typing > 0 ? 'I’m with you.' : beat >= 3 ? 'Take your time.' : ''
+
   return (
-    <div className="mirror-landing ml-fi">
-      <div className="ml-fi-form">
-        <header className="ml-fi-top">
-          <button type="button" className="ml-fi-logo" onClick={onBack}>MIRROR</button>
-        </header>
-        <main className="ml-fi-main" aria-labelledby="fi-q">
-          <div className="ml-fi-orb" aria-hidden="true"><LiveOrb state={orb} inputLevel={typing} /></div>
-          <p className="ml-fi-eyebrow">Start here</p>
-          <h1 id="fi-q" className="ml-fi-question" aria-live="polite">{ONE_QUESTION}</h1>
-          <p className="ml-fi-purpose">MIRROR is practice before the interview. Tell it a little about you, then you are in the room.</p>
-          <div className="ml-fi-composer">
+    <div className="mirror-landing ml-fi" data-state={orb} data-beat={beat} style={{ ['--lvl' as string]: String(Math.min(1, typing + (dictation.state === 'recording' ? 0.5 : 0))) }}>
+      <div className="ml-fi-glow" aria-hidden="true" />
+      <header className="ml-fi-top">
+        <button type="button" className="ml-fi-logo" onClick={onBack}>MIRROR</button>
+      </header>
+      <main className="ml-fi-main" aria-labelledby="fi-q">
+        <div className="ml-fi-stage" aria-hidden="true">
+          <i className="ml-fi-ring ml-fi-ring--1" /><i className="ml-fi-ring ml-fi-ring--2" /><i className="ml-fi-ring ml-fi-ring--3" />
+          <div className="ml-fi-orb"><LiveOrb state={orb} inputLevel={typing} /></div>
+        </div>
+        <p className="ml-fi-hello" aria-live="polite">
+          <span className="ml-fi-line is-on">Hi, I’m MIRROR.</span>
+          <span className={`ml-fi-line${beat >= 1 ? ' is-on' : ''}`}>No one is judging this. It’s just a conversation.</span>
+        </p>
+        <h1 id="fi-q" className={`ml-fi-question${beat >= 2 ? ' is-on' : ''}`} aria-label={ONE_QUESTION}>
+          {words.map((w, i) => <span key={i} aria-hidden="true" style={{ ['--i' as string]: i }}>{w} </span>)}
+        </h1>
+        <div className={`ml-fi-dock${beat >= 3 ? ' is-on' : ''}`}>
+          <p className="ml-fi-caption" role="status">{dictation.error || note || (text.length > 0 && !ready ? 'A little more, so I have something real to work with.' : caption)}</p>
+          <div className="ml-fi-bar">
             <textarea
               autoFocus
+              rows={2}
               value={text}
               onChange={e => { setText(e.target.value); setTyping(0.9) }}
-              placeholder="Take your time. Say it the way you’d say it out loud."
+              onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && ready && !busy) void send() }}
+              placeholder="Say it the way you’d say it out loud…"
               aria-label="About you"
               readOnly={busy}
               maxLength={5000}
+              tabIndex={beat >= 3 ? 0 : -1}
             />
-            <div className="ml-fi-row">
-              <button
-                type="button"
-                className="ml-fi-btn ml-fi-btn--quiet"
-                aria-pressed={dictation.state === 'recording'}
-                disabled={busy || dictation.state === 'transcribing'}
-                onClick={() => void dictation.toggle()}
-              >
-                {dictation.state === 'recording' ? 'Stop' : dictation.state === 'transcribing' ? 'Listening back…' : 'Speak instead'}
-              </button>
-              <button type="button" className="ml-fi-btn" disabled={!ready || busy} onClick={() => void send()}>
-                {busy ? 'One moment…' : 'Start practising'}
-              </button>
-            </div>
+            <button type="button" className="ml-fi-round" aria-pressed={dictation.state === 'recording'} aria-label={dictation.state === 'recording' ? 'Stop speaking' : 'Speak instead'} disabled={busy || dictation.state === 'transcribing'} onClick={() => void dictation.toggle()}>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg>
+            </button>
+            <button type="button" className="ml-fi-round ml-fi-round--go" aria-label="Start practising" disabled={!ready || busy} onClick={() => void send()}>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            </button>
           </div>
-          <p className="ml-fi-note" role="status">
-            {dictation.error || note || (text.length > 0 && !ready ? 'A little more, so I have something real to work with.' : '')}
-          </p>
+          <p className="ml-fi-hint">Press Ctrl or Cmd and Enter to start. You can also speak.</p>
           <FallbackNote source={fellBack ? 'fallback' : null} />
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   )
 }

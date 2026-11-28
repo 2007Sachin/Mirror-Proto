@@ -1,4 +1,5 @@
 import { normalise } from './guard.js'
+import { stripLead } from '../frame.js'
 import type { InterviewContext } from '../../providers/types.js'
 import type { InterviewRow, Repository, TurnRow } from '../../repo/types.js'
 import type { AnswerSignals, GapSkill, RoomState } from './types.js'
@@ -31,7 +32,8 @@ export async function buildRoomState(
   _profile: InterviewContext | null = null,
 ): Promise<RoomState> {
   const earlier = await repo.listInterviews(workspace, { limit: 30 })
-  const history = [...new Set(earlier.filter(i => i.id !== interview.id).flatMap(i => i.askedQuestions))]
+  // Questions are compared without the greeting or bridge the room puts in front of them.
+  const history = [...new Set(earlier.filter(i => i.id !== interview.id).flatMap(i => i.askedQuestions.map(stripLead)))]
 
   let gaps: GapSkill[] = []
   if (interview.targetId) {
@@ -51,7 +53,7 @@ export async function buildRoomState(
   const stories = await repo.listStories(workspace)
   const storyThemes = [...new Set(stories.flatMap(s => s.themes))]
 
-  const asked = interview.askedQuestions
+  const asked = interview.askedQuestions.map(stripLead)
   const covered = gaps
     .filter(g => asked.some(q => q === g.probeQuestion || normalise(q).includes(normalise(g.skill))))
     .map(g => g.skill)

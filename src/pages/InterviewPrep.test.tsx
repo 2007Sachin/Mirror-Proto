@@ -47,14 +47,14 @@ describe('Interview Prep room', () => {
     render(<InterviewPrep onStart={vi.fn()} onOpenJob={onOpenJob} onPractise={vi.fn()} />)
     fireEvent.click(await screen.findByRole('button', { name: /Northwind/ }))
     expect(onOpenJob).toHaveBeenCalledWith('t1')
-    fireEvent.click(screen.getByRole('button', { name: /Bring your own job/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Your target job/ }))
     expect(onOpenJob).toHaveBeenLastCalledWith('new')
   })
 
   it('bringing a job is its own page: the form, with no ready-made roles on it', () => {
     const onOpenJob = vi.fn()
     render(<InterviewPrep onStart={vi.fn()} jobId="new" onOpenJob={onOpenJob} onPractise={vi.fn()} />)
-    expect(screen.getByRole('heading', { level: 1, name: 'Bring your own job' })).toBeTruthy()
+    expect(screen.getByRole('heading', { level: 1, name: 'Your target job' })).toBeTruthy()
     expect(screen.getByLabelText(/Job description/)).toBeTruthy()
     expect(screen.queryByRole('button', { name: /Product Manager/ })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'All roles' }))

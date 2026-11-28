@@ -5,7 +5,7 @@ import { allowlist } from './copyAllowlist'
 
 // What must never reach a learner.
 export const BANNED: [string, RegExp][] = [
-  ['banned word', /\b(agentic|evidence|reflect\w*|evaluat\w*)\b/i],
+  ['banned word', /\b(agentic|evidence|reflect\w*)\b/i],
   ['fixed count', /\b\d+ questions?\b|\bof \d+\b|\b(one|two|three|four|five|six)[- ]question\b/i],
   ['percentage', /\d\s?%|\bpercent(age)?\b/i],
   ['streak', /\bstreaks?\b|\bin a row\b/i],

@@ -8,6 +8,27 @@ export const ReflectionOutputSchema = z.object({
   suggestion: z.string().trim().min(8).max(400),
 })
 
+/**
+ * The evaluation: for each dimension an answer can show, a level in words, one exact quote from the learner and one change to try.
+ * Never a number, never a pass or fail.
+ */
+export const EvaluationOutputSchema = z.object({
+  dimensions: z
+    .array(
+      z.object({
+        dimension: z.enum(['structure', 'specificity', 'ownership', 'result']),
+        level: z.enum(['starting', 'clear', 'strong']),
+        turnId: z.string().min(1),
+        quote: z.string().min(1).max(200),
+        observation: z.string().trim().min(8).max(260),
+        fix: z.string().trim().min(8).max(260),
+      }),
+    )
+    .min(1)
+    .max(4),
+})
+export type EvaluationOutput = z.infer<typeof EvaluationOutputSchema>
+
 export const FollowUpOutputSchema = z.object({
   question: z.string().trim().min(8).max(500),
 })
@@ -121,6 +142,8 @@ export interface FollowUpRequest {
 
 export interface ReflectionProvider {
   generateReflection(request: ProviderRequest): Promise<ReflectionOutput>
+  /** Levels with the learner's own words. Absent: the notes are written without an evaluation. */
+  generateEvaluation?(request: ProviderRequest): Promise<EvaluationOutput>
   generateFollowUp?(request: FollowUpRequest): Promise<string>
   /** The Room's one live Interviewer call (chooses among the Director's candidates or probes the last answer). Absent: the bank answers. */
   generateNextQuestion?(input: InterviewerInput): Promise<InterviewerResult>

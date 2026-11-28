@@ -25,7 +25,7 @@ Nice to have:
 - Airflow`
 
 // Same rules as src/copyScan BANNED (not imported: that file needs a DOM).
-const BANNED = [/\b(agentic|evidence|reflect\w*|evaluat\w*)\b/i, /\b\d+ questions?\b|\bof \d+\b/i, /\d\s?%|\bpercent(age)?\b/i]
+const BANNED = [/\b(agentic|evidence|reflect\w*)\b/i, /\b\d+ questions?\b|\bof \d+\b/i, /\d\s?%|\bpercent(age)?\b/i]
 const scan = (_where: string, text: string) => BANNED.filter(re => re.test(text)).map(String)
 
 const skills = extractSkills(JD)

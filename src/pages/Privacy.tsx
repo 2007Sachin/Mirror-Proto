@@ -3,7 +3,7 @@ import '../features/privacy/privacy.css'
 // Every sentence here is checked against the code in docs/PRIVACY-AUDIT.md. Change the wording, not the audit.
 const PROMISES = [
   ['Audio is never stored by MIRROR', 'Your voice is turned into text while you speak. MIRROR keeps the text, never the recording.'],
-  ['Answers are never scored', 'You get notes on what you said and one thing to practise next. Your interview answers, spoken or typed, never get a score. Practice problems with one right answer, such as SQL, are simply marked correct or not.'],
+  ['Answers never get a number', 'After a session you get an evaluation in plain levels, with the lines you said and one thing to try. Your interview answers, spoken or typed, never get a number or a pass or fail. Practice problems with one right answer, such as SQL, are simply marked correct or not.'],
   ['Nothing is shared with employers', 'MIRROR has no sharing feature. Nothing is sent to employers or recruiters, and nobody else signed in to MIRROR can open your practice.'],
   ['You can delete everything, anytime', 'In Settings, Delete all my data removes everything MIRROR stores for you. Export my data gives you a copy first.'],
 ] as const

@@ -1,21 +1,31 @@
 import { describe, expect, it } from 'vitest'
 import { j, makeApp, WS } from './helpers.js'
-import { bridge, greet } from '../domain/frame.js'
+import { bridge, greet, stripLead, warmUp } from '../domain/frame.js'
 
 describe('interview frame', () => {
   it('greets before the first question, naming the job and round, and says nothing is scored', () => {
     const g = greet('Data Analyst · Behavioural round', 'Tell me about a time you led.')
     expect(g).toMatch(/^Hi, thanks for making time/)
-    expect(g).toContain('behavioural round for Data Analyst')
+    expect(g).toContain('for this behavioural round for the Data Analyst role')
     expect(g).toContain('Nothing here is scored')
     expect(g.endsWith('Tell me about a time you led.')).toBe(true)
     expect(greet('Analyst', 'Hello there. Ready?')).toBe('Hello there. Ready?')
+    // the starter profile has no real job: no "Interview practice role"
+    expect(greet('Interview practice', 'Q?')).toContain("I'll be interviewing you today.")
+    expect(warmUp('Interview practice')).toContain('the kind of role you are aiming for next')
   })
   it('bridges between questions and flags the last one', () => {
     expect(bridge('What changed?', 1, 4)).toMatch(/^Thanks for walking me through that\. What changed\?$/)
-    expect(bridge('What changed?', 2, 4)).toMatch(/^That helps me picture it\./)
+    expect(bridge('What changed?', 2, 4)).toMatch(/^That's helpful context\./)
     expect(bridge('What changed?', 3, 4)).toBe("Last question for today, and then we'll wrap up. What changed?")
     expect(bridge('Thanks, and what next?', 1, 4)).toBe('Thanks, and what next?')
+  })
+  it('strips the greeting or bridge so the repeat guard compares only the question', () => {
+    expect(stripLead(greet('Analyst', 'What did you own?'))).toBe('What did you own?')
+    expect(stripLead(bridge('What changed?', 2, 5))).toBe('What changed?')
+    expect(stripLead("Last question for today, and then we'll wrap up. Why?")).toBe('Why?')
+    expect(stripLead('That helps me picture it. Why?')).toBe('Why?')
+    expect(stripLead('Plain question?')).toBe('Plain question?')
   })
   it('never adds a score, percentage or count', () => {
     for (let i = 1; i < 4; i++) expect(bridge('Why?', i, 4)).not.toMatch(/\d|%|score/i)

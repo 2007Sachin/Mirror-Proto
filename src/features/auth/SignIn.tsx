@@ -2,7 +2,7 @@ import { useId, useRef, useState, type FormEvent } from 'react'
 import '../../landing.css'
 import './auth.css'
 import { ApiError, authApi } from '../../lib/api'
-import { MeshGradient } from '../../site/MeshGradient'
+import { LiveOrb } from '../../components/LiveOrb'
 
 interface Props {
   googleEnabled: boolean
@@ -70,7 +70,7 @@ export default function SignIn({ googleEnabled, notice, onBack }: Props) {
         {onBack && <button type="button" className="auth-link" onClick={onBack}>Back to the start</button>}
       </main></div>
       <aside className="auth-split__side" aria-hidden="true">
-        <div className="auth-split__tile"><MeshGradient colors={['#f0c0ff', '#ffbd7e', '#79e7dc']} ground="#ffe4ff" /></div>
+        <div className="auth-split__tile"><div className="auth-split__orb"><LiveOrb state="idle" /></div></div>
         <p className="auth-split__note"><b>Practice that stays yours.</b>Say your answers out loud, then read calm notes on what to strengthen.</p>
       </aside>
     </div>

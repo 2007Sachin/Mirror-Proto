@@ -44,7 +44,8 @@ const interviewProps = (extra: Partial<InterviewProps> = {}): InterviewProps => 
 describe('copy: no banned words, fixed counts or percentages', () => {
   it('scanner catches planted strings', () => {
     expect(scan('x', 'Your evidence is ready')).toHaveLength(1)
-    expect(scan('x', 'A Reflection and an evaluation')).toHaveLength(1)
+    expect(scan('x', 'A Reflection and an evaluation')).toHaveLength(1) // Reflection is still banned; evaluation is allowed
+    expect(scan('x', 'Your evaluation is ready')).toHaveLength(0)
     expect(scan('x', 'agentic')).toHaveLength(1)
     expect(scan('x', 'Answer 4 questions')).toHaveLength(1)
     expect(scan('x', 'Step 2 of 4')).toHaveLength(1)

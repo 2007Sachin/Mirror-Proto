@@ -13,10 +13,11 @@ import { createMockStt } from './voice/stt/mockStt.js'
 import { sttProviderName } from './voice/sttProvider.js'
 import { createRestSarvamStt } from './voice/stt/createStt.js'
 import type { SttProvider } from './voice/providers/types.js'
+import { isEvaluationItem, validateEvaluation } from './domain/evaluation.js'
 import { bridge, greet, PRACTICE_QUESTIONS, warmUp } from './domain/frame.js'
 import { addTurn, canAbandon, canComplete, validateEvidence } from './domain/stateMachine.js'
 import { PHASE1_TABLES } from './repo/supabase.js'
-import type { AgentEvent, Debrief, InterviewRow, ProfileRow, ReflectionRow, Repository, Target, TurnRow } from './repo/types.js'
+import type { AgentEvent, Debrief, EvidenceItem, InterviewRow, ProfileRow, ReflectionRow, Repository, Target, TurnRow } from './repo/types.js'
 import { z } from 'zod'
 import { summarise } from './domain/practice.js'
 import { buildRounds, extractSkills } from './domain/scout.js'
@@ -132,6 +133,7 @@ export function buildApp(deps: AppDeps): Hono {
   // Every AI call gets the same overall deadline; a miss is a ProviderFailure, and each call site falls back.
   const provider: ReflectionProvider | null = rawProvider && {
     generateReflection: r => withDeadline(rawProvider.generateReflection(r), deadlineMs),
+    generateEvaluation: rawProvider.generateEvaluation && (r => withDeadline(rawProvider.generateEvaluation!(r), deadlineMs)),
     generateFollowUp: rawProvider.generateFollowUp && (r => withDeadline(rawProvider.generateFollowUp!(r), deadlineMs)),
     generateNextQuestion: rawProvider.generateNextQuestion && (i => withDeadline(rawProvider.generateNextQuestion!(i), env.interviewerDeadlineMs)),
     generateOnboarding: rawProvider.generateOnboarding && (r => withDeadline(rawProvider.generateOnboarding!(r), deadlineMs)),
@@ -167,8 +169,27 @@ export function buildApp(deps: AppDeps): Hono {
     return (await nextFollowUp(draft, [], context ? provider : null, context)).question
   }
 
+  /** The evaluation items for these answers: levels with the learner's own words. Best effort: any miss gives none, and the notes still stand. */
+  async function evaluationFor(interview: InterviewRow, turns: TurnRow[], profile: ProfileRow | null): Promise<EvidenceItem[]> {
+    if (!provider?.generateEvaluation || turns.length === 0) return []
+    try {
+      const out = await provider.generateEvaluation({
+        role: interview.role,
+        industry: interview.industry,
+        questions: interview.askedQuestions,
+        turns: turns.map(t => ({ id: t.id, question: t.question, answer: t.answer })),
+        context: profile && { focus: profile.focus, primaryStory: profile.story },
+      })
+      return validateEvaluation(turns, out)
+    } catch (err) {
+      if (!(err instanceof ProviderFailure)) throw err
+      return []
+    }
+  }
+
   async function generateAndSaveReflection(repo: Repository, interview: InterviewRow, turns: TurnRow[]) {
     const profile = await repo.getProfile(interview.workspaceId)
+    const evaluating = evaluationFor(interview, turns, profile) // runs alongside the notes
     const toQuotes = (o: { whatStoodOut: { turnId: string; quote: string }[] }) =>
       o.whatStoodOut.map(q => ({ turnId: q.turnId, quote: q.quote, observation: '', competency: '' }))
     let output = fallbackNotes(turns, profile?.focus)
@@ -201,7 +222,7 @@ export function buildApp(deps: AppDeps): Hono {
       role: interview.role,
       readinessLabel: null,
       readinessRange: null,
-      evidence: evidenceResult.evidence,
+      evidence: [...evidenceResult.evidence, ...(await evaluating)],
       focus: output.keepWorkingOn.charAt(0).toUpperCase() + output.keepWorkingOn.slice(1),
       suggestion: output.suggestion,
       model,
@@ -340,7 +361,7 @@ export function buildApp(deps: AppDeps): Hono {
         targetId: i.targetId ?? null,
         answered: (await repo.getTurns(workspace, i.id)).length,
         // The notes, so Today can show lines that landed and how the gap moved without another call.
-        notes: await repo.getReflection(workspace, i.id).then(r => r && { keepWorkingOn: r.focus, quotes: r.evidence.map(e => e.quote), source: reflectionSource(r) }),
+        notes: await repo.getReflection(workspace, i.id).then(r => r && { keepWorkingOn: r.focus, quotes: r.evidence.filter(e => !isEvaluationItem(e)).map(e => e.quote), source: reflectionSource(r) }),
       })),
     )
     return c.json(list)
@@ -495,6 +516,30 @@ export function buildApp(deps: AppDeps): Hono {
     }
     const reflection = await generateAndSaveReflection(repo, interview, turns)
     return c.json(serializeReflection(reflection), 201)
+  })
+
+  // Adds (or refreshes) the evaluation on notes that already exist, for sessions written before evaluations or when the model missed.
+  api.post('/interviews/:id/evaluate', async c => {
+    const repo = c.get('repo')
+    const workspace = c.get('workspace')
+    const interview = await repo.getInterview(workspace, c.req.param('id'))
+    if (!interview) throw new AppError(404, 'interview_not_found')
+    const reflection = await repo.getReflection(workspace, interview.id)
+    if (!reflection) throw new AppError(409, 'notes_not_written')
+    const turns = await repo.getTurns(workspace, interview.id)
+    const items = await evaluationFor(interview, turns, await repo.getProfile(workspace))
+    if (items.length === 0) throw new AppError(503, 'evaluation_unavailable')
+    const saved = await repo.saveReflection(workspace, {
+      interviewId: interview.id,
+      role: reflection.role,
+      readinessLabel: reflection.readinessLabel,
+      readinessRange: reflection.readinessRange,
+      evidence: [...reflection.evidence.filter(e => !isEvaluationItem(e)), ...items],
+      focus: reflection.focus,
+      suggestion: reflection.suggestion,
+      model: reflection.model,
+    })
+    return c.json(serializeReflection(saved))
   })
 
   // ---- The First Interview (replaces onboarding) ----

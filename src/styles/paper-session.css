@@ -33,10 +33,14 @@
 .iv-confirm h2 { font-size: 22px; letter-spacing: -.03em; }
 .iv-confirm .iv-row { margin-top: 10px; }
 
-.iv-center { gap: 10px; padding: 8px 8px 16px; }
-.iv-orbbox { margin-bottom: 22px; }
+/* "safe" keeps the orb on screen when the content is taller than the room: it scrolls instead of clipping the top. */
+.iv-center { gap: 10px; padding: 16px 8px 16px; justify-content: safe center; }
+.iv-orbbox { margin-bottom: 14px; }
 .iv-ring { border: 1px solid var(--p-line-strong); opacity: .7; }
-.iv-question { font-family: var(--p-sans); font-weight: 500; font-size: clamp(26px, 3.4vw, 42px); letter-spacing: -.04em; line-height: 1.12; max-width: 22ch; margin: 6px 0 4px; color: var(--p-ink); }
+.iv-lead { margin: 4px 0 0; max-width: 58ch; font-family: var(--p-sans); font-size: clamp(15px, 1.2vw, 17px); line-height: 1.55; color: var(--p-ink-2); text-wrap: pretty; }
+.iv-lead > span { opacity: .15; transition: opacity .2s ease; }
+.iv-lead > span.is-in { opacity: 1; }
+.iv-question { font-family: var(--p-sans); font-weight: 400; font-size: clamp(24px, 2.8vw, 38px); letter-spacing: -.035em; line-height: 1.15; max-width: 28ch; margin: 6px 0 4px; color: var(--p-ink); }
 .iv-hint { font-family: var(--p-mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--p-ink-3); max-width: 46ch; line-height: 1.6; }
 .iv-card { padding: 14px 18px; max-width: 520px; }
 .iv-card p { color: var(--p-ink); }
@@ -123,34 +127,7 @@
 }
 @media (prefers-reduced-motion: reduce) { .iv-cb, .iv-cb:hover { transition: none; transform: none; } }
 
-/* ---------- Onboarding: the first interview ---------- */
-.ml-fi-main { max-width: 680px; gap: 18px; padding-block: 56px 96px; }
-.ml-fi-main > .ml-eyebrow { font-size: 11.5px; letter-spacing: .08em; }
-.ml-fi-orb { width: 112px; margin-bottom: 4px; }
-.ml-fi-steps { gap: 6px; }
-.ml-fi-steps li { background: var(--p-line-strong); height: 3px; }
-.ml-fi-steps li.is-on { background: var(--p-blue); }
-.ml-fi-logo { font-family: var(--p-pixel); font-size: 17px; letter-spacing: .02em; text-transform: lowercase; color: var(--p-ink); min-height: 44px; }
-.ml-fi-agent { padding: 28px 30px; font-weight: 500; font-size: clamp(22px, 3vw, 30px); letter-spacing: -.035em; line-height: 1.22; color: var(--p-ink); border-radius: 18px; }
-.ml-fi-drop { align-content: center; gap: 2px; border: 1px dashed var(--p-line-strong); border-radius: 14px; background: color-mix(in srgb, var(--p-surface) 60%, transparent); color: var(--p-ink-3); min-height: 88px; }
-.ml-fi-drop.is-over { border-color: var(--p-blue); background: color-mix(in srgb, var(--p-blue) 8%, var(--p-surface)); }
-.ml-fi-file { color: var(--p-ink); font-weight: 500; }
-.ml-fi-file button, .ml-fi-pick { color: var(--p-blue-ink); font-weight: 500; min-width: 44px; border-radius: 8px; }
-.ml-fi-file button:hover, .ml-fi-pick:hover { text-decoration: underline; text-underline-offset: 3px; }
-.ml-fi-composer { padding: 18px 20px 18px; border-radius: 18px; }
-.ml-fi-composer textarea { font-family: var(--p-sans); font-size: 18px; letter-spacing: -.01em; line-height: 1.55; color: var(--p-ink); border: 0; padding: 6px; }
-.ml-fi-composer textarea::placeholder { color: var(--p-ink-3); }
-.ml-fi-row { padding-top: 12px; margin-top: 8px; border-top: 1px solid var(--p-line); }
-.ml-btn--quiet[aria-pressed="true"] { border-color: var(--p-blue); color: var(--p-blue-ink); }
-.ml-fi-ask { font-size: 19px; line-height: 1.5; color: var(--p-ink-2); letter-spacing: -.01em; }
-.ml-fi-ask b { color: var(--p-ink); font-weight: 500; }
-.ml-fi-note { font-family: var(--p-mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--p-ink-3); }
-@media (max-width: 560px) {
-  .ml-fi-main { padding-block: 32px 72px; }
-  .ml-fi-agent { padding: 20px 20px; }
-  .ml-fi-row > .ml-btn, .ml-fi-options > .ml-btn { flex: 1 1 100%; }
-}
-
+/* The onboarding page (the first question) has its own stylesheet: src/pages/firstInterview.css. */
 /* ---------- Screening call ---------- */
 .sc-wrap { max-width: 720px; padding: 48px 20px 80px; gap: 20px; }
 .sc-card { background: var(--p-surface); border: 1px solid var(--p-line); border-radius: 16px; box-shadow: var(--p-card-shadow); padding: 24px 26px; gap: 12px; }

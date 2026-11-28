@@ -1,0 +1,16 @@
+/* Your evaluation: calm cards, a level as a word with a colour, the learner's own words in a quote. */
+.ev { display: grid; gap: 12px; }
+.ev-line { margin: 0; font-size: 1.02rem; color: var(--p-ink, #111); }
+.ev-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 12px; }
+.ev-item { --lv: #787673; padding: 16px 18px; border: 1px solid var(--p-line, #eae8e5); border-left: 3px solid var(--lv); border-radius: 14px; background: var(--p-surface, #fff); display: grid; gap: 8px; }
+.ev-item--starting { --lv: #d4693a; }
+.ev-item--clear { --lv: #7a20a6; }
+.ev-item--strong { --lv: #2f6b3a; }
+.ev-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ev-head h3 { margin: 0; font-size: 1.1rem; font-weight: 500; letter-spacing: -.02em; }
+.ev-level { padding: 3px 11px; border-radius: 999px; font-size: 12px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--lv); background: color-mix(in srgb, var(--lv) 12%, transparent); }
+.ev-means { margin: 0; font-size: 14px; color: var(--p-ink-3, #6a6865); }
+.ev-quote { margin: 0; padding: 10px 14px; border-radius: 10px; background: var(--p-chip, #f6f5f3); font-size: 15px; line-height: 1.5; }
+.ev-quote span { display: block; margin-bottom: 2px; font-size: 11px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--p-ink-3, #6a6865); }
+.ev-item p { margin: 0; }
+.ev-try strong { color: var(--lv); font-weight: 500; }

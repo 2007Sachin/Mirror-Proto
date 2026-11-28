@@ -1,50 +1,71 @@
-/* The First Interview. Uses the landing page's tokens (.mirror-landing) so it reads as the same product. */
-.ml-fi-main { max-width: 680px; display: flex; flex-direction: column; align-items: stretch; gap: 16px; padding-block: 36px 80px; }
-.ml-fi-main > .ml-eyebrow { margin: 0; text-align: center; }
-.ml-fi-orb { align-self: center; width: 120px; }
+/* The first question, as a room that wakes up: a large, high-resolution orb of dots, a hello, the question word by word,
+   then a floating input. One screen, warm paper, nothing boxed. Colours match the website. */
+.ml-fi { position: relative; min-height: 100vh; overflow-x: hidden; background: #fbfaf9; color: #111; font-family: var(--p-sans, system-ui, sans-serif); display: flex; flex-direction: column; }
+.ml-fi-glow { position: absolute; inset: -20% -10% auto; height: 90%; pointer-events: none; background:
+  radial-gradient(45% 50% at 50% 38%, rgba(187, 105, 234, calc(.20 + var(--lvl, 0) * .22)) 0%, transparent 70%),
+  radial-gradient(60% 45% at 25% 55%, rgba(255, 189, 126, .22) 0%, transparent 70%),
+  radial-gradient(55% 45% at 78% 45%, rgba(200, 196, 234, .5) 0%, transparent 70%);
+  animation: ml-fi-drift 16s ease-in-out infinite alternate; }
+@keyframes ml-fi-drift { from { transform: translate3d(-2%, 0, 0) scale(1); } to { transform: translate3d(2%, 2%, 0) scale(1.06); } }
+.ml-fi-top { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px clamp(20px, 4vw, 48px); }
+.ml-fi-exit { display: flex; align-items: center; gap: 6px; }
+.ml-fi-link { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid transparent; background: transparent; color: #494846; font: inherit; font-size: 14px; cursor: pointer; transition: background-color .25s, color .25s, border-color .25s; }
+.ml-fi-link:hover:not(:disabled) { background: rgba(17, 17, 17, .06); color: #111; }
+.ml-fi-link--strong { border-color: #dcdbda; color: #111; background: rgba(255, 255, 255, .7); }
+.ml-fi-link:disabled { opacity: .4; cursor: not-allowed; }
+.ml-fi-link:focus-visible { outline: 2px solid #8e44c3; outline-offset: 3px; }
+.ml-fi .ml-fi-logo { text-transform: uppercase; background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit; font-weight: 500; font-size: 15px; letter-spacing: .13em; color: #111; }
+/* A big orb in the middle that reacts to you, the question under it, and the input at the bottom. */
+.ml-fi .ml-fi-main { position: relative; z-index: 1; flex: 1; width: 100%; max-width: 980px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 40px) clamp(16px, 3vh, 28px); display: flex; flex-direction: column; align-items: center; text-align: center; min-height: calc(100vh - 72px); }
+.ml-fi-center { position: relative; z-index: 2; width: 100%; max-width: 900px; display: flex; flex-direction: column; align-items: center; text-align: center; }
 
-.ml-fi-logo { background: none; border: 0; padding: 0; font-family: inherit; cursor: pointer; }
-.ml-fi-steps { display: flex; gap: 8px; padding-right: 16px; }
-.ml-fi-steps li { width: 28px; height: 4px; border-radius: 4px; background: var(--line); transition: background-color .4s var(--ease); }
-.ml-fi-steps li.is-on { background: var(--accent); }
+@keyframes ml-fi-rise { from { opacity: 0; transform: scale(.9); } }
+.ml-fi-stage { position: relative; flex: none; width: min(600px, 88vw, 46vh); aspect-ratio: 1; margin: 0 auto; animation: ml-fi-rise 1.6s cubic-bezier(.23, 1, .32, 1) both; }
+.ml-fi-orb { position: absolute; inset: 0; transition: transform .9s cubic-bezier(.23, 1, .32, 1); transform: scale(calc(1 + var(--lvl, 0) * .02)); }
+.ml-fi .ml-fi-orb .orb-wrap { position: absolute; inset: 0; width: 100%; max-width: none; min-width: 0; height: 100%; }
+.ml-fi .ml-fi-orb .orb-wrap > div { width: 100% !important; height: 100% !important; }
+.ml-fi[data-state="listening"] .ml-fi[data-state="thinking"] 
+.ml-fi-hello { margin: 14px 0 0; display: grid; gap: 4px; min-height: 3.2em; }
+.ml-fi-line { display: block; opacity: 0; transform: translateY(8px); transition: opacity .9s cubic-bezier(.23, 1, .32, 1), transform .9s cubic-bezier(.23, 1, .32, 1); font-size: 15px; letter-spacing: .01em; color: rgba(17, 17, 17, .6); }
+.ml-fi-line:first-child { font-size: clamp(22px, 2.6vw, 28px); letter-spacing: -.03em; color: #111; }
+.ml-fi-line.is-on { opacity: 1; transform: none; }
+.ml-fi-question { margin: 10px 0 0; font-size: clamp(24px, 3.6vw, 44px); line-height: 1.1; font-weight: 400; letter-spacing: -.04em; text-wrap: balance; min-height: 2.2em; }
+.ml-fi-question span { display: inline-block; opacity: 0; transform: translateY(10px); filter: blur(6px); transition: opacity .7s cubic-bezier(.23, 1, .32, 1), transform .7s cubic-bezier(.23, 1, .32, 1), filter .7s; transition-delay: calc(var(--i) * 70ms); white-space: pre; }
+.ml-fi-question.is-on span { opacity: 1; transform: none; filter: none; }
 
-.ml-fi-purpose { max-width: 46ch; margin: 0 0 4px; text-align: center; color: var(--muted); font-size: var(--m-text-body); }
-.ml-fi-agent {
-  padding: 22px 26px;
-  font-size: clamp(19px, 2.6vw, 24px);
-  font-weight: 600;
-  letter-spacing: -.02em;
-  line-height: 1.35;
-  animation: ml-fi-in .5s var(--ease);
+.ml-fi-dock { position: relative; z-index: 3; width: min(720px, 100%); margin-top: auto; padding-top: 20px; opacity: 0; transform: translateY(24px); pointer-events: none; transition: opacity .9s cubic-bezier(.23, 1, .32, 1), transform .9s cubic-bezier(.23, 1, .32, 1); }
+.ml-fi-dock.is-on { opacity: 1; transform: none; pointer-events: auto; }
+.ml-fi-caption { min-height: 1.5em; margin: 0 0 10px; font-size: 14px; color: #6a6865; }
+.ml-fi-bar { display: flex; align-items: flex-end; gap: 8px; padding: 10px 10px 10px 22px; text-align: left; background: rgba(255, 255, 255, .85); border: 1px solid #eae8e5; border-radius: 28px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 1px 3px rgba(17, 17, 17, .05), 0 12px 30px -10px rgba(122, 32, 166, .25); transition: border-color .3s, box-shadow .3s; }
+.ml-fi-bar:focus-within { border-color: #993dca; box-shadow: 0 1px 3px rgba(17, 17, 17, .05), 0 16px 40px -10px rgba(153, 61, 202, .45); }
+.ml-fi-bar textarea { flex: 1; min-width: 0; resize: none; max-height: 180px; min-height: 52px; overflow-y: auto; caret-color: #993dca; padding: 10px 0; border: 0; background: transparent; color: #111; font: inherit; font-size: 17px; line-height: 1.5; }
+.ml-fi-bar textarea:focus-visible { outline: none; }
+.ml-fi-bar textarea::placeholder { color: #787673; }
+.ml-fi-round { flex: none; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; border: 1px solid #dcdbda; background: #fff; color: #111; cursor: pointer; transition: transform .5s cubic-bezier(.23, 1, .32, 1), background-color .25s, opacity .25s; }
+.ml-fi-round:hover:not(:disabled) { transform: scale(1.06); }
+.ml-fi-round[aria-pressed="true"] { background: #993dca; border-color: #993dca; color: #fff; animation: ml-fi-pulse 1.4s ease-in-out infinite; }
+.ml-fi-round--go { background: #111; border-color: #111; color: #fff; }
+.ml-fi-round:disabled { opacity: .35; cursor: not-allowed; }
+@keyframes ml-fi-pulse { 50% { box-shadow: 0 0 0 10px rgba(153, 61, 202, .18); } }
+.ml-fi-round:focus-visible, .ml-fi-logo:focus-visible { outline: 2px solid #8e44c3; outline-offset: 3px; }
+.ml-fi-hint { margin: 12px 0 0; font-size: 13px; color: #787673; }
+
+@media (max-width: 600px) { .ml-fi-hint { display: none; } .ml-fi-center { width: 86vw; } }
+@media (prefers-reduced-motion: reduce) {
+  .ml-fi *, .ml-fi *::before { animation: none !important; transition: none !important; }
+  .ml-fi-line, .ml-fi-question span, .ml-fi-dock { opacity: 1; transform: none; filter: none; }
 }
-@keyframes ml-fi-in { from { opacity: 0; transform: translateY(8px); } }
-
-.ml-fi-drop {
-  display: grid; place-items: center; min-height: 84px; padding: 18px 24px;
-  gap: 6px; text-align: center; color: var(--muted); font-size: 15px;
-  border: 1.5px dashed var(--line); border-radius: 20px;
-  transition: border-color .2s var(--ease), background-color .2s var(--ease);
-}
-.ml-fi-drop.is-over { border-color: var(--accent); background: var(--soft); }
-.ml-fi-file { display: inline-flex; align-items: center; gap: 12px; color: var(--ink); font-weight: 600; }
-.ml-fi-file button, .ml-fi-pick { font: inherit; font-size: 14px; font-weight: 600; color: var(--accent); background: none; border: 0; cursor: pointer; min-height: 44px; padding: 0 8px; }
-
-.ml-fi-composer { padding: 14px 16px 16px; }
-.ml-fi-composer textarea {
-  display: block; width: 100%; min-height: 130px; resize: vertical;
-  padding: 8px 6px; border: 0; background: transparent; color: var(--ink);
-  font: inherit; font-size: 17px; line-height: 1.55;
-}
-.ml-fi-composer textarea:focus-visible { outline: none; }
-.ml-fi-composer textarea::placeholder { color: var(--muted); }
-.ml-fi-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-.ml-fi-row > .ml-btn:only-child { margin-left: auto; }
-.ml-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
-.ml-btn--quiet[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
-
-.ml-fi-contract { display: flex; flex-direction: column; gap: 16px; }
-.ml-fi-ask { font-size: 18px; line-height: 1.5; }
-.ml-fi-ask b { color: var(--accent); font-weight: 650; }
-.ml-fi-options { display: flex; flex-wrap: wrap; gap: 12px; }
-
-.ml-fi-note { min-height: 1.5em; text-align: center; font-size: 14px; color: var(--muted); }
+@media (prefers-color-scheme: dark) {
+  .ml-fi { background: #111; color: #f6f5f3; }
+  .ml-fi-logo, .ml-fi-line:first-child { color: #f6f5f3; }
+  .ml-fi-link { color: #c4c2bf; }
+  .ml-fi-link:hover:not(:disabled) { background: rgba(246, 245, 243, .1); color: #f6f5f3; }
+  .ml-fi-link--strong { color: #f6f5f3; border-color: #52504d; background: rgba(28, 27, 26, .7); }
+  .ml-fi-line { color: rgba(246, 245, 243, .65); }
+  .ml-fi-caption, .ml-fi-hint { color: #a09e9b; }
+  .ml-fi-bar { background: rgba(28, 27, 26, .85); border-color: #2e2d2b; }
+  .ml-fi-bar textarea { color: #f6f5f3; }
+  .ml-fi-round { background: #232221; border-color: #52504d; color: #f6f5f3; }
+  .ml-fi-round--go { background: #f6f5f3; border-color: #f6f5f3; color: #111; }
+  }

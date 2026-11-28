@@ -4,7 +4,7 @@ Goal of this slice: **target with a job description → Scout builds the skill m
 
 Audience for v1: data and analytics roles. Technical rounds are text-first (the candidate writes a query; the interviewer discusses it by text). Python and tools rounds exist in the plan but are marked "Next" (not available yet). Do not fake them.
 
-User-facing copy never uses the words "agentic", "evidence", "reflection" or "evaluation". Agents are called by name only (Scout, Planner, Interviewer, Coach). No scores, no percentages, no grades anywhere.
+User-facing copy never uses the words "agentic", "evidence" or "reflection". "Evaluation" and "assessment" are fine. Agents are called by name only (Scout, Planner, Interviewer, Coach). Interview answers get an evaluation in levels with the learner's own words ("just starting", "clear", "strong"), never a number: no scores, no percentages, no pass or fail, no readiness verdict.
 
 ## Types (identical on server and client)
 

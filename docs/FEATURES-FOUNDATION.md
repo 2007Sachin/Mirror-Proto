@@ -1,6 +1,6 @@
 # Shared foundation for the six interview features
 
-Rules for all features: no scores or percentages, quote only the learner's own words, text only (no audio stored), calm plain copy, every UI string passes the copy scan.
+Rules for all features: levels in words only, no scores or percentages, quote only the learner's own words, text only (no audio stored), calm plain copy, every UI string passes the copy scan.
 
 ## Interview length and early end
 - `totalFor(interview)` in `server/domain/questions.ts` is `questionCap ?? 4`. Use it, never `TOTAL_QUESTIONS`, for anything per interview. Practice is always four.

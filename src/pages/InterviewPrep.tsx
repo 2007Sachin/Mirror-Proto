@@ -42,7 +42,7 @@ export default function InterviewPrep({ onStart, jobId = null, onOpenJob, onPrac
         <div className="page-title">
           <div>
             <p className="eyebrow">Interview Prep</p>
-            <h1>Bring your own job</h1>
+            <h1>Your target job</h1>
             <p>Paste the job description. MIRROR lines it up with your résumé, suggests rounds, and you can add the ones the company told you about.</p>
           </div>
           <button type="button" className="m-btn m-btn--quiet" onClick={() => onOpenJob(null)}>All roles</button>
@@ -81,7 +81,7 @@ function Jobs({ onOpen }: { onOpen: (id: string) => void }) {
       <p>Bring the job description. MIRROR lines it up with your résumé, suggests rounds, and you can add the ones the company told you about.</p>
       <ul className="prep-grid">
         <li>
-          <FolderCard tint={0} label="Your job" title="Bring a job" name="Bring your own job" pill="New" lines={['Paste the job description', 'Your résumé is matched to it', 'Get rounds to practise']} onOpen={() => onOpen('new')} action="Start" />
+          <FolderCard tint={0} label="Custom prep" title="Your target job" name="Your target job" pill="New" lines={['Paste the job description', 'Matched to your résumé', 'Rounds built for this role']} onOpen={() => onOpen('new')} action="Start" />
         </li>
         {items === null && <li><PageSkeleton label="Loading your jobs" rows={2} /></li>}
         {items?.map((t, i) => (
@@ -97,7 +97,7 @@ function Jobs({ onOpen }: { onOpen: (id: string) => void }) {
 function Picker({ onPick, onOpenJob }: { onPick: (r: PrepRole) => void; onOpenJob?: (id: string | null) => void }) {
   return (
     <>
-      <div className="page-title"><div><p className="eyebrow">Interview Prep</p><h1>Pick the role you are preparing for</h1><p>Every round of the loop is a live mock interview. An interviewer asks, listens and follows up. Nothing is graded.</p></div></div>
+      <div className="page-title"><div><p className="eyebrow">Interview Prep</p><h1>Pick the role you are preparing for</h1><p>Every round of the loop is a live mock interview. An interviewer asks, listens and follows up. No numbers and no pass or fail: you get clear levels and the lines behind them.</p></div></div>
       <ul className="prep-grid">
         {PREP_ROLES.map((r, i) => (
           <li key={r.slug}>

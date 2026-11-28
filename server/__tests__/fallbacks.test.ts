@@ -229,7 +229,7 @@ describe('Sessions data path', () => {
 })
 
 describe('learner-facing copy', () => {
-  const banned = /\b(agentic|evidence|reflect\w*|evaluat\w*)\b/i
+  const banned = /\b(agentic|evidence|reflect\w*)\b/i
   // Identifiers and the instruction that forbids the words are allowed; anything else a learner could read is not.
   const allowed = [/Never use the words/, /^(evidence|reflection|reflect)$/, /reflection_|_reflection|\/reflect|\.reflection|\breflectionFocus\b/]
 

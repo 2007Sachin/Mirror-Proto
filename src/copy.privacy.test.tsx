@@ -34,7 +34,7 @@ describe('privacy copy', () => {
 
   it('states the four promises and the honest hand-offs', () => {
     render(<Privacy onBack={() => {}} onOpenSettings={() => {}} />)
-    for (const t of ['Audio is never stored by MIRROR', 'Answers are never scored', 'Nothing is shared with employers', 'You can delete everything, anytime', 'Who handles what']) {
+    for (const t of ['Audio is never stored by MIRROR', 'Answers never get a number', 'Nothing is shared with employers', 'You can delete everything, anytime', 'Who handles what']) {
       expect(screen.getByText(t)).toBeTruthy()
     }
     expect(screen.getByText(/does not remove your sign-in account/)).toBeTruthy()

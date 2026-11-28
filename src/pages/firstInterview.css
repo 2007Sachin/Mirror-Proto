@@ -14,7 +14,7 @@
 .ml-fi-center { position: relative; z-index: 2; width: 100%; max-width: 900px; display: flex; flex-direction: column; align-items: center; text-align: center; }
 
 @keyframes ml-fi-rise { from { opacity: 0; transform: scale(.9); } }
-.ml-fi-stage { position: relative; flex: none; width: min(680px, 92vw, 52vh); aspect-ratio: 1; margin: 0 auto; animation: ml-fi-rise 1.6s cubic-bezier(.23, 1, .32, 1) both; }
+.ml-fi-stage { position: relative; flex: none; width: min(700px, 92vw, 54vh); aspect-ratio: 1; margin: 0 auto; animation: ml-fi-rise 1.6s cubic-bezier(.23, 1, .32, 1) both; }
 .ml-fi-orb { position: absolute; inset: 0; transition: transform .3s cubic-bezier(.23, 1, .32, 1); transform: scale(calc(1 + var(--lvl, 0) * .06)); }
 .ml-fi .ml-fi-orb .orb-wrap { position: absolute; inset: 0; width: 100%; max-width: none; min-width: 0; height: 100%; }
 .ml-fi .ml-fi-orb .orb-wrap > div { width: 100% !important; height: 100% !important; }

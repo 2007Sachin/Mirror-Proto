@@ -15,7 +15,7 @@ const ONE_QUESTION = 'Tell me a little about yourself: what you do now, and the 
 const loudness = (c: Int16Array) => {
   let sum = 0
   for (let i = 0; i < c.length; i++) sum += (c[i] / 32768) ** 2
-  return Math.min(1, Math.sqrt(sum / Math.max(1, c.length)) * 5)
+  return Math.min(0.7, Math.sqrt(sum / Math.max(1, c.length)) * 3)
 }
 const LIVE_EVERY_MS = 3500 // how often what you have said so far is turned into text while you speak
 
@@ -110,7 +110,7 @@ export default function FirstInterview({
   const [typing, setTyping] = useState(0)
   useEffect(() => {
     if (typing <= 0) return
-    const id = window.setTimeout(() => setTyping(t => Math.max(0, t - 0.12)), 80)
+    const id = window.setTimeout(() => setTyping(t => Math.max(0, t - 0.05)), 120)
     return () => window.clearTimeout(id)
   }, [typing])
   const orb: OrbState = dictation.state === 'recording' || typing > 0 ? 'listening' : busy || dictation.state === 'transcribing' ? 'thinking' : 'idle'
@@ -198,7 +198,7 @@ export default function FirstInterview({
               autoFocus
               rows={2}
               value={text}
-              onChange={e => { setText(e.target.value); setTyping(0.9) }}
+              onChange={e => { setText(e.target.value); setTyping(0.5) }}
               onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && ready && !busy) void send() }}
               placeholder="Say it the way you’d say it out loud…"
               aria-label="About you"

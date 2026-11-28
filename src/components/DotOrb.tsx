@@ -50,7 +50,7 @@ export function DotOrb({ energy = 0, className }: { energy?: number; className?:
     }
     const draw = () => {
       ctx.clearRect(0, 0, w, h)
-      const R = Math.min(w, h) * 0.46 * (1 + e * 0.05)
+      const R = Math.min(w, h) * 0.46 * (1 + e * 0.015)
       const cx = w / 2, cy = h / 2
       const cs = Math.cos(spin), sn = Math.sin(spin), ct = Math.cos(TILT), st = Math.sin(TILT)
       const live = Math.min(1, e * 1.4)
@@ -61,7 +61,7 @@ export function DotOrb({ energy = 0, className }: { energy?: number; className?:
         const y2 = p.y * ct - z1 * st
         const z2 = p.y * st + z1 * ct
         // a slow ripple travels over the surface; it grows with energy
-        const wave = 1 + Math.sin(p.y * 5 + pulse + p.seed * 2) * 0.035 * (0.3 + e * 2.2)
+        const wave = 1 + Math.sin(p.y * 4 + pulse + p.seed * 1.2) * 0.012 * (0.5 + e * 1.1)
         const depth = (z2 + 1) / 2 // 0 far side, 1 near side
         const rr = R * wave
         const r = (0.5 + depth * 1.1) * (Math.min(w, h) / 560 + 0.3)
@@ -77,9 +77,9 @@ export function DotOrb({ energy = 0, className }: { energy?: number; className?:
     }
     const loop = (now: number) => {
       const dt = Math.min(now - last, 64); last = now
-      e += (target.current - e) * Math.min(1, dt / 220)
-      spin += dt * 0.00035 * (1 + e * 5)
-      pulse += dt * 0.002 * (1 + e * 4)
+      e += (target.current - e) * Math.min(1, dt / 900) // slow easing: it eases into a state, never jumps
+      spin += dt * 0.0003 * (1 + e * 1.1)
+      pulse += dt * 0.0012 * (1 + e * 1.2)
       draw()
       raf = requestAnimationFrame(loop)
     }
